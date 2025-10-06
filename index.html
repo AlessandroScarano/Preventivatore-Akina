@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preventivatore Porte Akina</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Preventivatore Porte Akina</h1>
+            <p class="subtitle">Calcola dimensioni, tagli e preventivi per porte Akina</p>
+        </header>
+
+        <main>
+            <form id="preventivatore-form">
+                <section class="form-section">
+                    <h2>Dati Cliente</h2>
+                    <div class="form-group">
+                        <label for="cliente-nome">Nome Cliente:</label>
+                        <input type="text" id="cliente-nome" name="cliente-nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cliente-email">Email:</label>
+                        <input type="email" id="cliente-email" name="cliente-email">
+                    </div>
+                    <div class="form-group">
+                        <label for="cliente-telefono">Telefono:</label>
+                        <input type="tel" id="cliente-telefono" name="cliente-telefono">
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2>Specifiche Porta</h2>
+                    <div class="form-group">
+                        <label for="tipo-porta">Tipo Porta:</label>
+                        <select id="tipo-porta" name="tipo-porta" required>
+                            <option value="">Seleziona...</option>
+                            <option value="standard">Standard</option>
+                            <option value="blindata">Blindata</option>
+                            <option value="interna">Interna</option>
+                            <option value="scorrevole">Scorrevole</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="materiale">Materiale:</label>
+                        <select id="materiale" name="materiale" required>
+                            <option value="">Seleziona...</option>
+                            <option value="legno">Legno</option>
+                            <option value="alluminio">Alluminio</option>
+                            <option value="pvc">PVC</option>
+                            <option value="legno-massello">Legno Massello</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="finitura">Finitura:</label>
+                        <select id="finitura" name="finitura">
+                            <option value="">Seleziona...</option>
+                            <option value="verniciata">Verniciata</option>
+                            <option value="laminata">Laminata</option>
+                            <option value="naturale">Naturale</option>
+                            <option value="laccata">Laccata</option>
+                        </select>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2>Dimensioni e Tagli</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="altezza">Altezza (cm):</label>
+                            <input type="number" id="altezza" name="altezza" min="180" max="250" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="larghezza">Larghezza (cm):</label>
+                            <input type="number" id="larghezza" name="larghezza" min="60" max="120" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="spessore">Spessore (mm):</label>
+                            <input type="number" id="spessore" name="spessore" min="30" max="80" step="1" value="40">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="taglio-su-misura" name="taglio-su-misura">
+                            Taglio su misura necessario
+                        </label>
+                    </div>
+
+                    <div id="tagli-section" style="display: none;">
+                        <h3>Dettagli Tagli</h3>
+                        <div class="form-group">
+                            <label for="taglio-alto">Taglio Alto (cm):</label>
+                            <input type="number" id="taglio-alto" name="taglio-alto" min="0" step="0.1" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="taglio-basso">Taglio Basso (cm):</label>
+                            <input type="number" id="taglio-basso" name="taglio-basso" min="0" step="0.1" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="taglio-sinistro">Taglio Sinistro (cm):</label>
+                            <input type="number" id="taglio-sinistro" name="taglio-sinistro" min="0" step="0.1" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="taglio-destro">Taglio Destro (cm):</label>
+                            <input type="number" id="taglio-destro" name="taglio-destro" min="0" step="0.1" value="0">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2>Accessori</h2>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="maniglia" name="maniglia">
+                            Maniglia (€50)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="serratura" name="serratura">
+                            Serratura (€80)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="cerniere" name="cerniere">
+                            Cerniere Premium (€60)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="verniciatura-extra" name="verniciatura-extra">
+                            Verniciatura Extra (€100)
+                        </label>
+                    </div>
+                </section>
+
+                <section class="form-section">
+                    <h2>Installazione</h2>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="installazione" name="installazione">
+                            Richiedi installazione professionale (€150)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="note">Note aggiuntive:</label>
+                        <textarea id="note" name="note" rows="4"></textarea>
+                    </div>
+                </section>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Calcola Preventivo</button>
+                    <button type="button" class="btn btn-secondary" id="reset-btn">Azzera</button>
+                </div>
+            </form>
+
+            <div id="risultato" style="display: none;">
+                <h2>Risultato Preventivo</h2>
+                
+                <div class="risultato-section">
+                    <h3>Dimensioni Finali</h3>
+                    <div class="risultato-item">
+                        <span class="label">Altezza finale:</span>
+                        <span class="value" id="altezza-finale">-</span>
+                    </div>
+                    <div class="risultato-item">
+                        <span class="label">Larghezza finale:</span>
+                        <span class="value" id="larghezza-finale">-</span>
+                    </div>
+                    <div class="risultato-item">
+                        <span class="label">Area totale:</span>
+                        <span class="value" id="area-totale">-</span>
+                    </div>
+                </div>
+
+                <div class="risultato-section">
+                    <h3>Dettaglio Costi</h3>
+                    <div id="dettaglio-costi"></div>
+                    <div class="totale">
+                        <span class="label">TOTALE:</span>
+                        <span class="value" id="prezzo-totale">€ 0.00</span>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-primary" id="stampa-btn">Stampa Preventivo</button>
+                    <button type="button" class="btn btn-secondary" id="nuovo-preventivo-btn">Nuovo Preventivo</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 Preventivatore Porte Akina - Tutti i diritti riservati</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
