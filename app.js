@@ -112,6 +112,10 @@ class DoorVisualizer {
     handle,
     track,
     floorGuide,
+    fixedPanels = {},
+    doorBox = false,
+    doorBoxSide = 'Destra',
+    isSoloPanelModel = false,
   }) {
     this.doorGroup.clear();
     this.leafGroups = [];
@@ -121,8 +125,8 @@ class DoorVisualizer {
     }
 
     const scale = this.scaleFactor;
-    const totalWidth = width * scale;
     const doorHeight = height * scale;
+    const totalWidth = width * scale;
     const frameThickness = 4.5;
     const stileWidth = 4.5;
     const panelInset = 0.3;
@@ -163,16 +167,49 @@ class DoorVisualizer {
       return new THREE.Mesh(geometry, handleMaterial);
     };
 
-    const leafWidth = totalWidth / leaves;
-    const slideSpacing = scale * (leaves === 1 ? 18 : 24);
-    const handleDepthOffset = frameThickness / 2 + 0.6;
+    const rawLeaves = Math.max(Number(leaves) || 0, 0);
+    const slidingLeafCount = isSoloPanelModel ? 0 : Math.max(rawLeaves, 0);
+    const fixedCount = Math.max(Number(fixedPanels.count) || 0, 0);
+    const fallbackLeafCount = slidingLeafCount > 0 ? slidingLeafCount : Math.max(fixedCount, 1);
+    const computedLeafWidth = fallbackLeafCount > 0 ? totalWidth / fallbackLeafCount : totalWidth;
+    const leafWidth = Math.max(computedLeafWidth, stileWidth * 2 + scale * 20);
 
+    const manualWidthScaled = Math.max(Number(fixedPanels.manualWidth) || 0, 0) * scale;
+    const fixedPanelWidth =
+      fixedPanels.mode === 'manuale' && manualWidthScaled ? manualWidthScaled : leafWidth;
+    const fixedSpacing = scale * 16;
+    const fixedClusterWidth =
+      fixedCount > 0
+        ? fixedCount * fixedPanelWidth + Math.max(0, fixedCount - 1) * fixedSpacing
+        : 0;
+
+    const addsExtraWidth =
+      slidingLeafCount > 0 && fixedCount > 0 && !fixedPanels.shareTrack;
+    const extraWidth = addsExtraWidth ? fixedClusterWidth + scale * 24 : 0;
+
+    let stageWidth = totalWidth + extraWidth;
+    if (slidingLeafCount === 0 && fixedClusterWidth > 0) {
+      stageWidth = fixedClusterWidth;
+    }
+    if (!Number.isFinite(stageWidth) || stageWidth <= 0) {
+      stageWidth = totalWidth || fixedClusterWidth || scale * 100;
+    }
+
+    const slidingOffsetX = addsExtraWidth ? -extraWidth / 2 : 0;
     const baseY = doorHeight / 2 + baseOffset;
+    const slideSpacing = scale * (slidingLeafCount <= 1 ? 18 : 24);
+    const handleDepthOffset = frameThickness / 2 + 0.6;
+    const showHandles = !isSoloPanelModel && handle !== 'hidden';
+
+    const isSliding = opening === 'scorrevole-parete' || opening === 'scorrevole-muro';
+    const isSwing = opening === 'battente';
 
     const trackGroup = new THREE.Group();
-    if (opening !== 'battente') {
+    if (isSliding) {
+      const trackSpan = totalWidth;
+      const trackOffsetX = slidingOffsetX;
       const trackLength =
-        totalWidth + (track === 'filo-muro' ? scale * 120 : track === 'incasso' ? scale * 80 : scale * 60);
+        trackSpan + (track === 'filo-muro' ? scale * 120 : track === 'incasso' ? scale * 80 : scale * 60);
       const trackHeight = scale * 40;
       const trackDepth = frameThickness + scale * 6;
       const trackMaterial = new THREE.MeshStandardMaterial({
@@ -187,7 +224,7 @@ class DoorVisualizer {
       });
 
       const rail = new THREE.Mesh(new THREE.BoxGeometry(trackLength, trackHeight, trackDepth), trackMaterial);
-      rail.position.set(0, baseOffset + doorHeight + trackHeight / 2, -frameThickness / 2);
+      rail.position.set(trackOffsetX, baseOffset + doorHeight + trackHeight / 2, -frameThickness / 2);
 
       if (track !== 'incasso') {
         const cover = new THREE.Mesh(
@@ -198,12 +235,12 @@ class DoorVisualizer {
             roughness: 0.6,
           })
         );
-        cover.position.set(0, rail.position.y + trackHeight / 1.8, rail.position.z + scale * 6);
+        cover.position.set(trackOffsetX, rail.position.y + trackHeight / 1.8, rail.position.z + scale * 6);
         trackGroup.add(cover);
       }
 
       trackGroup.add(rail);
-    } else {
+    } else if (isSwing) {
       const jambMaterial = new THREE.MeshStandardMaterial({
         color: '#b7b9c2',
         metalness: 0.2,
@@ -212,15 +249,16 @@ class DoorVisualizer {
       const jambThickness = scale * 45;
       const jambWidth = scale * 35;
       const jambHeight = doorHeight + scale * 120;
+      const halfSpan = stageWidth / 2;
       const jambLeft = new THREE.Mesh(
         new THREE.BoxGeometry(jambWidth, jambHeight, jambThickness),
         jambMaterial
       );
-      jambLeft.position.set(-totalWidth / 2 - jambWidth / 2, baseOffset + jambHeight / 2 - scale * 60, -frameThickness);
+      jambLeft.position.set(-halfSpan - jambWidth / 2, baseOffset + jambHeight / 2 - scale * 60, -frameThickness);
       const jambRight = jambLeft.clone();
-      jambRight.position.x = totalWidth / 2 + jambWidth / 2;
+      jambRight.position.x = halfSpan + jambWidth / 2;
       const head = new THREE.Mesh(
-        new THREE.BoxGeometry(totalWidth + jambWidth * 2, jambWidth, jambThickness),
+        new THREE.BoxGeometry(stageWidth + jambWidth * 2, jambWidth, jambThickness),
         jambMaterial
       );
       head.position.set(0, jambLeft.position.y + jambHeight / 2 + jambWidth / 2, -frameThickness);
@@ -228,7 +266,8 @@ class DoorVisualizer {
     }
 
     const guideGroup = new THREE.Group();
-    if (opening !== 'battente') {
+    const showGuide = isSliding && floorGuide !== 'none';
+    if (showGuide) {
       const guideMaterial = new THREE.MeshStandardMaterial({
         color: floorGuide === 'invisibile' ? '#a4aab6' : floorGuide === 'autoallineante' ? '#88909f' : '#767d8a',
         metalness: 0.4,
@@ -241,7 +280,7 @@ class DoorVisualizer {
         new THREE.BoxGeometry(guideWidth, guideHeight, guideDepth),
         guideMaterial
       );
-      guide.position.set(0, baseOffset - guideHeight / 2, 0);
+      guide.position.set(slidingOffsetX, baseOffset - guideHeight / 2, 0);
       guideGroup.add(guide);
     }
 
@@ -253,19 +292,19 @@ class DoorVisualizer {
       opacity: 0.92,
     });
     const backdrop = new THREE.Mesh(
-      new THREE.PlaneGeometry(totalWidth + scale * 240, doorHeight + scale * 260),
+      new THREE.PlaneGeometry(stageWidth + scale * 240, doorHeight + scale * 260),
       backdropMaterial
     );
     backdrop.position.set(0, baseOffset + doorHeight / 2, -frameThickness * 2);
 
-    for (let i = 0; i < leaves; i += 1) {
+    for (let i = 0; i < slidingLeafCount; i += 1) {
       const leafGroup = new THREE.Group();
-      const offsetX = (leafWidth + slideSpacing) * (i - (leaves - 1) / 2);
+      const offsetX = (leafWidth + slideSpacing) * (i - (slidingLeafCount - 1) / 2) + slidingOffsetX;
       leafGroup.position.set(offsetX, baseY, 0);
 
       const railHeight = scale * 45;
       const stileHeight = doorHeight - scale * 90;
-      const panelWidth = Math.max(leafWidth - scale * 90, scale * 40);
+      const panelWidth = Math.max(leafWidth - stileWidth * 2, scale * 40);
       const panelHeight = doorHeight - scale * 120;
 
       const topRail = new THREE.Mesh(
@@ -289,36 +328,39 @@ class DoorVisualizer {
       );
       panel.position.set(0, 0, -panelInset / 2);
 
-      const handleMesh = createHandle(handle);
-      const handleOffsetX = (() => {
-        if (opening === 'battente') {
-          if (leaves === 1) {
-            if (swing === 'sinistra') return leafWidth / 2 - scale * 70;
-            if (swing === 'destra') return -leafWidth / 2 + scale * 70;
-            return 0;
-          }
-          if (leaves === 2) {
-            return i === 0 ? leafWidth / 2 - scale * 70 : -leafWidth / 2 + scale * 70;
-          }
-        }
+      leafGroup.add(topRail, bottomRail, leftStile, rightStile, panel);
 
-        if (leaves === 1) {
-          return leafWidth / 2 - scale * 80;
-        }
-        return i === 0 ? leafWidth / 2 - scale * 80 : -leafWidth / 2 + scale * 80;
-      })();
+      if (showHandles) {
+        const handleMesh = createHandle(handle);
+        const handleOffsetX = (() => {
+          if (opening === 'battente') {
+            if (slidingLeafCount === 1) {
+              if (swing === 'sinistra') return leafWidth / 2 - scale * 70;
+              if (swing === 'destra') return -leafWidth / 2 + scale * 70;
+              return 0;
+            }
+            if (slidingLeafCount === 2) {
+              return i === 0 ? leafWidth / 2 - scale * 70 : -leafWidth / 2 + scale * 70;
+            }
+          }
 
-      handleMesh.position.set(handleOffsetX, 0, handleDepthOffset);
-      if (handle === 'incassata') {
-        handleMesh.position.z = handleDepthOffset - scale * 2.2;
-      } else if (handle === 'totale') {
-        handleMesh.position.z = handleDepthOffset + scale * 0.8;
+          if (slidingLeafCount === 1) {
+            return leafWidth / 2 - scale * 80;
+          }
+          return i === 0 ? leafWidth / 2 - scale * 80 : -leafWidth / 2 + scale * 80;
+        })();
+
+        handleMesh.position.set(handleOffsetX, 0, handleDepthOffset);
+        if (handle === 'incassata') {
+          handleMesh.position.z = handleDepthOffset - scale * 2.2;
+        } else if (handle === 'totale') {
+          handleMesh.position.z = handleDepthOffset + scale * 0.8;
+        }
+        leafGroup.add(handleMesh);
       }
 
-      leafGroup.add(topRail, bottomRail, leftStile, rightStile, panel, handleMesh);
-
       if (opening === 'battente') {
-        const baseRotation = THREE.MathUtils.degToRad(leaves === 1 ? 12 : i === 0 ? -10 : 10);
+        const baseRotation = THREE.MathUtils.degToRad(slidingLeafCount === 1 ? 12 : i === 0 ? -10 : 10);
         leafGroup.rotation.y = baseRotation;
         leafGroup.userData.baseRotation = baseRotation;
       } else {
@@ -334,10 +376,103 @@ class DoorVisualizer {
       this.doorGroup.add(leafGroup);
     }
 
-    this.slideAmplitude = opening.startsWith('scorrevole') ? Math.min(leafWidth * 0.25, scale * 120) : 0;
+    if (fixedCount > 0) {
+      const clusterSpan = fixedClusterWidth || stageWidth;
+      const startX = (() => {
+        if (slidingLeafCount === 0) {
+          return clusterSpan / 2 - fixedPanelWidth / 2;
+        }
+        if (fixedPanels.shareTrack) {
+          return totalWidth / 2 - fixedPanelWidth / 2 + slidingOffsetX;
+        }
+        return stageWidth / 2 - fixedPanelWidth / 2;
+      })();
+
+      for (let index = 0; index < fixedCount; index += 1) {
+        const panelGroup = new THREE.Group();
+        const railHeight = scale * 45;
+        const stileHeight = doorHeight - scale * 90;
+        const panelHeight = doorHeight - scale * 120;
+        const visiblePanelWidth = Math.max(fixedPanelWidth - stileWidth * 2, scale * 30);
+
+        const topRail = new THREE.Mesh(
+          new THREE.BoxGeometry(fixedPanelWidth, railHeight, frameThickness),
+          frameMaterial
+        );
+        topRail.position.set(0, doorHeight / 2 - railHeight / 2, 0);
+        const bottomRail = topRail.clone();
+        bottomRail.position.y = -doorHeight / 2 + railHeight / 2;
+
+        const stileGeometry = new THREE.BoxGeometry(stileWidth, stileHeight, frameThickness);
+        const leftStile = new THREE.Mesh(stileGeometry, frameMaterial);
+        leftStile.position.set(-fixedPanelWidth / 2 + stileWidth / 2, 0, 0);
+        const rightStile = leftStile.clone();
+        rightStile.position.x = fixedPanelWidth / 2 - stileWidth / 2;
+
+        const panelMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(visiblePanelWidth, panelHeight, frameThickness - panelInset),
+          panelMaterial
+        );
+        panelMesh.position.set(0, 0, -panelInset / 2);
+
+        panelGroup.add(topRail, bottomRail, leftStile, rightStile, panelMesh);
+
+        const offset =
+          (fixedPanels.shareTrack && slidingLeafCount > 0 ? slidingOffsetX : 0) +
+          (startX - index * (fixedPanelWidth + fixedSpacing));
+
+        panelGroup.position.set(offset, baseY, 0);
+        this.doorGroup.add(panelGroup);
+      }
+    }
+
+    if (doorBox) {
+      const boxWidth = scale * 120;
+      const boxDepth = frameThickness * 1.6;
+      const boxHeight = doorHeight + scale * 160;
+      const doorBoxMaterial = new THREE.MeshStandardMaterial({
+        color: '#1f2434',
+        metalness: 0.6,
+        roughness: 0.35,
+      });
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth),
+        doorBoxMaterial
+      );
+      const sideFactor = doorBoxSide === 'Sinistra' ? -1 : 1;
+      box.position.set(
+        (stageWidth / 2 + boxWidth / 2 + scale * 12) * sideFactor,
+        baseOffset + boxHeight / 2 - scale * 80,
+        -frameThickness / 2
+      );
+
+      const glow = new THREE.Mesh(
+        new THREE.BoxGeometry(boxWidth * 0.6, boxHeight * 0.9, boxDepth * 0.6),
+        new THREE.MeshStandardMaterial({
+          color: '#3b82f6',
+          emissive: '#3b82f6',
+          emissiveIntensity: 0.3,
+          transparent: true,
+          opacity: 0.35,
+          roughness: 0.6,
+          metalness: 0.2,
+        })
+      );
+      glow.position.set(0, 0, boxDepth / 4);
+      box.add(glow);
+      this.doorGroup.add(box);
+    }
+
+    this.slideAmplitude = isSliding && slidingLeafCount > 0 ? Math.min(leafWidth * 0.25, scale * 120) : 0;
     this.currentOpening = opening;
 
-    this.doorGroup.add(backdrop, trackGroup, guideGroup);
+    this.doorGroup.add(backdrop);
+    if (trackGroup.children.length) {
+      this.doorGroup.add(trackGroup);
+    }
+    if (guideGroup.children.length) {
+      this.doorGroup.add(guideGroup);
+    }
   }
 
   animate() {
@@ -476,6 +611,9 @@ function toggleSummaryCards(visible) {
     if (!card) return;
     card.classList.toggle('is-collapsed', !visible);
   });
+  if (visible) {
+    requestAnimationFrame(() => visualizer.handleResize());
+  }
 }
 
 function updateStep(index) {
@@ -1111,17 +1249,79 @@ function refreshOutputs({ force = false } = {}) {
   renderSelectionSummary(config);
   renderCutsTable(cuts);
 
+  const isSoloPannello = config.model === 'SOLO_PANNELLO';
+  const slidingLeaves = isSoloPannello ? 0 : Math.max(config.leaves, 1);
+  const soloPanelCount = isSoloPannello ? Math.max(config.soloPannelloCount || config.leaves || 1, 1) : 0;
+  const fixedPanelsCount =
+    !isSoloPannello && config.pannelloFisso === 'Si' ? Math.max(config.numeroPannelliFissi || 1, 1) : 0;
+
+  const openingType = (() => {
+    if (isSoloPannello) return 'fisso';
+    if (config.model === 'SINGOLA') return 'battente';
+    if (config.anteNascoste === 'Si') return 'scorrevole-muro';
+    return MODEL_CONFIG[config.model]?.defaultOpening ?? 'scorrevole-parete';
+  })();
+
+  const swingDirection = (() => {
+    if (openingType === 'battente') {
+      if (config.tipologia === '1+1' || config.aperturaAnte === 'Destra Sinistra') {
+        return 'centrale';
+      }
+      if (config.aperturaAnte === 'Normale') {
+        return 'sinistra';
+      }
+      return 'sinistra';
+    }
+    if (config.aperturaAnte === 'Destra Sinistra') {
+      return 'centrale';
+    }
+    return 'sinistra';
+  })();
+
+  const handleType = (() => {
+    if (isSoloPannello) return 'hidden';
+    if (config.maniglieDetails.length > 0) return 'incassata';
+    return 'standard';
+  })();
+
+  const trackType = (() => {
+    if (openingType === 'battente' || openingType === 'fisso') return 'standard';
+    if (config.anteNascoste === 'Si') return 'filo-muro';
+    return BINARIO_CONFIG[config.binario]?.track ?? 'standard';
+  })();
+
+  const floorGuideType = (() => {
+    if (openingType === 'battente' || openingType === 'fisso') return 'none';
+    if (config.anteNascoste === 'Si') return 'invisibile';
+    return 'standard';
+  })();
+
+  const fixedPanelDetails = {
+    count: isSoloPannello ? soloPanelCount : fixedPanelsCount,
+    mode: isSoloPannello ? 'manuale' : config.sceltaPannelloFisso || '',
+    manualWidth: isSoloPannello
+      ? soloPanelCount > 0
+        ? config.width / soloPanelCount
+        : config.width
+      : config.larghezzaPannelloFisso || 0,
+    shareTrack: !isSoloPannello && config.pannelliSuBinari === 'Si',
+  };
+
   visualizer.updateDoor({
     width: config.width,
     height: config.height,
-    leaves: Math.max(config.leaves, 1),
+    leaves: slidingLeaves || 1,
     profileColor: DEFAULT_PROFILE_COLOR,
     glassColor: DEFAULT_GLASS_COLOR,
-    opening: MODEL_CONFIG[config.model]?.defaultOpening ?? 'scorrevole-parete',
-    swing: config.aperturaAnte === 'Destra Sinistra' ? 'centrale' : 'sinistra',
-    handle: config.maniglieDetails.length > 0 ? 'incassata' : 'standard',
-    track: BINARIO_CONFIG[config.binario]?.track ?? 'standard',
-    floorGuide: config.anteNascoste === 'Si' ? 'invisibile' : 'standard',
+    opening: openingType,
+    swing: swingDirection,
+    handle: handleType,
+    track: trackType,
+    floorGuide: floorGuideType,
+    fixedPanels: fixedPanelDetails,
+    doorBox: config.doorBox === 'Si',
+    doorBoxSide: config.doorBoxMounting || 'Destra',
+    isSoloPanelModel: isSoloPannello,
   });
 }
 
