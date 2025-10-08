@@ -13,618 +13,683 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="hero">
-      <div class="hero__overlay"></div>
-      <div class="hero__content container">
-        <p class="hero__eyebrow">Configura la tua porta Akina</p>
-        <h1>Preventivatore professionale</h1>
-        <p>
-          Rispondi alle domande del configuratore, calcola i tagli dei profili e
-          visualizza in tempo reale il modello 3D della porta Akina.
-        </p>
-      </div>
-    </header>
-
-    <main class="container layout">
-      <section class="card card--config" aria-labelledby="configuratore-titolo">
-        <div class="card__header">
-          <h2 id="configuratore-titolo">Configuratore</h2>
-          <p>Riproduce il flusso Glasscom con scelte visuali e domande condizionali.</p>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="header-brand">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <div class="brand-copy">
+            <p class="brand-eyebrow">Preventivatore Porta Akina</p>
+            <h1 class="brand-title">Configura, visualizza e ottieni il preventivo</h1>
+          </div>
         </div>
+        <nav class="header-progress" aria-label="Avanzamento configuratore">
+          <ol class="progress-steps">
+            <li class="progress-step is-active"><span>Dimensioni e modello</span></li>
+            <li class="progress-step"><span>Struttura</span></li>
+            <li class="progress-step"><span>Pannelli e profili</span></li>
+            <li class="progress-step"><span>Scorrimento</span></li>
+            <li class="progress-step"><span>Accessori</span></li>
+          </ol>
+        </nav>
+      </header>
 
-                <form id="akina-configurator-form" class="configurator-form" novalidate>
-          <div class="configurator-progress" aria-hidden="true">
-            <ol class="progress-steps">
-              <li class="progress-step is-active"><span>Dimensioni e modello</span></li>
-              <li class="progress-step"><span>Struttura</span></li>
-              <li class="progress-step"><span>Pannelli e profili</span></li>
-              <li class="progress-step"><span>Scorrimento</span></li>
-              <li class="progress-step"><span>Accessori</span></li>
-            </ol>
+      <div class="app-main">
+        <section class="viewer-area" aria-labelledby="visualizer-titolo">
+          <div class="viewer-stage">
+            <div id="viewer" class="viewer" role="img" aria-label="Anteprima 3D parametrica"></div>
+            <div class="viewer-dimension viewer-dimension--height">
+              <span id="viewer-height-label">2200 mm</span>
+            </div>
+            <div class="viewer-dimension viewer-dimension--width">
+              <span id="viewer-width-label">1200 mm</span>
+            </div>
+            <div class="viewer-track" id="viewer-track-label">Binario: 2 m</div>
           </div>
+        </section>
 
-          <div class="form-step is-active" data-step="0">
-            <div class="configurator-section">
-              <h2>Dimensioni del vano</h2>
-              <div class="dimension-grid">
-                <label>
-                  Larghezza vano (mm)
-                  <input type="number" name="width" id="width" min="600" max="3000" step="5" value="1200" required />
-                </label>
-                <label>
-                  Altezza vano (mm)
-                  <input type="number" name="height" id="height" min="1800" max="3200" step="5" value="2200" required />
-                </label>
-              </div>
-            </div>
-
-            <div class="configurator-section">
-              <h2>Scegli il modello</h2>
-              <div class="model-selection">
-                <div class="model-option" data-value="TRASCINAMENTO">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/trascinamento.jpg" alt="TRASCINAMENTO" />
-                  <span>TRASCINAMENTO</span>
-                </div>
-                <div class="model-option" data-value="INDIPENDENTE">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/indipendente.jpg" alt="INDIPENDENTE" />
-                  <span>INDIPENDENTE</span>
-                </div>
-                <div class="model-option" data-value="MAGNETICA">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/magnetica.jpg" alt="MAGNETICA" />
-                  <span>MAGNETICA</span>
-                </div>
-                <div class="model-option" data-value="SINGOLA">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/singola.jpg" alt="SINGOLA" />
-                  <span>SINGOLA</span>
-                </div>
-                <div class="model-option" data-value="SOLO_PANNELLO">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/fisso.jpg" alt="Solo Pannello" />
-                  <span>SOLO PANNELLO FISSO</span>
-                </div>
-
-                <div class="model-option" data-value="SOLO_ANTA">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/solo_anta.jpg" alt="Solo Anta" />
-                  <span>SOLO ANTA</span>
-                </div>
-              </div>
-              <input type="hidden" name="model" id="model-select" required data-step-validate="true" data-validation-message="Seleziona un modello" />
-            </div>
-
-            <div class="configurator-section" id="solo-pannello-section" style="display: none;">
-              <h2>Configurazione Solo Pannello</h2>
-              <label for="num-panels-pannello">Numero di Pannelli:</label>
-              <input type="number" id="num-panels-pannello" name="num_panels_pannello" min="1" max="10" />
-              <div id="panel-dimensions-container-pannello"></div>
-            </div>
-
-            <div class="configurator-section" id="solo-anta-section" style="display: none;">
-              <h2>Configurazione Solo Anta</h2>
-              <label for="num-panels-anta">Numero di Ante:</label>
-              <input type="number" id="num-panels-anta" name="num_panels_anta" min="1" max="10" />
-              <div id="panel-dimensions-container-anta"></div>
-            </div>
-          </div>
-
-          <div class="form-step" data-step="1">
-            <div class="configurator-section" id="numero-ante-section">
-              <h2>Scegli il numero di ante</h2>
-              <label>
-                Numero di ante:
-                <select name="numero_ante" id="numero-ante-select" required>
-                  <!-- Opzioni generate dinamicamente -->
-                </select>
-              </label>
-            </div>
-
-            <div class="configurator-section" id="apertura-ante-section" style="display: none;">
-              <h2>Scegli l'Apertura delle Ante</h2>
-              <div class="apertura-ante-selection">
-                <div class="apertura-ante-option" data-value="Normale">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/aperturaLato.svg" alt="Normale" />
-                  <span>Normale</span>
-                </div>
-                <div class="apertura-ante-option" data-value="Destra Sinistra">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/aperturaDestraSinistra.svg" alt="Destra Sinistra" />
-                  <span>Destra Sinistra</span>
-                </div>
-              </div>
-              <input type="hidden" name="apertura_ante" id="apertura-ante-select" data-step-validate="true" data-validation-message="Seleziona l'apertura delle ante" />
-            </div>
-
-            <div class="configurator-section" id="tipologia-section" style="display: none;">
-              <h2>Scegli la Tipologia</h2>
-              <div class="tipologia-selection">
-                <div class="tipologia-option" data-value="1">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/tipologiasingola-1.svg" alt="1" />
-                  <span>1</span>
-                </div>
-                <div class="tipologia-option" data-value="1+1">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/tipologiasingola-11.svg" alt="1 + 1" />
-                  <span>1 + 1</span>
-                </div>
-              </div>
-              <input type="hidden" name="tipologia" id="tipologia-select" data-step-validate="true" data-validation-message="Seleziona la tipologia" />
-            </div>
-          </div>
-
-          <div class="form-step" data-step="2">
-            <div class="configurator-section">
-              <h2>Vuoi un pannello fisso?</h2>
-              <div class="pannello-fisso-selection">
-                <div class="pannello-fisso-option" data-value="Si">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/pannelloSi.svg" alt="Si" />
-                  <span>Si</span>
-                </div>
-                <div class="pannello-fisso-option" data-value="No">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/pannelloNo.svg" alt="No" />
-                  <span>No</span>
-                </div>
-              </div>
-              <input type="hidden" name="pannello_fisso" id="pannello-fisso-select" required data-step-validate="true" data-validation-message="Indica se vuoi un pannello fisso" />
-
-              <div id="pannello-fisso-extra" style="display: none;">
-                <br /><br />
-
-                <label>
-                  <h2>Numero dei pannelli fissi:</h2>
-                  <input type="number" name="numero_pannelli_fissi" id="numero-pannelli-fissi" min="1" max="10" />
-                </label>
-
-                <div id="pannelli-su-binari-question">
-                  <h3>I pannelli fissi sono sugli stessi binari delle ante scorrevoli?</h3>
-                  <div class="pannelli-scelta">
-                    <div class="pannello-option" data-value="Si">
-                      <img src="https://glasscom.it/wp-content/uploads/2024/10/posizFissoSi.svg" alt="Si" />
-                      <span>Si</span>
-                    </div>
-                    <div class="pannello-option" data-value="No">
-                      <img src="https://glasscom.it/wp-content/uploads/2024/10/posizFissoNo.svg" alt="No" />
-                      <span>No</span>
-                    </div>
-                  </div>
-                  <input type="hidden" name="pannelli_su_binari" id="pannelli-su-binari-select" data-step-validate="true" data-validation-message="Indica la posizione dei pannelli fissi" />
-                </div>
-
-                <div class="form-group">
-                  <h3>Come vuoi definire la larghezza del pannello fisso?</h3>
-                  <div class="binario-selection" id="scelta-dimensioni-pannello-fisso">
-                    <div class="binario-option" data-value="manuale">
-                      <img src="https://glasscom.it/wp-content/uploads/2024/10/manuale.svg" alt="Manuale" />
-                      <span>Inserisco io la larghezza</span>
-                    </div>
-                    <div class="binario-option" data-value="uguale_anta">
-                      <img src="https://glasscom.it/wp-content/uploads/2024/10/uguale_alle_ante.svg" alt="Uguale alle ante" />
-                      <span>Uguale alle ante scorrevoli</span>
-                    </div>
-                  </div>
-                  <input type="hidden" name="sceltaPannelloFisso" id="sceltaPannelloFissoHidden" />
-                </div>
-
-                <div class="form-group" id="campo-larghezza-pannello-fisso" style="display: none;">
-                  <label for="larghezzaPannelloFisso">
-                    <h2>Inserisci la larghezza del pannello fisso (in mm):</h2>
-                    <input type="number" name="larghezza_pannello_fisso" id="larghezza-pannello-fisso" min="1" placeholder="Es. 800 mm" />
+        <aside class="sidebar">
+          <form id="akina-configurator-form" class="configurator-form" novalidate>
+            <div class="form-step is-active" data-step="0">
+              <div class="configurator-section">
+                <h2>Dimensioni del vano</h2>
+                <div class="dimension-grid">
+                  <label>
+                    Larghezza vano (mm)
+                    <input type="number" name="width" id="width" min="600" max="3000" step="5" value="1200" required />
+                  </label>
+                  <label>
+                    Altezza vano (mm)
+                    <input type="number" name="height" id="height" min="1800" max="3200" step="5" value="2200" required />
                   </label>
                 </div>
               </div>
-              <input type="hidden" id="input-larghezza-pannello-fisso" name="larghezza_pannello_fisso" value="" />
-            </div>
 
-            <div class="configurator-section" id="profilo-superiore-section" style="display: none;">
-              <h2>Scegli la Lunghezza del Profilo Superiore Porta Fissi</h2>
-              <div class="profilo-superiore-selection">
-                <div class="profilo-superiore-option" data-value="Quanto i fissi">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/profilo_fissi.svg" alt="Quanto i fissi" />
-                  <span>Quanto i fissi</span>
-                </div>
-                <div class="profilo-superiore-option" data-value="Quanto tutto il binario">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/profilo_binario.svg" alt="Quanto tutto il binario" />
-                  <span>Quanto tutto il binario</span>
-                </div>
-              </div>
-              <input type="hidden" name="profilo_superiore_fissi" id="profilo-superiore-fissi-select" data-step-validate="true" data-validation-message="Scegli la lunghezza del profilo" />
-            </div>
-
-            <div class="configurator-section" id="ante-nascoste-section">
-              <h2>Vuoi che le Ante siano Nascoste dietro il Muro?</h2>
-              <div class="ante-nascoste-selection">
-                <div class="ante-nascoste-option" data-value="No">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/anteNascosteNO.svg" alt="No" />
-                  <span>No</span>
-                </div>
-                <div class="ante-nascoste-option" data-value="Si">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/anteNascosteSI.svg" alt="Si" />
-                  <span>Si</span>
-                </div>
-              </div>
-              <input type="hidden" name="ante_nascoste" id="ante-nascoste-select" required data-step-validate="true" data-validation-message="Indica se vuoi le ante nascoste" />
-            </div>
-          </div>
-
-          <div class="form-step" data-step="3">
-            <div class="configurator-section" id="door-box-section" style="display: none;">
-              <h2>Vuoi aggiungere il Door Box?</h2>
-              <div class="door-box-selection">
-                <div class="door-box-option" data-value="Si">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxSi.svg" alt="Si" />
-                  <span>Si</span>
-                </div>
-                <div class="door-box-option" data-value="No">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxNo.svg" alt="No" />
-                  <span>No</span>
-                </div>
-              </div>
-              <input type="hidden" name="door_box" id="door-box-select" required data-step-validate="true" data-validation-message="Indica se vuoi il Door Box" />
-
-              <div id="door-box-mounting" style="display: none;">
-                <h3>Montaggio Door Box</h3>
-                <div class="door-box-selection">
-                  <div class="door-box-mounting-option" data-value="Destra">
-                    <img src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxDx.svg" alt="Destra" />
-                    <span>Destra</span>
+              <div class="configurator-section">
+                <h2>Scegli il modello</h2>
+                <div class="model-selection">
+                  <div class="model-option" data-value="TRASCINAMENTO">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/trascinamento.jpg" alt="TRASCINAMENTO" />
+                    <span>TRASCINAMENTO</span>
                   </div>
-                  <div class="door-box-mounting-option" data-value="Sinistra">
-                    <img src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxSx.svg" alt="Sinistra" />
-                    <span>Sinistra</span>
+                  <div class="model-option" data-value="INDIPENDENTE">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/indipendente.jpg" alt="INDIPENDENTE" />
+                    <span>INDIPENDENTE</span>
+                  </div>
+                  <div class="model-option" data-value="MAGNETICA">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/magnetica.jpg" alt="MAGNETICA" />
+                    <span>MAGNETICA</span>
+                  </div>
+                  <div class="model-option" data-value="SINGOLA">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/singola.jpg" alt="SINGOLA" />
+                    <span>SINGOLA</span>
+                  </div>
+                  <div class="model-option" data-value="SOLO_PANNELLO">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/fisso.jpg" alt="Solo Pannello" />
+                    <span>SOLO PANNELLO FISSO</span>
+                  </div>
+
+                  <div class="model-option" data-value="SOLO_ANTA">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/solo_anta.jpg" alt="Solo Anta" />
+                    <span>SOLO ANTA</span>
                   </div>
                 </div>
-                <input type="hidden" name="door_box_mounting" id="door-box-mounting-select" data-step-validate="true" data-validation-message="Seleziona il lato di montaggio" />
+                <input
+                  type="hidden"
+                  name="model"
+                  id="model-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="Seleziona un modello"
+                />
+              </div>
+
+              <div class="configurator-section" id="solo-pannello-section" style="display: none;">
+                <h2>Configurazione Solo Pannello</h2>
+                <label for="num-panels-pannello">Numero di Pannelli:</label>
+                <input type="number" id="num-panels-pannello" name="num_panels_pannello" min="1" max="10" />
+                <div id="panel-dimensions-container-pannello"></div>
+              </div>
+
+              <div class="configurator-section" id="solo-anta-section" style="display: none;">
+                <h2>Configurazione Solo Anta</h2>
+                <label for="num-panels-anta">Numero di Ante:</label>
+                <input type="number" id="num-panels-anta" name="num_panels_anta" min="1" max="10" />
+                <div id="panel-dimensions-container-anta"></div>
               </div>
             </div>
 
-            <div class="configurator-section" id="binario-section">
-              <h2>Scegli il binario</h2>
-              <div class="binario-selection">
-                <div class="binario-option" data-value="A vista">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/VisBinarioVis.svg" alt="A vista" />
-                  <span>A vista</span>
-                </div>
-                <div class="binario-option" data-value="Nascosto">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/VisBinarioNas.svg" alt="Nascosto" />
-                  <span>Nascosto nel Cartongesso</span>
-                </div>
-              </div>
-              <input type="hidden" name="binario" id="binario-select" required data-step-validate="true" data-validation-message="Scegli il tipo di binario" />
-            </div>
-
-            <div class="configurator-section" id="montaggio-section" style="display: none;">
-              <h2>Scegli il Montaggio</h2>
-              <label>
-                <select name="montaggio" id="montaggio-select" required>
-                  <option value="">-- Seleziona un'opzione --</option>
-                  <option value="A soffitto" selected>A soffitto</option>
-                  <option value="Parete">Parete</option>
-                </select>
-              </label>
-            </div>
-
-            <div class="configurator-section">
-              <h2>Scegli la lunghezza del binario</h2>
-              <p id="lunghezza-binario-msg" class="binario-warning"></p>
-              <label>
-                Lunghezza del binario:
-                <select name="lunghezza_binario" id="lunghezza-binario-select" required>
-                  <!-- Opzioni generate dinamicamente -->
-                </select>
-              </label>
-            </div>
-          </div>
-
-          <div class="form-step" data-step="4">
-            <div class="configurator-section" id="traversino-section">
-              <h2>Vuoi aggiungere il Traversino Decorativo Adesivo?</h2>
-              <div class="traversino-selection">
-                <div class="traversino-option" data-value="Si">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/traversinoSi.svg" alt="Si" />
-                  <span>Si</span>
-                </div>
-                <div class="traversino-option" data-value="No">
-                  <img src="https://glasscom.it/wp-content/uploads/2024/10/traversinoNo.svg" alt="No" />
-                  <span>No</span>
-                </div>
-              </div>
-              <input type="hidden" name="traversino" id="traversino-select" required data-step-validate="true" data-validation-message="Indica se vuoi il traversino" />
-
-              <div id="traversino-meters" style="display: none;">
-                <br /><br />
+            <div class="form-step" data-step="1">
+              <div class="configurator-section" id="numero-ante-section">
+                <h2>Scegli il numero di ante</h2>
                 <label>
-                  <h2>Quantità in metri:</h2>
-                  <input type="number" name="traversino_meters" id="traversino-meters-input" min="1" step="1" />
+                  Numero di ante:
+                  <select name="numero_ante" id="numero-ante-select" required>
+                    <!-- Opzioni generate dinamicamente -->
+                  </select>
+                </label>
+              </div>
+
+              <div class="configurator-section" id="apertura-ante-section" style="display: none;">
+                <h2>Scegli l'Apertura delle Ante</h2>
+                <div class="apertura-ante-selection">
+                  <div class="apertura-ante-option" data-value="Normale">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/aperturaLato.svg" alt="Normale" />
+                    <span>Normale</span>
+                  </div>
+                  <div class="apertura-ante-option" data-value="Destra Sinistra">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/aperturaDestraSinistra.svg" alt="Destra Sinistra" />
+                    <span>Destra Sinistra</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="apertura_ante"
+                  id="apertura-ante-select"
+                  data-step-validate="true"
+                  data-validation-message="Seleziona l'apertura delle ante"
+                />
+              </div>
+
+              <div class="configurator-section" id="tipologia-section" style="display: none;">
+                <h2>Scegli la Tipologia</h2>
+                <div class="tipologia-selection">
+                  <div class="tipologia-option" data-value="1">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/tipologiasingola-1.svg" alt="1" />
+                    <span>1</span>
+                  </div>
+                  <div class="tipologia-option" data-value="1+1">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/tipologiasingola-11.svg" alt="1 + 1" />
+                    <span>1 + 1</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="tipologia"
+                  id="tipologia-select"
+                  data-step-validate="true"
+                  data-validation-message="Seleziona la tipologia"
+                />
+              </div>
+            </div>
+
+            <div class="form-step" data-step="2">
+              <div class="configurator-section">
+                <h2>Vuoi un pannello fisso?</h2>
+                <div class="pannello-fisso-selection">
+                  <div class="pannello-fisso-option" data-value="Si">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/pannelloSi.svg" alt="Si" />
+                    <span>Si</span>
+                  </div>
+                  <div class="pannello-fisso-option" data-value="No">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/pannelloNo.svg" alt="No" />
+                    <span>No</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="pannello_fisso"
+                  id="pannello-fisso-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="Indica se vuoi un pannello fisso"
+                />
+
+                <div id="pannello-fisso-extra" style="display: none;">
+                  <br /><br />
+
+                  <label>
+                    <h2>Numero dei pannelli fissi:</h2>
+                    <input type="number" name="numero_pannelli_fissi" id="numero-pannelli-fissi" min="1" max="10" />
+                  </label>
+
+                  <div id="pannelli-su-binari-question">
+                    <h3>I pannelli fissi sono sugli stessi binari delle ante scorrevoli?</h3>
+                    <div class="pannelli-scelta">
+                      <div class="pannello-option" data-value="Si">
+                        <img src="https://glasscom.it/wp-content/uploads/2024/10/posizFissoSi.svg" alt="Si" />
+                        <span>Si</span>
+                      </div>
+                      <div class="pannello-option" data-value="No">
+                        <img src="https://glasscom.it/wp-content/uploads/2024/10/posizFissoNo.svg" alt="No" />
+                        <span>No</span>
+                      </div>
+                    </div>
+                    <input
+                      type="hidden"
+                      name="pannelli_su_binari"
+                      id="pannelli-su-binari-select"
+                      data-step-validate="true"
+                      data-validation-message="Indica la posizione dei pannelli fissi"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <h3>Come vuoi definire la larghezza del pannello fisso?</h3>
+                    <div class="binario-selection" id="scelta-dimensioni-pannello-fisso">
+                      <div class="binario-option" data-value="manuale">
+                        <img src="https://glasscom.it/wp-content/uploads/2024/10/manuale.svg" alt="Manuale" />
+                        <span>Inserisco io la larghezza</span>
+                      </div>
+                      <div class="binario-option" data-value="uguale_anta">
+                        <img src="https://glasscom.it/wp-content/uploads/2024/10/uguale_alle_ante.svg" alt="Uguale alle ante" />
+                        <span>Uguale alle ante scorrevoli</span>
+                      </div>
+                    </div>
+                    <input type="hidden" name="sceltaPannelloFisso" id="sceltaPannelloFissoHidden" />
+                  </div>
+
+                  <div class="form-group" id="campo-larghezza-pannello-fisso" style="display: none;">
+                    <label for="larghezzaPannelloFisso">
+                      <h2>Inserisci la larghezza del pannello fisso (in mm):</h2>
+                      <input
+                        type="number"
+                        name="larghezza_pannello_fisso"
+                        id="larghezza-pannello-fisso"
+                        min="1"
+                        placeholder="Es. 800 mm"
+                      />
+                    </label>
+                  </div>
+                </div>
+                <input type="hidden" id="input-larghezza-pannello-fisso" name="larghezza_pannello_fisso" value="" />
+              </div>
+
+              <div class="configurator-section" id="profilo-superiore-section" style="display: none;">
+                <h2>Scegli la Lunghezza del Profilo Superiore Porta Fissi</h2>
+                <div class="profilo-superiore-selection">
+                  <div class="profilo-superiore-option" data-value="Quanto i fissi">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/profilo_fissi.svg" alt="Quanto i fissi" />
+                    <span>Quanto i fissi</span>
+                  </div>
+                  <div class="profilo-superiore-option" data-value="Quanto tutto il binario">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/profilo_binario.svg" alt="Quanto tutto il binario" />
+                    <span>Quanto tutto il binario</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="profilo_superiore_fissi"
+                  id="profilo-superiore-fissi-select"
+                  data-step-validate="true"
+                  data-validation-message="Scegli la lunghezza del profilo"
+                />
+              </div>
+
+              <div class="configurator-section" id="ante-nascoste-section">
+                <h2>Vuoi che le Ante siano Nascoste dietro il Muro?</h2>
+                <div class="ante-nascoste-selection">
+                  <div class="ante-nascoste-option" data-value="No">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/anteNascosteNO.svg" alt="No" />
+                    <span>No</span>
+                  </div>
+                  <div class="ante-nascoste-option" data-value="Si">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/anteNascosteSI.svg" alt="Si" />
+                    <span>Si</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="ante_nascoste"
+                  id="ante-nascoste-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="Indica se vuoi le ante nascoste"
+                />
+              </div>
+            </div>
+
+            <div class="form-step" data-step="3">
+              <div class="configurator-section" id="door-box-section" style="display: none;">
+                <h2>Vuoi aggiungere il Door Box?</h2>
+                <div class="door-box-selection">
+                  <div class="door-box-option" data-value="Si">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxSi.svg" alt="Si" />
+                    <span>Si</span>
+                  </div>
+                  <div class="door-box-option" data-value="No">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxNo.svg" alt="No" />
+                    <span>No</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="door_box"
+                  id="door-box-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="Indica se vuoi il Door Box"
+                />
+
+                <div id="door-box-mounting" style="display: none;">
+                  <h3>Montaggio Door Box</h3>
+                  <div class="door-box-selection">
+                    <div class="door-box-mounting-option" data-value="Destra">
+                      <img src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxDx.svg" alt="Destra" />
+                      <span>Destra</span>
+                    </div>
+                    <div class="door-box-mounting-option" data-value="Sinistra">
+                      <img src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxSx.svg" alt="Sinistra" />
+                      <span>Sinistra</span>
+                    </div>
+                  </div>
+                  <input
+                    type="hidden"
+                    name="door_box_mounting"
+                    id="door-box-mounting-select"
+                    data-step-validate="true"
+                    data-validation-message="Seleziona il lato di montaggio"
+                  />
+                </div>
+              </div>
+
+              <div class="configurator-section" id="binario-section">
+                <h2>Scegli il binario</h2>
+                <div class="binario-selection">
+                  <div class="binario-option" data-value="A vista">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/VisBinarioVis.svg" alt="A vista" />
+                    <span>A vista</span>
+                  </div>
+                  <div class="binario-option" data-value="Nascosto">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/VisBinarioNas.svg" alt="Nascosto" />
+                    <span>Nascosto nel Cartongesso</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="binario"
+                  id="binario-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="Scegli il tipo di binario"
+                />
+              </div>
+
+              <div class="configurator-section" id="montaggio-section" style="display: none;">
+                <h2>Scegli il Montaggio</h2>
+                <label>
+                  <select name="montaggio" id="montaggio-select" required>
+                    <option value="">-- Seleziona un'opzione --</option>
+                    <option value="A soffitto" selected>A soffitto</option>
+                    <option value="Parete">Parete</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="configurator-section">
+                <h2>Scegli la lunghezza del binario</h2>
+                <p id="lunghezza-binario-msg" class="binario-warning"></p>
+                <label>
+                  Lunghezza del binario:
+                  <select name="lunghezza_binario" id="lunghezza-binario-select" required>
+                    <!-- Opzioni generate dinamicamente -->
+                  </select>
                 </label>
               </div>
             </div>
 
-            <div class="configurator-section" id="magnetica-optional-section" style="display: none;">
-              <h2>Seleziona Optional per Modello Magnetica</h2>
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-ELB" data-name="Elettroblocco" data-price="230" />
-                MAG-AC-ELB - Elettroblocco (€ 230)
-              </label><br />
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-TC1" data-name="Telecomando" data-price="130" />
-                MAG-AC-TC1 - Telecomando (€ 130)
-              </label><br />
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-TC2" data-name="Telecomando Smart" data-price="250" />
-                MAG-AC-TC2 - Telecomando Smart (€ 250)
-              </label><br />
-              <label>
+            <div class="form-step" data-step="4">
+              <div class="configurator-section" id="traversino-section">
+                <h2>Vuoi aggiungere il Traversino Decorativo Adesivo?</h2>
+                <div class="traversino-selection">
+                  <div class="traversino-option" data-value="Si">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/traversinoSi.svg" alt="Si" />
+                    <span>Si</span>
+                  </div>
+                  <div class="traversino-option" data-value="No">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/traversinoNo.svg" alt="No" />
+                    <span>No</span>
+                  </div>
+                </div>
                 <input
-                  type="checkbox"
-                  name="optional_magnetica[]"
-                  value="MAG-AC-TC3"
-                  data-name="Telecomando Smart con Supporto Magnetico di Montaggio"
-                  data-price="270"
+                  type="hidden"
+                  name="traversino"
+                  id="traversino-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="Indica se vuoi il traversino"
                 />
-                MAG-AC-TC3 - Telecomando Smart con Supporto Magnetico di Montaggio (€ 270)
-              </label>
-              <br />
-              <label>
-                <input
-                  type="checkbox"
-                  name="optional_magnetica[]"
-                  value="MAG-AC-TNT"
-                  data-name="Tastierino Numerico"
-                  data-price="630"
-                />
-                MAG-AC-TNT - Tastierino Numerico con Lettore di Impronte Digitali e Badge (€ 630)
-              </label><br />
 
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CAV" data-name="Cavo di Connessione 4 Fili" data-price="100" />
-                MAG-AC-CAV - Cavo di Connessione 4 Fili (€ 100)
-              </label><br />
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-MTS" data-name="Mini Sensore Superiore" data-price="280" />
-                MAG-AC-MTS - Mini Sensore Superiore (€ 280)
-              </label><br />
+                <div id="traversino-meters" style="display: none;">
+                  <br /><br />
 
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CSB" data-name="Clean Switch Nero" data-price="350" />
-                MAG-AC-CSB - Clean Switch Nero (€ 350)
-              </label><br />
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CSW" data-name="Clean Switch Bianco" data-price="350" />
-                MAG-AC-CSW - Clean Switch Bianco (€ 350)
-              </label><br />
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SBH" data-name="Supporto per Clean Switch Quadrato" data-price="50" />
-                MAG-AC-SBH - Supporto per Clean Switch Quadrato (€ 50)
-              </label><br />
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SBW" data-name="Supporto per Clean Switch Rettangolare" data-price="60" />
-                MAG-AC-SBW - Supporto per Clean Switch Rettangolare (€ 60)
-              </label><br />
-              <label>
-                <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SYN" data-name="Cavo di Connessione Ante Sincronizzate" data-price="100" />
-                MAG-AC-SYN - Cavo di Connessione Ante Sincronizzate (€ 100)
-              </label>
-            </div>
+                  <label>
+                    <h2>Quantità in metri:</h2>
+                    <input type="number" name="traversino_meters" id="traversino-meters-input" min="1" step="1" />
+                  </label>
+                </div>
+              </div>
 
-            <div class="configurator-section optional-section">
-              <h2>Seleziona Optional</h2>
-              <label>
-                <input
-                  type="checkbox"
-                  name="optional[]"
-                  value="UNK-KIT1S-K1A"
-                  data-name="Kit Anta Ridotta"
-                  data-price="450"
-                />
-                UNK-KIT1S-K1A - Kit Anta Ridotta (+100 €  su Anta)
-              </label><br />
-
-              <label>
-                <input type="checkbox" name="optional[]" value="UNK-PTO" data-name="Push to Open con Soft Close" data-price="100" />
-                UNK-PTO - Push to Open con Soft Close (€ 100)
-              </label><br />
-
-              <label class="optional-trascinamento" style="display: none;">
-                <input
-                  type="checkbox"
-                  name="optional[]"
-                  value="UNK-CAM-L1500"
-                  data-name="Cinta per la sincronizzazione delle ante Maggiorate"
-                  data-price="100"
-                />
-                UNK-CAM-L1500 - Cinta per la sincronizzazione delle ante Maggiorate (€ 100)
-              </label>
-            </div>
-
-            <div class="configurator-section">
-              <h2>Seleziona Maniglie e Nicchie</h2>
-
-              <label>
-                <input
-                  type="number"
-                  name="maniglie_nicchie_quantity[MAQ1015]"
-                  data-name="Coppia di Maniglie Dritte Autoadesive 10 x 160 mm"
-                  data-price="47"
-                  min="0"
-                  value="0"
-                  style="width: 50px; margin-right: 10px;"
-                />
-                <strong>MAQ1015</strong> - Coppia di Maniglie Dritte Autoadesive 10 x 160 mm (€ 47)
-              </label>
-              <br />
-
-              <label>
-                <input
-                  type="number"
-                  name="maniglie_nicchie_quantity[UNK-NTI NO]"
-                  data-name="Coppia di Nicchie Tonde Autoadesive Ø 110 mm"
-                  data-price="60"
-                  min="0"
-                  value="0"
-                  style="width: 50px; margin-right: 10px;"
-                />
-                <strong>UNK-NTI NO</strong> - Coppia di Nicchie Tonde Autoadesive Ø 110 mm (€ 60)
-              </label>
-              <br />
-
-              <label>
-                <input
-                  type="number"
-                  name="maniglie_nicchie_quantity[UNK-MRC200.33 NO]"
-                  data-name="Coppia di Maniglie a C Angolo Retto, 200 x 33 mm"
-                  data-price="65"
-                  min="0"
-                  value="0"
-                  style="width: 50px; margin-right: 10px;"
-                />
-                <strong>UNK-MRC200.33 NO</strong> - Coppia di Maniglie a C Angolo Retto, 200 x 33 mm (€ 65)
-              </label>
-              <br />
-
-              <label>
-                <input
-                  type="number"
-                  name="maniglie_nicchie_quantity[UNK-MRC206.33 NO]"
-                  data-name="Coppia di Maniglie a C 206 x 33 mm"
-                  data-price="70"
-                  min="0"
-                  value="0"
-                  style="width: 50px; margin-right: 10px;"
-                />
-                <strong>UNK-MRC206.33 NO</strong> - Coppia di Maniglie a C 206 x 33 mm (€ 70)
-              </label>
-              <br />
-
-              <label>
-                <input
-                  type="number"
-                  name="maniglie_nicchie_quantity[UNK-KSM NO]"
-                  data-name="Kit Serratura Magnetica per Porta Scorrevole"
-                  data-price="70"
-                  min="0"
-                  value="0"
-                  style="width: 50px; margin-right: 10px;"
-                />
-                <strong>UNK-KSM NO</strong> - Kit Serratura Magnetica per Porta Scorrevole (€ 70)
-              </label>
-              <br />
-
-              <label>
-                <input
-                  type="number"
-                  name="maniglie_nicchie_quantity[NRCI50.220]"
-                  data-name="Coppia di Nicchie Autoadesive 50 x 110 mm"
-                  data-price="70"
-                  min="0"
-                  value="0"
-                  style="width: 50px; margin-right: 10px;"
-                />
-                <strong>NRCI50.220</strong> - Coppia di Nicchie Autoadesive 50 x 110 mm (€ 70)
-              </label>
-              <br />
-
-              <label>
-                <input
-                  type="number"
-                  name="maniglie_nicchie_quantity[NRCI45.220 NO]"
-                  data-name="Coppia di Nicchie Autoadesive 45 x 220 mm"
-                  data-price="76"
-                  min="0"
-                  value="0"
-                  style="width: 50px; margin-right: 10px;"
-                />
-                <strong>NRCI45.220 NO</strong> - Coppia di Nicchie Autoadesive 45 x 220 mm (€ 76)
-              </label>
-              <br />
-            </div>
-
-            <div class="configurator-section">
-              <h2>Seleziona Kit di Lavorazione Profili</h2>
-              <div class="kit-lav-prof">
-                <p><strong>Da acquistare solo al primo ordine</strong></p><br />
-                <label style="display: block;">
-                  <input type="checkbox" name="kit_lavorazione[]" value="UNK-PFT" data-name="Punta per Trapano Foratura Telaio Porta" data-price="16" />
-                  UNK-PFT - Punta per Trapano Foratura Telaio Porta (€ 16)
-                </label>
-                <label class="kit-trascinamento-only" style="display: block;">
-                  <input type="checkbox" name="kit_lavorazione[]" value="UNK-PSC" data-name="Pinza per Serraggio su Cinghia" data-price="152.7" />
-                  UNK-PSC - Pinza per Serraggio su Cinghia (€ 152.70)
-                </label>
-                <label style="display: block;">
-                  <input type="checkbox" name="kit_lavorazione[]" value="UNK-PVT" data-name="Prolunga per Fissaggio Viti su Telaio Porta" data-price="15" />
-                  UNK-PVT - Prolunga per Fissaggio Viti su Telaio Porta (€ 15)
-                </label>
-                <label class="kit-trascinamento-only" style="display: block;">
-                  <input type="checkbox" name="kit_lavorazione[]" value="UNK-DDC" data-name="Dima per Localizzare la Dimensione della Cinghia" data-price="10" />
-                  UNK-DDC - Dima per Localizzare la Dimensione della Cinghia (€ 10)
-                </label>
-                <label style="display: block;">
-                  <input type="checkbox" name="kit_lavorazione[]" value="UNK-DFT" data-name="Dima per Foratura Profili Telaio Porta" data-price="126" />
-                  UNK-DFT - Dima per Foratura Profili Telaio Porta (€ 126)
+              <div class="configurator-section" id="magnetica-optional-section" style="display: none;">
+                <h2>Seleziona Optional per Modello Magnetica</h2>
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-ELB" data-name="Elettroblocco" data-price="230" />
+                  MAG-AC-ELB - Elettroblocco (€ 230)
+                </label><br />
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-TC1" data-name="Telecomando" data-price="130" />
+                  MAG-AC-TC1 - Telecomando (€ 130)
+                </label><br />
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-TC2" data-name="Telecomando Smart" data-price="250" />
+                  MAG-AC-TC2 - Telecomando Smart (€ 250)
+                </label><br />
+                <label>
+                  <input
+                    type="checkbox"
+                    name="optional_magnetica[]"
+                    value="MAG-AC-TC3"
+                    data-name="Telecomando Smart con Supporto Magnetico di Montaggio"
+                    data-price="270"
+                  />
+                  MAG-AC-TC3 - Telecomando Smart con Supporto Magnetico di Montaggio (€ 270)
                 </label>
                 <br />
-                <a id="select-all-kits" style="text-decoration: underline; cursor: pointer; color: blue;">Seleziona Tutti</a>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="optional_magnetica[]"
+                    value="MAG-AC-TNT"
+                    data-name="Tastierino Numerico"
+                    data-price="630"
+                  />
+                  MAG-AC-TNT - Tastierino Numerico con Lettore di Impronte Digitali e Badge (€ 630)
+                </label><br />
+
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CAV" data-name="Cavo di Connessione 4 Fili" data-price="100" />
+                  MAG-AC-CAV - Cavo di Connessione 4 Fili (€ 100)
+                </label><br />
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-MTS" data-name="Mini Sensore Superiore" data-price="280" />
+                  MAG-AC-MTS - Mini Sensore Superiore (€ 280)
+                </label><br />
+
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CSB" data-name="Clean Switch Nero" data-price="350" />
+                  MAG-AC-CSB - Clean Switch Nero (€ 350)
+                </label><br />
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CSW" data-name="Clean Switch Bianco" data-price="350" />
+                  MAG-AC-CSW - Clean Switch Bianco (€ 350)
+                </label><br />
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SBH" data-name="Supporto per Clean Switch Quadrato" data-price="50" />
+                  MAG-AC-SBH - Supporto per Clean Switch Quadrato (€ 50)
+                </label><br />
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SBW" data-name="Supporto per Clean Switch Rettangolare" data-price="60" />
+                  MAG-AC-SBW - Supporto per Clean Switch Rettangolare (€ 60)
+                </label><br />
+                <label>
+                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SYN" data-name="Cavo di Connessione Ante Sincronizzate" data-price="100" />
+                  MAG-AC-SYN - Cavo di Connessione Ante Sincronizzate (€ 100)
+                </label>
+              </div>
+
+              <div class="configurator-section optional-section">
+                <h2>Seleziona Optional</h2>
+                <label>
+                  <input type="checkbox" name="optional[]" value="UNK-KIT1S-K1A" data-name="Kit Anta Ridotta" data-price="450" />
+                  UNK-KIT1S-K1A - Kit Anta Ridotta (+100 €  su Anta)
+                </label><br />
+
+                <label>
+                  <input type="checkbox" name="optional[]" value="UNK-PTO" data-name="Push to Open con Soft Close" data-price="100" />
+                  UNK-PTO - Push to Open con Soft Close (€ 100)
+                </label><br />
+
+                <label class="optional-trascinamento" style="display: none;">
+                  <input
+                    type="checkbox"
+                    name="optional[]"
+                    value="UNK-CAM-L1500"
+                    data-name="Cinta per la sincronizzazione delle ante Maggiorate"
+                    data-price="100"
+                  />
+                  UNK-CAM-L1500 - Cinta per la sincronizzazione delle ante Maggiorate (€ 100)
+                </label>
+              </div>
+
+              <div class="configurator-section">
+                <h2>Seleziona Maniglie e Nicchie</h2>
+
+                <label>
+                  <input
+                    type="number"
+                    name="maniglie_nicchie_quantity[MAQ1015]"
+                    data-name="Coppia di Maniglie Dritte Autoadesive 10 x 160 mm"
+                    data-price="47"
+                    min="0"
+                    value="0"
+                    style="width: 50px; margin-right: 10px;"
+                  />
+                  <strong>MAQ1015</strong> - Coppia di Maniglie Dritte Autoadesive 10 x 160 mm (€ 47)
+                </label>
+                <br />
+
+                <label>
+                  <input
+                    type="number"
+                    name="maniglie_nicchie_quantity[UNK-NTI NO]"
+                    data-name="Coppia di Nicchie Tonde Autoadesive Ø 110 mm"
+                    data-price="60"
+                    min="0"
+                    value="0"
+                    style="width: 50px; margin-right: 10px;"
+                  />
+                  <strong>UNK-NTI NO</strong> - Coppia di Nicchie Tonde Autoadesive Ø 110 mm (€ 60)
+                </label>
+                <br />
+
+                <label>
+                  <input
+                    type="number"
+                    name="maniglie_nicchie_quantity[UNK-MRC200.33 NO]"
+                    data-name="Coppia di Maniglie a C Angolo Retto, 200 x 33 mm"
+                    data-price="65"
+                    min="0"
+                    value="0"
+                    style="width: 50px; margin-right: 10px;"
+                  />
+                  <strong>UNK-MRC200.33 NO</strong> - Coppia di Maniglie a C Angolo Retto, 200 x 33 mm (€ 65)
+                </label>
+                <br />
+
+                <label>
+                  <input
+                    type="number"
+                    name="maniglie_nicchie_quantity[UNK-MRC206.33 NO]"
+                    data-name="Coppia di Maniglie a C 206 x 33 mm"
+                    data-price="70"
+                    min="0"
+                    value="0"
+                    style="width: 50px; margin-right: 10px;"
+                  />
+                  <strong>UNK-MRC206.33 NO</strong> - Coppia di Maniglie a C 206 x 33 mm (€ 70)
+                </label>
+                <br />
+
+                <label>
+                  <input
+                    type="number"
+                    name="maniglie_nicchie_quantity[UNK-KSM NO]"
+                    data-name="Kit Serratura Magnetica per Porta Scorrevole"
+                    data-price="70"
+                    min="0"
+                    value="0"
+                    style="width: 50px; margin-right: 10px;"
+                  />
+                  <strong>UNK-KSM NO</strong> - Kit Serratura Magnetica per Porta Scorrevole (€ 70)
+                </label>
+                <br />
+
+                <label>
+                  <input
+                    type="number"
+                    name="maniglie_nicchie_quantity[NRCI50.220]"
+                    data-name="Coppia di Nicchie Autoadesive 50 x 110 mm"
+                    data-price="70"
+                    min="0"
+                    value="0"
+                    style="width: 50px; margin-right: 10px;"
+                  />
+                  <strong>NRCI50.220</strong> - Coppia di Nicchie Autoadesive 50 x 110 mm (€ 70)
+                </label>
+                <br />
+
+                <label>
+                  <input
+                    type="number"
+                    name="maniglie_nicchie_quantity[NRCI45.220 NO]"
+                    data-name="Coppia di Nicchie Autoadesive 45 x 220 mm"
+                    data-price="76"
+                    min="0"
+                    value="0"
+                    style="width: 50px; margin-right: 10px;"
+                  />
+                  <strong>NRCI45.220 NO</strong> - Coppia di Nicchie Autoadesive 45 x 220 mm (€ 76)
+                </label>
+                <br />
+              </div>
+
+              <div class="configurator-section">
+                <h2>Seleziona Kit di Lavorazione Profili</h2>
+                <div class="kit-lav-prof">
+                  <p><strong>Da acquistare solo al primo ordine</strong></p><br />
+                  <label style="display: block;">
+                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-PFT" data-name="Punta per Trapano Foratura Telaio Porta" data-price="16" />
+                    UNK-PFT - Punta per Trapano Foratura Telaio Porta (€ 16)
+                  </label>
+                  <label class="kit-trascinamento-only" style="display: block;">
+                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-PSC" data-name="Pinza per Serraggio su Cinghia" data-price="152.7" />
+                    UNK-PSC - Pinza per Serraggio su Cinghia (€ 152.70)
+                  </label>
+                  <label style="display: block;">
+                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-PVT" data-name="Prolunga per Fissaggio Viti su Telaio Porta" data-price="15" />
+                    UNK-PVT - Prolunga per Fissaggio Viti su Telaio Porta (€ 15)
+                  </label>
+                  <label class="kit-trascinamento-only" style="display: block;">
+                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-DDC" data-name="Dima per Localizzare la Dimensione della Cinghia" data-price="10" />
+                    UNK-DDC - Dima per Localizzare la Dimensione della Cinghia (€ 10)
+                  </label>
+                  <label style="display: block;">
+                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-DFT" data-name="Dima per Foratura Profili Telaio Porta" data-price="126" />
+                    UNK-DFT - Dima per Foratura Profili Telaio Porta (€ 126)
+                  </label>
+                  <br />
+                  <a id="select-all-kits" style="text-decoration: underline; cursor: pointer; color: blue;">Seleziona Tutti</a>
+                </div>
+              </div>
+
+              <div class="configurator-section configurator-section--note">
+                <button type="button" id="generate-summary">Genera Riepilogo</button>
+                <p class="configurator-note"><strong>* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell'utilizzo del Tool.</strong></p>
+                <p class="configurator-note">Vi preghiamo di utilizzare i cataloghi, i listini, e schede tecniche, a disposizione.</p>
               </div>
             </div>
 
-            <div class="configurator-section configurator-section--note">
-              <button type="button" id="generate-summary">Genera Riepilogo</button>
-              <p class="configurator-note"><strong>* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell'utilizzo del Tool.</strong></p>
-              <p class="configurator-note">Vi preghiamo di utilizzare i cataloghi, i listini, e schede tecniche, a disposizione.</p>
+            <div class="wizard-navigation">
+              <button type="button" class="wizard-button wizard-button--secondary" id="step-prev">Indietro</button>
+              <p id="step-feedback" class="wizard-feedback" role="status" aria-live="polite"></p>
+              <button type="button" class="wizard-button" id="step-next">Avanti</button>
             </div>
-          </div>
+          </form>
 
-          <div class="wizard-navigation">
-            <button type="button" class="wizard-button wizard-button--secondary" id="step-prev">Indietro</button>
-            <p id="step-feedback" class="wizard-feedback" role="status" aria-live="polite"></p>
-            <button type="button" class="wizard-button" id="step-next">Avanti</button>
-          </div>
-        </form>
-
-      </section>
-
-      <section class="card card--results is-collapsed" aria-labelledby="preventivo-titolo">
-        <div class="card__header">
-          <h2 id="preventivo-titolo">Preventivo</h2>
-          <p>Riepilogo economico aggiornato in tempo reale.</p>
-        </div>
-        <div id="quote-results" class="results">
-          <div class="results__highlight">
-            <span>Totale</span>
-            <strong id="quote-total">€ 0,00 + IVA e Spese di Trasporto</strong>
-          </div>
-          <div class="results__summary">
-            <h3>Dati configurazione</h3>
-            <ul id="selection-summary" class="selection-summary"></ul>
-          </div>
-          <div class="results__breakdown" id="quote-breakdown" aria-live="polite"></div>
-        </div>
-      </section>
-
-      <section class="card is-collapsed" aria-labelledby="tagli-titolo">
-        <div class="card__header">
-          <h2 id="tagli-titolo">Tagli profili</h2>
-          <p>Lista dei tagli necessari per la produzione.</p>
-        </div>
-        <table class="cuts-table">
-          <thead>
-            <tr>
-              <th>Elemento</th>
-              <th>Quantità</th>
-              <th>Lunghezza (mm)</th>
-            </tr>
-          </thead>
-          <tbody id="cuts-body"></tbody>
-        </table>
-      </section>
-
-      <section class="card card--visualizer is-collapsed" aria-labelledby="visualizer-titolo">
-        <div class="card__header">
-          <h2 id="visualizer-titolo">Visualizzatore 3D</h2>
-          <p>Anteprima interattiva della porta Akina.</p>
-        </div>
-        <div id="viewer" class="viewer" role="img" aria-label="Anteprima 3D"></div>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <p>© 2024 Akina Doors – Preventivatore professionale</p>
-    </footer>
+          <section class="summary-panel card--results is-collapsed" aria-labelledby="preventivo-titolo">
+            <header class="summary-panel__header">
+              <div>
+                <p class="summary-eyebrow">Riepilogo preventivo</p>
+                <h2 id="preventivo-titolo">Totale configurazione</h2>
+              </div>
+              <div class="summary-total" id="quote-total">€ 0,00 + IVA e Spese di Trasporto</div>
+            </header>
+            <div id="quote-results" class="summary-panel__body">
+              <div class="summary-section">
+                <h3>Dati configurazione</h3>
+                <ul id="selection-summary" class="selection-summary"></ul>
+              </div>
+              <div class="summary-section">
+                <h3>Dettaglio voci</h3>
+                <div class="summary-breakdown" id="quote-breakdown" aria-live="polite"></div>
+              </div>
+              <div class="summary-section">
+                <h3>Tagli profili</h3>
+                <table class="cuts-table">
+                  <thead>
+                    <tr>
+                      <th>Elemento</th>
+                      <th>Quantità</th>
+                      <th>Lunghezza (mm)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cuts-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
 
     <script type="module" src="app.js"></script>
   </body>

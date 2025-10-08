@@ -168,6 +168,12 @@ function formatMeters(value) {
   }).format(value);
 }
 
+function formatMillimeters(value) {
+  return new Intl.NumberFormat('it-IT', {
+    maximumFractionDigits: 0,
+  }).format(Math.max(0, Math.round(value || 0)));
+}
+
 function mmFromCode(code) {
   return Math.round(Number(code || 0) * 100);
 }
@@ -717,14 +723,15 @@ const selectors = {
   optionalCheckboxes: document.querySelectorAll('input[name="optional[]"]'),
   optionalMagneticaCheckboxes: document.querySelectorAll('input[name="optional_magnetica[]"]'),
   selectAllKits: document.getElementById('select-all-kits'),
-  resultsCard: document.querySelector('.card--results'),
-  cutsCard: document.querySelector('[aria-labelledby="tagli-titolo"]'),
-  visualizerCard: document.querySelector('.card--visualizer'),
+  resultsPanel: document.querySelector('.summary-panel'),
   summaryButton: document.getElementById('generate-summary'),
   quoteTotal: document.getElementById('quote-total'),
   quoteBreakdown: document.getElementById('quote-breakdown'),
   summaryList: document.getElementById('selection-summary'),
   cutsBody: document.getElementById('cuts-body'),
+  viewerHeightLabel: document.getElementById('viewer-height-label'),
+  viewerWidthLabel: document.getElementById('viewer-width-label'),
+  viewerTrackLabel: document.getElementById('viewer-track-label'),
 };
 
 const manigliaInputs = Array.from(selectors.maniglieInputs ?? []);
@@ -757,10 +764,9 @@ function showStepFeedback(message = '') {
 }
 
 function toggleSummaryCards(visible) {
-  [selectors.resultsCard, selectors.cutsCard, selectors.visualizerCard].forEach((card) => {
-    if (!card) return;
-    card.classList.toggle('is-collapsed', !visible);
-  });
+  if (selectors.resultsPanel) {
+    selectors.resultsPanel.classList.toggle('is-collapsed', !visible);
+  }
   if (visible) {
     requestAnimationFrame(() => visualizer.handleResize());
   }
@@ -1934,6 +1940,18 @@ function refreshOutputs({ force = false } = {}) {
   renderQuoteBreakdown(quote.categories || []);
   renderSelectionSummary(config, derived);
   renderCutsTable(cuts);
+
+  if (selectors.viewerHeightLabel) {
+    selectors.viewerHeightLabel.textContent = `${formatMillimeters(config.height)} mm`;
+  }
+  if (selectors.viewerWidthLabel) {
+    selectors.viewerWidthLabel.textContent = `A: ${formatMillimeters(config.width)} mm`;
+  }
+  if (selectors.viewerTrackLabel) {
+    const trackLabel = config.lunghezzaBinarioLabel ||
+      (config.lunghezzaBinarioMetri ? `${formatMeters(config.lunghezzaBinarioMetri)} m` : '—');
+    selectors.viewerTrackLabel.textContent = `Binario: ${trackLabel}`;
+  }
 
   const isSoloPannello = config.model === 'SOLO_PANNELLO';
   const slidingLeaves = isSoloPannello ? 0 : Math.max(derived?.numeroAnte || config.leaves || 1, 1);
