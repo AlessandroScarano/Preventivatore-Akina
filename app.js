@@ -365,6 +365,11 @@ const visualizer = new DoorVisualizer(document.getElementById('viewer'));
 
 const selectors = {
   form: document.getElementById('akina-configurator-form'),
+  formSteps: document.querySelectorAll('.form-step'),
+  progressSteps: document.querySelectorAll('.progress-step'),
+  prevButton: document.getElementById('step-prev'),
+  nextButton: document.getElementById('step-next'),
+  stepFeedback: document.getElementById('step-feedback'),
   widthInput: document.getElementById('width'),
   heightInput: document.getElementById('height'),
   modelContainer: document.querySelector('.model-selection'),
@@ -423,6 +428,9 @@ const selectors = {
   optionalCheckboxes: document.querySelectorAll('input[name="optional[]"]'),
   optionalMagneticaCheckboxes: document.querySelectorAll('input[name="optional_magnetica[]"]'),
   selectAllKits: document.getElementById('select-all-kits'),
+  resultsCard: document.querySelector('.card--results'),
+  cutsCard: document.querySelector('[aria-labelledby="tagli-titolo"]'),
+  visualizerCard: document.querySelector('.card--visualizer'),
   summaryButton: document.getElementById('generate-summary'),
   basePrice: document.getElementById('base-price'),
   structurePrice: document.getElementById('structure-price'),
@@ -454,6 +462,107 @@ function toggleRequired(input, isRequired) {
     input.removeAttribute('required');
   }
 }
+
+const formSteps = Array.from(selectors.formSteps ?? []);
+let currentStepIndex = 0;
+
+function showStepFeedback(message = '') {
+  if (!selectors.stepFeedback) return;
+  selectors.stepFeedback.textContent = message;
+}
+
+function toggleSummaryCards(visible) {
+  [selectors.resultsCard, selectors.cutsCard, selectors.visualizerCard].forEach((card) => {
+    if (!card) return;
+    card.classList.toggle('is-collapsed', !visible);
+  });
+}
+
+function updateStep(index) {
+  if (!formSteps.length) return;
+  formSteps.forEach((step, stepIndex) => {
+    const isActive = stepIndex === index;
+    step.classList.toggle('is-active', isActive);
+    step.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+  });
+
+  Array.from(selectors.progressSteps ?? []).forEach((node, stepIndex) => {
+    const isActive = stepIndex === index;
+    node.classList.toggle('is-active', isActive);
+    node.classList.toggle('is-complete', stepIndex < index);
+    if (isActive) {
+      node.setAttribute('aria-current', 'step');
+    } else {
+      node.removeAttribute('aria-current');
+    }
+  });
+
+  if (selectors.prevButton) {
+    selectors.prevButton.disabled = index === 0;
+  }
+
+  if (selectors.nextButton) {
+    selectors.nextButton.style.display = index >= formSteps.length - 1 ? 'none' : 'inline-flex';
+  }
+
+  toggleSummaryCards(index === formSteps.length - 1);
+  showStepFeedback('');
+  currentStepIndex = index;
+}
+
+function validateStep(index) {
+  const step = formSteps[index];
+  if (!step) return true;
+
+  const fields = Array.from(step.querySelectorAll('input, select, textarea')).filter((field) => !field.disabled);
+  fields.forEach((field) => {
+    field.closest('.configurator-section')?.classList.remove('configurator-section--error');
+  });
+
+  for (const field of fields) {
+    const section = field.closest('.configurator-section');
+    if (field.type === 'hidden') {
+      const shouldValidate = field.dataset.stepValidate === 'true' && field.required;
+      if (shouldValidate && !field.value) {
+        section?.classList.add('configurator-section--error');
+        showStepFeedback(field.dataset.validationMessage || 'Completa il campo obbligatorio.');
+        section?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      }
+      continue;
+    }
+
+    if (field.offsetParent === null) {
+      continue;
+    }
+
+    if (!field.checkValidity()) {
+      section?.classList.add('configurator-section--error');
+      field.reportValidity();
+      showStepFeedback(field.validationMessage);
+      return false;
+    }
+  }
+
+  showStepFeedback('');
+  return true;
+}
+
+function goToStep(index, { validateCurrent = false } = {}) {
+  if (!formSteps.length) return;
+  const target = Math.max(0, Math.min(index, formSteps.length - 1));
+  if (validateCurrent && !validateStep(currentStepIndex)) {
+    return;
+  }
+
+  updateStep(target);
+
+  if (target === formSteps.length - 1) {
+    refreshOutputs({ force: true });
+  }
+}
+
+updateStep(0);
 
 function gatherCheckboxDetails(inputs) {
   return Array.from(inputs ?? [])
@@ -1228,11 +1337,17 @@ selectors.lunghezzaBinarioSelect?.addEventListener('change', () => refreshOutput
 selectors.montaggioSelect?.addEventListener('change', () => refreshOutputs());
 selectors.traversinoMetersInput?.addEventListener('input', () => refreshOutputs());
 
-selectors.form?.addEventListener('change', () => {
+selectors.form?.addEventListener('change', (event) => {
+  event.target.closest('.configurator-section')?.classList.remove('configurator-section--error');
+  showStepFeedback('');
   refreshOutputs();
 });
 
 selectors.form?.addEventListener('input', (event) => {
+  if (event.target.closest('.configurator-section')) {
+    event.target.closest('.configurator-section').classList.remove('configurator-section--error');
+  }
+  showStepFeedback('');
   if (event.target.matches('input[type="number"]') && !event.target.classList.contains('hidden')) {
     refreshOutputs();
   }
@@ -1246,7 +1361,26 @@ selectors.selectAllKits?.addEventListener('click', (event) => {
   refreshOutputs();
 });
 
-selectors.summaryButton?.addEventListener('click', () => refreshOutputs({ force: true }));
+selectors.summaryButton?.addEventListener('click', () => {
+  showStepFeedback('');
+  refreshOutputs({ force: true });
+});
+
+selectors.nextButton?.addEventListener('click', () => {
+  goToStep(currentStepIndex + 1, { validateCurrent: true });
+});
+
+selectors.prevButton?.addEventListener('click', () => {
+  goToStep(currentStepIndex - 1);
+});
+
+Array.from(selectors.progressSteps ?? []).forEach((node, index) => {
+  node.addEventListener('click', () => {
+    if (index <= currentStepIndex) {
+      goToStep(index);
+    }
+  });
+});
 
 // Default selections
 modelGroup.select('TRASCINAMENTO');
