@@ -29,6 +29,7 @@
             <li class="progress-step"><span>Pannelli e profili</span></li>
             <li class="progress-step"><span>Scorrimento</span></li>
             <li class="progress-step"><span>Accessori</span></li>
+            <li class="progress-step"><span>Riepilogo</span></li>
           </ol>
         </nav>
       </header>
@@ -55,7 +56,7 @@
                 <div class="dimension-grid">
                   <label>
                     Larghezza vano (mm)
-                    <input type="number" name="width" id="width" min="600" max="3000" step="5" value="1200" required />
+                    <input type="number" name="width" id="width" min="600" max="9000" step="5" value="1200" required />
                   </label>
                   <label>
                     Altezza vano (mm)
@@ -641,10 +642,15 @@
                 </div>
               </div>
 
-              <div class="configurator-section configurator-section--note">
-                <button type="button" id="generate-summary">Genera Riepilogo</button>
+            </div>
+
+            <div class="form-step" data-step="5">
+              <div class="configurator-section configurator-section--summary">
+                <h2>Riepilogo finale</h2>
+                <p>Conferma le tue scelte e genera il preventivo dettagliato comprensivo di lavorazioni e accessori.</p>
+                <button type="button" id="generate-summary" class="wizard-button wizard-button--cta">Genera riepilogo</button>
                 <p class="configurator-note"><strong>* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell'utilizzo del Tool.</strong></p>
-                <p class="configurator-note">Vi preghiamo di utilizzare i cataloghi, i listini, e schede tecniche, a disposizione.</p>
+                <p class="configurator-note">Vi preghiamo di utilizzare i cataloghi, i listini e le schede tecniche a disposizione.</p>
               </div>
             </div>
 
