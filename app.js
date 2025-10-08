@@ -94,8 +94,8 @@ class DoorVisualizer {
       0.1,
       1000
     );
-    this.camera.position.set(140, 180, 320);
-    this.camera.lookAt(new THREE.Vector3(0, 100, 0));
+    this.camera.position.set(180, 180, 360);
+    this.camera.lookAt(new THREE.Vector3(0, 120, 0));
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -125,6 +125,12 @@ class DoorVisualizer {
 
     window.addEventListener('resize', () => this.handleResize());
 
+    this.scaleFactor = 0.1; // 1 unit = 10 mm
+    this.leafGroups = [];
+    this.slideAmplitude = 0;
+    this.currentOpening = 'scorrevole-parete';
+    this.clock = new THREE.Clock();
+
     this.animate();
   }
 
@@ -135,70 +141,258 @@ class DoorVisualizer {
     this.renderer.setSize(clientWidth, clientHeight);
   }
 
-  updateDoor({ width, height, leaves, profileColor, glassColor, opening }) {
+  updateDoor({
+    width,
+    height,
+    leaves,
+    profileColor,
+    glassColor,
+    opening,
+    swing,
+    handle,
+    track,
+    floorGuide,
+  }) {
     this.doorGroup.clear();
+    this.leafGroups = [];
 
-    const doorWidth = width / leaves;
-    const frameDepth = 18;
-    const panelInset = 3;
+    const scale = this.scaleFactor;
+    const totalWidth = width * scale;
+    const doorHeight = height * scale;
+    const frameThickness = 4.5; // ≈45 mm
+    const stileWidth = 4.5;
+    const panelInset = 0.3;
+    const baseOffset = 1.2; // distanza da terra
 
-    for (let i = 0; i < leaves; i += 1) {
-      const leafGroup = new THREE.Group();
-      const offsetX = (doorWidth + 20) * (i - (leaves - 1) / 2);
-      leafGroup.position.x = offsetX;
+    const frameMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(profileColor),
+      metalness: 0.45,
+      roughness: 0.3,
+    });
 
-      const frameMaterial = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(profileColor),
-        metalness: 0.45,
+    const panelMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(glassColor),
+      metalness: 0.1,
+      roughness: 0.08,
+      transparent: true,
+      opacity: 0.82,
+    });
+
+    const createHandle = (type) => {
+      const handleMaterial = new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#d8dbe6'),
+        metalness: 0.8,
+        roughness: 0.25,
+      });
+
+      if (type === 'totale') {
+        const geometry = new THREE.BoxGeometry(scale * 40, doorHeight - scale * 240, scale * 18);
+        return new THREE.Mesh(geometry, handleMaterial);
+      }
+
+      if (type === 'incassata') {
+        const geometry = new THREE.BoxGeometry(scale * 30, scale * 240, scale * 6);
+        return new THREE.Mesh(geometry, handleMaterial);
+      }
+
+      const geometry = new THREE.CapsuleGeometry(scale * 20, scale * 200, 6, 12);
+      return new THREE.Mesh(geometry, handleMaterial);
+    };
+
+    const leafWidth = totalWidth / leaves;
+    const slideSpacing = scale * (leaves === 1 ? 18 : 24);
+    const handleDepthOffset = frameThickness / 2 + 0.6;
+
+    const baseY = doorHeight / 2 + baseOffset;
+
+    const trackGroup = new THREE.Group();
+    if (opening !== 'battente') {
+      const trackLength =
+        totalWidth + (track === 'filo-muro' ? scale * 120 : track === 'incasso' ? scale * 80 : scale * 60);
+      const trackHeight = scale * 40;
+      const trackDepth = frameThickness + scale * 6;
+      const trackMaterial = new THREE.MeshStandardMaterial({
+        color:
+          track === 'filo-muro'
+            ? '#bfc3cc'
+            : track === 'incasso'
+            ? '#ccd0d8'
+            : '#9aa0ad',
+        metalness: 0.65,
         roughness: 0.3,
       });
 
-      const panelMaterial = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(glassColor),
-        metalness: 0.15,
-        roughness: 0.1,
-        transparent: true,
-        opacity: 0.82,
-      });
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(trackLength, trackHeight, trackDepth), trackMaterial);
+      rail.position.set(0, baseOffset + doorHeight + trackHeight / 2, -frameThickness / 2);
 
-      const railGeometry = new THREE.BoxGeometry(doorWidth, 45, frameDepth);
-      const stileGeometry = new THREE.BoxGeometry(45, height - 90, frameDepth);
-      const panelGeometry = new THREE.BoxGeometry(
-        Math.max(doorWidth - 90, 40),
-        height - 120,
-        frameDepth - panelInset
-      );
-
-      const topRail = new THREE.Mesh(railGeometry, frameMaterial);
-      topRail.position.set(0, height / 2 - 22.5, 0);
-      const bottomRail = new THREE.Mesh(railGeometry, frameMaterial);
-      bottomRail.position.set(0, -height / 2 + 22.5, 0);
-
-      const leftStile = new THREE.Mesh(stileGeometry, frameMaterial);
-      leftStile.position.set(-doorWidth / 2 + 22.5, 0, 0);
-      const rightStile = new THREE.Mesh(stileGeometry, frameMaterial);
-      rightStile.position.set(doorWidth / 2 - 22.5, 0, 0);
-
-      const panel = new THREE.Mesh(panelGeometry, panelMaterial);
-      panel.position.set(0, 0, -panelInset / 2);
-
-      leafGroup.add(topRail, bottomRail, leftStile, rightStile, panel);
-
-      if (opening === 'battente') {
-        const angle = THREE.MathUtils.degToRad(leaves === 1 ? 12 : i === 0 ? -10 : 10);
-        leafGroup.rotation.y = angle;
-        leafGroup.position.z = i === 0 ? 0 : 12;
-      } else if (opening === 'scorrevole-muro') {
-        leafGroup.position.z = i % 2 === 0 ? 6 : -6;
+      if (track !== 'incasso') {
+        const cover = new THREE.Mesh(
+          new THREE.BoxGeometry(trackLength, trackHeight / 2, trackDepth + scale * 14),
+          new THREE.MeshStandardMaterial({
+            color: track === 'filo-muro' ? '#e2e5ed' : '#d4d7df',
+            metalness: 0.3,
+            roughness: 0.6,
+          })
+        );
+        cover.position.set(0, rail.position.y + trackHeight / 1.8, rail.position.z + scale * 6);
+        trackGroup.add(cover);
       }
 
+      trackGroup.add(rail);
+    } else {
+      const jambMaterial = new THREE.MeshStandardMaterial({
+        color: '#b7b9c2',
+        metalness: 0.2,
+        roughness: 0.6,
+      });
+      const jambThickness = scale * 45;
+      const jambWidth = scale * 35;
+      const jambHeight = doorHeight + scale * 120;
+      const jambLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(jambWidth, jambHeight, jambThickness),
+        jambMaterial
+      );
+      jambLeft.position.set(-totalWidth / 2 - jambWidth / 2, baseOffset + jambHeight / 2 - scale * 60, -frameThickness);
+      const jambRight = jambLeft.clone();
+      jambRight.position.x = totalWidth / 2 + jambWidth / 2;
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(totalWidth + jambWidth * 2, jambWidth, jambThickness),
+        jambMaterial
+      );
+      head.position.set(0, jambLeft.position.y + jambHeight / 2 + jambWidth / 2, -frameThickness);
+      trackGroup.add(jambLeft, jambRight, head);
+    }
+
+    const guideGroup = new THREE.Group();
+    if (opening !== 'battente') {
+      const guideMaterial = new THREE.MeshStandardMaterial({
+        color: floorGuide === 'invisibile' ? '#a4aab6' : floorGuide === 'autoallineante' ? '#88909f' : '#767d8a',
+        metalness: 0.4,
+        roughness: 0.45,
+      });
+      const guideWidth = floorGuide === 'autoallineante' ? scale * 120 : scale * 90;
+      const guideHeight = scale * 20;
+      const guideDepth = scale * 40;
+      const guide = new THREE.Mesh(
+        new THREE.BoxGeometry(guideWidth, guideHeight, guideDepth),
+        guideMaterial
+      );
+      guide.position.set(0, baseOffset - guideHeight / 2, 0);
+      guideGroup.add(guide);
+    }
+
+    const backdropMaterial = new THREE.MeshStandardMaterial({
+      color: '#121826',
+      metalness: 0.05,
+      roughness: 0.9,
+      transparent: true,
+      opacity: 0.92,
+    });
+    const backdrop = new THREE.Mesh(
+      new THREE.PlaneGeometry(totalWidth + scale * 240, doorHeight + scale * 260),
+      backdropMaterial
+    );
+    backdrop.position.set(0, baseOffset + doorHeight / 2, -frameThickness * 2);
+
+    for (let i = 0; i < leaves; i += 1) {
+      const leafGroup = new THREE.Group();
+      const offsetX = (leafWidth + slideSpacing) * (i - (leaves - 1) / 2);
+      leafGroup.position.set(offsetX, baseY, 0);
+
+      const railHeight = scale * 45;
+      const stileHeight = doorHeight - scale * 90;
+      const panelWidth = Math.max(leafWidth - scale * 90, scale * 40);
+      const panelHeight = doorHeight - scale * 120;
+
+      const topRail = new THREE.Mesh(
+        new THREE.BoxGeometry(leafWidth, railHeight, frameThickness),
+        frameMaterial
+      );
+      topRail.position.set(0, doorHeight / 2 - railHeight / 2, 0);
+
+      const bottomRail = topRail.clone();
+      bottomRail.position.y = -doorHeight / 2 + railHeight / 2;
+
+      const stileGeometry = new THREE.BoxGeometry(stileWidth, stileHeight, frameThickness);
+      const leftStile = new THREE.Mesh(stileGeometry, frameMaterial);
+      leftStile.position.set(-leafWidth / 2 + stileWidth / 2, 0, 0);
+      const rightStile = leftStile.clone();
+      rightStile.position.x = leafWidth / 2 - stileWidth / 2;
+
+      const panel = new THREE.Mesh(
+        new THREE.BoxGeometry(panelWidth, panelHeight, frameThickness - panelInset),
+        panelMaterial
+      );
+      panel.position.set(0, 0, -panelInset / 2);
+
+      const handleMesh = createHandle(handle);
+      const handleOffsetX = (() => {
+        if (opening === 'battente') {
+          if (leaves === 1) {
+            if (swing === 'sinistra') return leafWidth / 2 - scale * 70;
+            if (swing === 'destra') return -leafWidth / 2 + scale * 70;
+            return 0;
+          }
+          if (leaves === 2) {
+            return i === 0 ? leafWidth / 2 - scale * 70 : -leafWidth / 2 + scale * 70;
+          }
+        }
+
+        if (leaves === 1) {
+          return leafWidth / 2 - scale * 80;
+        }
+        return i === 0 ? leafWidth / 2 - scale * 80 : -leafWidth / 2 + scale * 80;
+      })();
+
+      handleMesh.position.set(handleOffsetX, 0, handleDepthOffset);
+      if (handle === 'incassata') {
+        handleMesh.position.z = handleDepthOffset - scale * 2.2;
+      } else if (handle === 'totale') {
+        handleMesh.position.z = handleDepthOffset + scale * 0.8;
+      }
+
+      leafGroup.add(topRail, bottomRail, leftStile, rightStile, panel, handleMesh);
+
+      if (opening === 'battente') {
+        const baseRotation = THREE.MathUtils.degToRad(leaves === 1 ? 12 : i === 0 ? -10 : 10);
+        leafGroup.rotation.y = baseRotation;
+        leafGroup.userData.baseRotation = baseRotation;
+      } else {
+        leafGroup.userData.baseRotation = 0;
+      }
+
+      if (opening === 'scorrevole-muro') {
+        leafGroup.position.z = i % 2 === 0 ? frameThickness / 1.5 : -frameThickness / 1.5;
+      }
+
+      leafGroup.userData.baseX = offsetX;
+      this.leafGroups.push(leafGroup);
       this.doorGroup.add(leafGroup);
     }
+
+    this.slideAmplitude = opening.startsWith('scorrevole') ? Math.min(leafWidth * 0.25, scale * 120) : 0;
+    this.currentOpening = opening;
+
+    this.doorGroup.add(backdrop, trackGroup, guideGroup);
   }
 
   animate() {
     requestAnimationFrame(() => this.animate());
-    this.doorGroup.rotation.y = Math.sin(Date.now() * 0.00035) * 0.18;
+    const elapsed = this.clock.getElapsedTime();
+
+    if (this.currentOpening === 'scorrevole-parete' || this.currentOpening === 'scorrevole-muro') {
+      this.leafGroups.forEach((group, index) => {
+        const direction = index % 2 === 0 ? 1 : -1;
+        group.position.x = group.userData.baseX + Math.sin(elapsed * 0.6) * this.slideAmplitude * direction;
+      });
+    } else if (this.currentOpening === 'battente') {
+      this.leafGroups.forEach((group, index) => {
+        const wobble = THREE.MathUtils.degToRad(2.2) * (index % 2 === 0 ? 1 : -1);
+        group.rotation.y = group.userData.baseRotation + Math.sin(elapsed * 0.7) * wobble;
+      });
+    }
+
+    this.doorGroup.rotation.y = Math.sin(elapsed * 0.25) * 0.18;
     this.renderer.render(this.scene, this.camera);
   }
 }
@@ -374,6 +568,10 @@ function updateQuote() {
     profileColor: PROFILE_FINISHES[values.profileFinish].color,
     glassColor: GLASS_TYPES[values.glassType].color,
     opening: values.opening,
+    swing: values.swing,
+    handle: values.handle,
+    track: values.track,
+    floorGuide: values.floorGuide,
   });
 }
 
