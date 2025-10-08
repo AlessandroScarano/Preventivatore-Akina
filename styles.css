@@ -4,6 +4,7 @@
   --bg-alt: rgba(21, 25, 40, 0.65);
   --card-bg: rgba(19, 22, 35, 0.75);
   --accent: #f5a623;
+  --accent-light: #ffe0a3;
   --accent-strong: #ff7b39;
   --text: #f4f6ff;
   --text-muted: #a5acc6;
@@ -479,27 +480,41 @@ img {
   font-weight: 600;
 }
 
-.results__details dl {
+
+.results__breakdown {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+}
+
+.quote-breakdown__section {
+  padding: 1.25rem 1.5rem;
+  border-radius: 18px;
+  border: 1px solid rgba(118, 141, 189, 0.22);
+  background: linear-gradient(135deg, rgba(19, 27, 48, 0.65), rgba(15, 21, 38, 0.85));
+  box-shadow: 0 15px 30px rgba(5, 8, 17, 0.35);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.quote-breakdown__section h3 {
   margin: 0;
-}
-
-.results__details div {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: baseline;
-}
-
-.results__details dt {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-}
-
-.results__details dd {
-  margin: 0;
+  font-size: 1.05rem;
   font-weight: 600;
+  color: var(--accent-light);
+}
+
+.quote-breakdown__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.quote-breakdown__item {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 .results__summary h3 {

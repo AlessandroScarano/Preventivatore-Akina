@@ -1,38 +1,153 @@
 import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
 
-const BASE_RATE = 380;
-const MIN_AREA = 1.3;
-
 const MODEL_CONFIG = {
-  TRASCINAMENTO: { label: 'Trascinamento', multiplier: 1.22, defaultOpening: 'scorrevole-parete' },
-  INDIPENDENTE: { label: 'Indipendente', multiplier: 1.18, defaultOpening: 'scorrevole-parete' },
-  MAGNETICA: { label: 'Magnetica', multiplier: 1.45, defaultOpening: 'scorrevole-parete' },
-  SINGOLA: { label: 'Singola', multiplier: 1.08, defaultOpening: 'scorrevole-parete' },
-  SOLO_PANNELLO: { label: 'Solo pannello fisso', multiplier: 0.9, defaultOpening: 'scorrevole-parete' },
-  SOLO_ANTA: { label: 'Solo anta', multiplier: 1.05, defaultOpening: 'scorrevole-parete' },
+  TRASCINAMENTO: { label: 'Trascinamento', defaultOpening: 'scorrevole-parete' },
+  INDIPENDENTE: { label: 'Indipendente', defaultOpening: 'scorrevole-parete' },
+  MAGNETICA: { label: 'Magnetica', defaultOpening: 'scorrevole-parete' },
+  SINGOLA: { label: 'Singola', defaultOpening: 'battente' },
+  SOLO_PANNELLO: { label: 'Solo pannello fisso', defaultOpening: 'fisso' },
+  SOLO_ANTA: { label: 'Solo anta', defaultOpening: 'scorrevole-parete' },
 };
 
 const MODEL_ANTE_OPTIONS = {
-  TRASCINAMENTO: [2, 3, 4],
-  INDIPENDENTE: [2, 3, 4],
+  TRASCINAMENTO: [2, 3, 4, 5, 6, 7, 8, 9, 10],
+  INDIPENDENTE: [2, 3, 4, 5, 6, 7, 8, 9, 10],
   MAGNETICA: [1, 2],
-  SINGOLA: [1, 2],
   DEFAULT: [1, 2],
 };
 
 const BINARIO_CONFIG = {
-  'A vista': { label: 'A vista', multiplier: 1, track: 'standard' },
-  Nascosto: { label: 'Nascosto nel cartongesso', multiplier: 1.08, track: 'incasso' },
+  'A vista': { label: 'A vista', track: 'standard' },
+  Nascosto: { label: 'Nascosto nel cartongesso', track: 'incasso' },
 };
 
-const DOOR_BOX_PRICE = 420;
-const PANNELLO_FISSO_PRICE = 150;
-const PANNELLI_BINARIO_EXTRA = 65;
-const PROFILO_BINARIO_EXTRA = 95;
-const MANUAL_PANEL_RATE = 0.18;
-const ANTE_NASCOSTE_EXTRA = 120;
-const BINARIO_EXTRA_PER_MM = 0.06;
-const TRAVERSINO_PRICE_PER_METER = 42;
+const TRACK_LENGTH_OPTIONS = {
+  DEFAULT: [
+    { code: 20, meters: 2, label: '2,0 Metri' },
+    { code: 30, meters: 3, label: '3,0 Metri' },
+    { code: 40, meters: 4, label: '4,0 Metri' },
+    { code: 60, meters: 6, label: '6,0 Metri' },
+  ],
+  SINGOLA: {
+    Parete: [
+      { code: 25, meters: 2.5, label: '2,5 Metri' },
+      { code: 40, meters: 4, label: '4,0 Metri' },
+    ],
+    'A soffitto': [
+      { code: 20, meters: 2, label: '2,0 Metri' },
+      { code: 30, meters: 3, label: '3,0 Metri' },
+      { code: 40, meters: 4, label: '4,0 Metri' },
+      { code: 60, meters: 6, label: '6,0 Metri' },
+    ],
+  },
+  MAGNETICA: {
+    'A vista': [
+      { code: 20, meters: 2, label: '2,0 Metri' },
+      { code: 27, meters: 2.7, label: '2,7 Metri' },
+      { code: 34, meters: 3.4, label: '3,4 Metri' },
+    ],
+    Nascosto: [
+      { code: 21, meters: 2.1, label: '2,1 Metri' },
+      { code: 28, meters: 2.8, label: '2,8 Metri' },
+    ],
+  },
+};
+
+const PRICE_TABLE = {
+  TRACKS: {
+    STANDARD: {
+      PRIMARY: {
+        20: { code: 'UNK-GS1-L20', price: 309, description: 'Binario principale 2 m' },
+        30: { code: 'UNK-GS1-L30', price: 463, description: 'Binario principale 3 m' },
+        40: { code: 'UNK-GS1-L40', price: 614, description: 'Binario principale 4 m' },
+        60: { code: 'UNK-GS1-L60', price: 921, description: 'Binario principale 6 m' },
+      },
+      EXTRA: {
+        20: { code: 'UNK-GS2-L20', price: 244, description: 'Binario aggiuntivo 2 m' },
+        30: { code: 'UNK-GS2-L30', price: 370, description: 'Binario aggiuntivo 3 m' },
+        40: { code: 'UNK-GS2-L40', price: 454, description: 'Binario aggiuntivo 4 m' },
+        60: { code: 'UNK-GS2-L60', price: 721, description: 'Binario aggiuntivo 6 m' },
+      },
+    },
+    SINGOLA: {
+      SOFFITTO: {
+        20: { code: 'UNK-GS1-L20', price: 309, description: 'Binario principale 2 m' },
+        30: { code: 'UNK-GS1-L30', price: 463, description: 'Binario principale 3 m' },
+        40: { code: 'UNK-GS1-L40', price: 614, description: 'Binario principale 4 m' },
+        60: { code: 'UNK-GS1-L60', price: 921, description: 'Binario principale 6 m' },
+      },
+      PARETE: {
+        25: { code: 'UNK-GP1-L25', price: 797, description: 'Kit binario parete 2,5 m' },
+        40: { code: 'UNK-GP1-L40', price: 1275, description: 'Kit binario parete 4 m' },
+      },
+    },
+    MAGNETICA: {
+      VISTA: {
+        20: { code: 'M100-P40-L20', price: 1850, description: 'Magnetica a vista 2 m (per anta)' },
+        27: { code: 'M100-P40-L27', price: 2050, description: 'Magnetica a vista 2,7 m (per anta)' },
+        34: { code: 'M100-P40-L34', price: 2250, description: 'Magnetica a vista 3,4 m (per anta)' },
+      },
+      NASCOSTO: {
+        21: { code: 'M100-CS55-L21', price: 2200, description: 'Magnetica incassata 2,1 m (per anta)' },
+        28: { code: 'M100-CS55-L28', price: 2450, description: 'Magnetica incassata 2,8 m (per anta)' },
+      },
+    },
+    FIXED_EXTRA: { code: 'UNK-GS1-L20', price: 309, description: 'Binario extra per pannello fisso' },
+  },
+  COVERS: {
+    STANDARD: { code: 'UNK-CCS-L30 NO', price: 40, description: 'Cover di montaggio' },
+    MAGNETICA: {
+      20: {
+        FRONT: { code: 'M100-CF-L20', price: 75, description: 'Cover frontale 2 m' },
+        TOP: { code: 'M100-CS-L20', price: 35, description: 'Cover superiore 2 m' },
+        MOUNT: { code: 'M100-PM-L20', price: 100, description: 'Profilo montaggio 2 m' },
+      },
+      27: {
+        FRONT: { code: 'M100-CF-L27', price: 95, description: 'Cover frontale 2,7 m' },
+        TOP: { code: 'M100-CS-L27', price: 45, description: 'Cover superiore 2,7 m' },
+        MOUNT: { code: 'M100-PM-L27', price: 130, description: 'Profilo montaggio 2,7 m' },
+      },
+    },
+  },
+  SCORRIMENTO: {
+    KIT1: { code: 'UNK-KIT1-K1A', price: 350, description: 'Kit scorrimento anta (prima/ultima)' },
+    KIT2: { code: 'UNK-KIT2-K1A', price: 333, description: 'Kit scorrimento anta centrale' },
+    KIT3: { code: 'UNK-KIT3-K1A', price: 343, description: 'Kit scorrimento anta centrale maggiorata' },
+    KIT1S: { code: 'UNK-KIT1S-K1A', price: 450, description: 'Kit anta ridotta' },
+    PUSH_TO_OPEN: { code: 'UNK-PTO', price: 100, description: 'Push to Open con Soft Close' },
+    CINTA_MAGGIORATA: { code: 'UNK-CAM-L1500', price: 100, description: 'Cinta sincronizzazione ante maggiorate' },
+  },
+  FISSI: {
+    PROFILI: {
+      20: { code: 'UNK-GS2-L20', price: 244, description: 'Profilo superiore fissi 2 m' },
+      30: { code: 'UNK-GS2-L30', price: 370, description: 'Profilo superiore fissi 3 m' },
+      40: { code: 'UNK-GS2-L40', price: 454, description: 'Profilo superiore fissi 4 m' },
+      60: { code: 'UNK-GS2-L60', price: 721, description: 'Profilo superiore fissi 6 m' },
+    },
+    KIT_ACCESSORI: { code: 'UNK-PF-K1A', price: 100, description: 'Kit accessori pannello fisso' },
+    TELAIO: { code: 'UNK-TK3-L30 NO', price: 534, description: 'Telaio per pannello fisso' },
+  },
+  TELAI: {
+    PER_ANTA: { code: 'UNK-TK1-L30', price: 541, description: 'Telaio anta scorrevole' },
+    CENTRALE: { code: 'UNK-TK2-L30', price: 549, description: 'Telaio anta centrale' },
+    SINGOLA_STANDARD: { code: 'UNK-TK3-L30', price: 534, description: 'Telaio anta singola' },
+  },
+  DOOR_BOX: {
+    Destra: { code: 'UNK-DBDX-K1A', price: 919, description: 'Door Box Destra' },
+    Sinistra: { code: 'UNK-BDSX-K1A', price: 919, description: 'Door Box Sinistra' },
+  },
+  MANIGLIE: {
+    DEP01: { code: 'DEP01', price: 23.5, description: 'Traversino decorativo adesivo (m)' },
+  },
+};
+
+const MAGNETICA_DEPENDENCIES = new Map([
+  ['MAG-AC-CSB', 'MAG-AC-CAV'],
+  ['MAG-AC-CSW', 'MAG-AC-CAV'],
+]);
+
+const LARGHEZZA_MIN = 400;
+const LARGHEZZA_MAX = 1500;
 
 const DEFAULT_PROFILE_COLOR = '#23283a';
 const DEFAULT_GLASS_COLOR = '#d6e9ff';
@@ -41,6 +156,45 @@ const formatter = new Intl.NumberFormat('it-IT', {
   style: 'currency',
   currency: 'EUR',
 });
+
+function formatCurrency(value) {
+  return formatter.format(value);
+}
+
+function formatMeters(value) {
+  return new Intl.NumberFormat('it-IT', {
+    minimumFractionDigits: value % 1 === 0 ? 0 : 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function mmFromCode(code) {
+  return Math.round(Number(code || 0) * 100);
+}
+
+function findTrackOptions(model, binario, montaggio) {
+  if (model === 'MAGNETICA') {
+    const family = TRACK_LENGTH_OPTIONS.MAGNETICA[binario === 'A vista' ? 'A vista' : 'Nascosto'];
+    return family ?? [];
+  }
+  if (model === 'SINGOLA') {
+    const key = montaggio === 'Parete' ? 'Parete' : 'A soffitto';
+    return TRACK_LENGTH_OPTIONS.SINGOLA[key] ?? [];
+  }
+  return TRACK_LENGTH_OPTIONS.DEFAULT;
+}
+
+function addOrUpdateItem(list, item) {
+  if (!item || !item.codice) return;
+  const existing = list.find((entry) => entry.codice === item.codice);
+  if (existing) {
+    existing.quantita += item.quantita;
+    if (item.descrizione) existing.descrizione = item.descrizione;
+    if (typeof item.prezzo === 'number') existing.prezzo = item.prezzo;
+    return;
+  }
+  list.push({ ...item });
+}
 
 class DoorVisualizer {
   constructor(container) {
@@ -567,12 +721,8 @@ const selectors = {
   cutsCard: document.querySelector('[aria-labelledby="tagli-titolo"]'),
   visualizerCard: document.querySelector('.card--visualizer'),
   summaryButton: document.getElementById('generate-summary'),
-  basePrice: document.getElementById('base-price'),
-  structurePrice: document.getElementById('structure-price'),
-  finishPrice: document.getElementById('finish-price'),
-  handlePrice: document.getElementById('handle-price'),
-  accessoriesPrice: document.getElementById('accessories-price'),
-  totalPrice: document.getElementById('total-price'),
+  quoteTotal: document.getElementById('quote-total'),
+  quoteBreakdown: document.getElementById('quote-breakdown'),
   summaryList: document.getElementById('selection-summary'),
   cutsBody: document.getElementById('cuts-body'),
 };
@@ -712,6 +862,30 @@ function gatherCheckboxDetails(inputs) {
     }));
 }
 
+function getCheckboxMeta(inputs, value) {
+  const node = Array.from(inputs ?? []).find((input) => input.value === value);
+  if (!node) return null;
+  return {
+    value: node.value,
+    name: node.dataset.name || node.value,
+    price: Number(node.dataset.price || 0),
+  };
+}
+
+function setOptionalChecked(code, checked) {
+  const checkbox = Array.from(selectors.optionalCheckboxes ?? []).find((input) => input.value === code);
+  if (!checkbox) return;
+  checkbox.checked = checked;
+  checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function setMagneticaOptionalChecked(code, checked) {
+  const checkbox = Array.from(selectors.optionalMagneticaCheckboxes ?? []).find((input) => input.value === code);
+  if (!checkbox) return;
+  checkbox.checked = checked;
+  checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 function getCardLabel(container, selector, value, fallback = '—') {
   if (!container || !value) return fallback;
   const option = Array.from(container.querySelectorAll(selector)).find(
@@ -801,6 +975,7 @@ function handleNumeroPannelliFissiChange() {
   if (!showQuestion && pannelliSuBinariGroup) {
     pannelliSuBinariGroup.clear();
   }
+  updateTrackLengthOptions();
 }
 
 function handlePannelloFissoChange(value) {
@@ -827,6 +1002,7 @@ function handlePannelloFissoChange(value) {
       pannelloDimensionGroup.select('uguale_anta');
     }
   }
+  updateTrackLengthOptions();
 }
 
 function handleSceltaPannelloFissoChange(value) {
@@ -848,6 +1024,7 @@ function handleDoorBoxChange(value) {
   if (!enabled && doorBoxMountingGroup) {
     doorBoxMountingGroup.clear();
   }
+  setOptionalChecked(PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.code, enabled);
 }
 
 function handleTraversinoChange(value) {
@@ -863,48 +1040,92 @@ function handleAnteNascosteChange() {
   updateTrackLengthOptions();
 }
 
+function resolveMontaggioValue(model) {
+  const binario = selectors.binarioInput?.value || 'A vista';
+  const pannelloFisso = selectors.pannelloFissoInput?.value || 'No';
+  const pannelliSuBinari = selectors.pannelliSuBinariInput?.value || '';
+
+  if (model === 'MAGNETICA' && binario === 'Nascosto') {
+    if (selectors.montaggioSelect) {
+      selectors.montaggioSelect.value = 'A soffitto';
+      selectors.montaggioSelect.setAttribute('disabled', 'true');
+    }
+    return 'A soffitto';
+  }
+
+  let forcedValue = '';
+  if (model === 'SINGOLA' && pannelloFisso === 'Si' && pannelliSuBinari === 'No') {
+    forcedValue = 'A soffitto';
+  }
+
+  if (selectors.montaggioSelect) {
+    if (model === 'SINGOLA' || (model === 'MAGNETICA' && binario === 'A vista')) {
+      selectors.montaggioSelect.removeAttribute('disabled');
+      if (!selectors.montaggioSelect.value) {
+        selectors.montaggioSelect.value = 'A soffitto';
+      }
+      if (forcedValue) {
+        selectors.montaggioSelect.value = forcedValue;
+        selectors.montaggioSelect.setAttribute('disabled', 'true');
+      }
+    } else {
+      selectors.montaggioSelect.value = 'A soffitto';
+      selectors.montaggioSelect.setAttribute('disabled', 'true');
+    }
+  }
+
+  if (forcedValue) return forcedValue;
+  if (model === 'SINGOLA') return selectors.montaggioSelect?.value || 'A soffitto';
+  if (model === 'MAGNETICA' && binario === 'A vista') {
+    return selectors.montaggioSelect?.value || 'A soffitto';
+  }
+  return 'A soffitto';
+}
+
+function shouldShowMontaggioSection(model) {
+  const binario = selectors.binarioInput?.value || 'A vista';
+  if (model === 'SINGOLA') return true;
+  if (model === 'MAGNETICA' && binario === 'A vista') return true;
+  return false;
+}
+
+function syncMontaggioVisibility(model) {
+  const show = shouldShowMontaggioSection(model);
+  setFlexVisibility(selectors.montaggioSection, show);
+  toggleRequired(selectors.montaggioSelect, show);
+}
+
 function updateTrackLengthOptions() {
   const select = selectors.lunghezzaBinarioSelect;
   if (!select) return;
-  const width = Number(selectors.widthInput?.value) || 0;
-  if (!width) {
-    select.innerHTML = '';
-    selectors.lunghezzaBinarioMsg.textContent = '';
-    return;
-  }
-
-  const suggestions = new Set([
-    Math.round(width * 1.05),
-    Math.round(width * 1.2),
-    Math.round(width * 1.35),
-  ]);
-
-  if (selectors.anteNascosteInput?.value === 'Si') {
-    suggestions.add(Math.round(width * 1.5));
-  }
-
-  const sorted = Array.from(suggestions).filter((value) => value > 0).sort((a, b) => a - b);
+  const model = document.getElementById('model-select')?.value || 'TRASCINAMENTO';
+  const binario = selectors.binarioInput?.value || 'A vista';
+  syncMontaggioVisibility(model);
+  const montaggio = resolveMontaggioValue(model);
+  const options = findTrackOptions(model, binario, montaggio);
   const previous = select.value;
   select.innerHTML = '';
 
-  sorted.forEach((length) => {
+  options.forEach(({ code, meters, label }) => {
     const option = document.createElement('option');
-    option.value = String(length);
-    option.textContent = `${length} mm`;
+    option.value = String(code);
+    option.dataset.code = String(code);
+    option.dataset.meters = String(meters);
+    option.dataset.mm = String(mmFromCode(code));
+    option.dataset.label = label;
+    option.textContent = label;
     select.appendChild(option);
   });
 
-  const fallback =
-    sorted.length === 0
-      ? ''
-      : sorted.includes(Number(previous))
+  if (options.length > 0) {
+    const preferred = options.find((item) => String(item.code) === previous)
       ? previous
-      : String(sorted[sorted.length - 1]);
-  if (fallback) {
-    select.value = fallback;
+      : String(options[0].code);
+    select.value = preferred;
+    selectors.lunghezzaBinarioMsg.textContent = '';
+  } else {
+    selectors.lunghezzaBinarioMsg.textContent = 'Compila i campi precedenti per mostrare le lunghezze disponibili.';
   }
-
-  selectors.lunghezzaBinarioMsg.textContent = `Suggerimento: aggiungi almeno ${Math.round(width * 0.25)} mm rispetto alla luce per lo scorrimento ottimale.`;
 }
 
 function collectConfiguration() {
@@ -928,6 +1149,12 @@ function collectConfiguration() {
   const numeroAnteValue = Number(data.get('numero_ante')) || 0;
   const soloPannelloCount = Number(data.get('num_panels_pannello')) || 0;
   const soloAntaCount = Number(data.get('num_panels_anta')) || 0;
+
+  const trackOption = selectors.lunghezzaBinarioSelect?.selectedOptions?.[0] || null;
+  const trackCode = Number(trackOption?.dataset.code || data.get('lunghezza_binario') || 0);
+  const trackMeters = Number(trackOption?.dataset.meters || 0);
+  const trackLabel = trackOption?.dataset.label || trackOption?.textContent?.trim() || '';
+  const trackMm = Number(trackOption?.dataset.mm || 0);
 
   const leaves = (() => {
     if (model === 'SOLO_PANNELLO') return soloPannelloCount || 1;
@@ -955,7 +1182,10 @@ function collectConfiguration() {
     doorBoxMounting: data.get('door_box_mounting') || '',
     binario: data.get('binario') || 'A vista',
     montaggio: data.get('montaggio') || '',
-    lunghezzaBinario: Number(data.get('lunghezza_binario')) || 0,
+    lunghezzaBinario: trackMm || mmFromCode(trackCode),
+    lunghezzaBinarioCodice: trackCode,
+    lunghezzaBinarioMetri: trackMeters,
+    lunghezzaBinarioLabel: trackLabel,
     traversino: data.get('traversino') || '',
     traversinoMeters: Number(data.get('traversino_meters')) || 0,
     optionalDetails,
@@ -967,72 +1197,572 @@ function collectConfiguration() {
   };
 }
 
+function deriveConfiguration(config) {
+  if (!config) return null;
+  const model = config.model;
+  let numeroAnte = 0;
+
+  if (model === 'SINGOLA') {
+    numeroAnte = config.tipologia === '1+1' ? 2 : 1;
+  } else if (model === 'SOLO_PANNELLO') {
+    numeroAnte = 0;
+  } else if (model === 'SOLO_ANTA') {
+    numeroAnte = config.soloAntaCount || 1;
+  } else if (config.numeroAnte) {
+    numeroAnte = config.numeroAnte;
+  } else {
+    numeroAnte = config.leaves || 0;
+  }
+
+  const apertura = config.aperturaAnte;
+  const isDoubleOpening = apertura === 'Destra Sinistra' || apertura === 'Sinistra Destra';
+
+  let numeroBinari = numeroAnte;
+  if (model === 'SINGOLA') {
+    numeroBinari = 1;
+  } else if (isDoubleOpening) {
+    numeroBinari = Math.max(Math.floor(numeroAnte / 2), 1);
+  }
+
+  const realNumeroAnte = numeroAnte + (config.anteNascoste === 'Si' || config.doorBox === 'Si' ? 1 : 0);
+
+  const trackCode = config.lunghezzaBinarioCodice || 0;
+  const trackMm = config.lunghezzaBinario || mmFromCode(trackCode);
+  const trackMeters = config.lunghezzaBinarioMetri || trackMm / 1000;
+
+  let montaggio = config.montaggio || 'A soffitto';
+  if (model === 'TRASCINAMENTO' || model === 'INDIPENDENTE') {
+    montaggio = 'A soffitto';
+  } else if (model === 'MAGNETICA' && config.binario === 'Nascosto') {
+    montaggio = 'A soffitto';
+  } else if (model !== 'SINGOLA' && model !== 'MAGNETICA') {
+    montaggio = 'A soffitto';
+  } else if (!montaggio) {
+    montaggio = 'A soffitto';
+  }
+
+  if (model === 'SINGOLA' && config.pannelloFisso === 'Si' && config.pannelliSuBinari === 'No') {
+    montaggio = 'A soffitto';
+  }
+
+  const pannelliCount = Math.max(config.numeroPannelliFissi || 0, 0);
+
+  let larghezzaAnta = 0;
+  if (model === 'SINGOLA' || model === 'MAGNETICA') {
+    const base = (trackCode * 100) / 2;
+    const divisor = Math.max(realNumeroAnte || 1, 1);
+    larghezzaAnta = Math.floor(base / divisor);
+  } else {
+    let availableMm = trackCode ? trackCode * 100 : trackMm || config.width || 0;
+    if (
+      config.pannelloFisso === 'Si' &&
+      config.sceltaPannelloFisso === 'manuale' &&
+      config.larghezzaPannelloFisso &&
+      pannelliCount > 0
+    ) {
+      availableMm -= config.larghezzaPannelloFisso * pannelliCount;
+    }
+    availableMm = Math.max(availableMm, 0);
+    const divisor = Math.max(realNumeroAnte || 1, 1);
+    larghezzaAnta = Math.floor(availableMm / divisor);
+  }
+
+  const withinRange =
+    model === 'MAGNETICA' || model === 'SINGOLA' || larghezzaAnta === 0
+      ? true
+      : larghezzaAnta >= LARGHEZZA_MIN && larghezzaAnta <= LARGHEZZA_MAX;
+
+  return {
+    ...config,
+    numeroAnte,
+    numeroBinari,
+    realNumeroAnte,
+    larghezzaAnta,
+    larghezzaAntaValida: withinRange,
+    montaggioEffettivo: montaggio,
+    lunghezzaBinarioMetri: trackMeters,
+    lunghezzaBinarioMm: trackMm,
+    aperturaEffettiva: apertura,
+  };
+}
+
+
+function selectProfileCode(meters) {
+  const allowed = [20, 30, 40, 60];
+  const target = Math.ceil((meters || 0) * 10);
+  return allowed.find((size) => size >= target) ?? allowed[allowed.length - 1];
+}
+
+function buildTrackItems(list, config, derived) {
+  const trackCode = derived.lunghezzaBinarioCodice || config.lunghezzaBinarioCodice || 0;
+  const model = config.model;
+  const numeroBinari = Math.max(derived.numeroBinari || 0, 0);
+  if (trackCode <= 0) return;
+
+  if (model === 'MAGNETICA') {
+    const family =
+      config.binario === 'A vista'
+        ? PRICE_TABLE.TRACKS.MAGNETICA.VISTA
+        : PRICE_TABLE.TRACKS.MAGNETICA.NASCOSTO;
+    const track = family?.[trackCode];
+    if (track) {
+      addOrUpdateItem(list, {
+        codice: track.code,
+        descrizione: track.description,
+        quantita: Math.max(derived.numeroAnte || 1, 1),
+        prezzo: track.price,
+      });
+    }
+    return;
+  }
+
+  if (model === 'SINGOLA') {
+    const table =
+      derived.montaggioEffettivo === 'Parete'
+        ? PRICE_TABLE.TRACKS.SINGOLA.PARETE
+        : PRICE_TABLE.TRACKS.SINGOLA.SOFFITTO;
+    const track = table?.[trackCode];
+    if (track) {
+      addOrUpdateItem(list, {
+        codice: track.code,
+        descrizione: track.description,
+        quantita: 1,
+        prezzo: track.price,
+      });
+    }
+    return;
+  }
+
+  const primary = PRICE_TABLE.TRACKS.STANDARD.PRIMARY[trackCode];
+  if (primary && numeroBinari > 0) {
+    addOrUpdateItem(list, {
+      codice: primary.code,
+      descrizione: primary.description,
+      quantita: 1,
+      prezzo: primary.price,
+    });
+  }
+
+  const extra = PRICE_TABLE.TRACKS.STANDARD.EXTRA[trackCode];
+  if (extra && numeroBinari > 1) {
+    addOrUpdateItem(list, {
+      codice: extra.code,
+      descrizione: extra.description,
+      quantita: numeroBinari - 1,
+      prezzo: extra.price,
+    });
+  }
+
+  if (config.pannelloFisso === 'Si' && config.pannelliSuBinari === 'No') {
+    const fixed = PRICE_TABLE.TRACKS.FIXED_EXTRA;
+    addOrUpdateItem(list, {
+      codice: fixed.code,
+      descrizione: fixed.description,
+      quantita: 1,
+      prezzo: fixed.price,
+    });
+  }
+}
+
+function buildCoverItems(list, config, derived) {
+  if (config.model === 'MAGNETICA' && config.binario === 'A vista') {
+    const trackCode = derived.lunghezzaBinarioCodice || config.lunghezzaBinarioCodice || 0;
+    if (trackCode === 34) {
+      const covers = PRICE_TABLE.COVERS.MAGNETICA[20];
+      if (covers) {
+        addOrUpdateItem(list, { codice: covers.FRONT.code, descrizione: covers.FRONT.description, quantita: 2, prezzo: covers.FRONT.price });
+        addOrUpdateItem(list, { codice: covers.TOP.code, descrizione: covers.TOP.description, quantita: 2, prezzo: covers.TOP.price });
+        addOrUpdateItem(list, { codice: covers.MOUNT.code, descrizione: covers.MOUNT.description, quantita: 2, prezzo: covers.MOUNT.price });
+      }
+      return;
+    }
+    const covers = PRICE_TABLE.COVERS.MAGNETICA[trackCode];
+    if (covers) {
+      addOrUpdateItem(list, { codice: covers.FRONT.code, descrizione: covers.FRONT.description, quantita: 1, prezzo: covers.FRONT.price });
+      addOrUpdateItem(list, { codice: covers.TOP.code, descrizione: covers.TOP.description, quantita: 1, prezzo: covers.TOP.price });
+      addOrUpdateItem(list, { codice: covers.MOUNT.code, descrizione: covers.MOUNT.description, quantita: 1, prezzo: covers.MOUNT.price });
+    }
+    return;
+  }
+
+  if (config.model !== 'MAGNETICA' && config.binario === 'Nascosto') {
+    const cover = PRICE_TABLE.COVERS.STANDARD;
+    const step = derived.montaggioEffettivo === 'Parete' ? 3 : 1.5;
+    const pieces = Math.ceil((derived.lunghezzaBinarioMetri || 0) / step);
+    if (pieces > 0) {
+      addOrUpdateItem(list, {
+        codice: cover.code,
+        descrizione: cover.description,
+        quantita: pieces,
+        prezzo: cover.price,
+      });
+    }
+  }
+}
+
+function buildScorrimentoItems(list, config, derived, optionalGeneral, optionalMagnetica) {
+  const model = config.model;
+  const numeroAnte = Math.max(derived.numeroAnte || 0, 0);
+  if (numeroAnte > 0) {
+    let kit1 = 0;
+    let kit2 = 0;
+    let kit3 = 0;
+
+    if (model === 'INDIPENDENTE' || model === 'MAGNETICA') {
+      kit1 = numeroAnte;
+    } else if (model === 'SINGOLA') {
+      kit1 = derived.numeroAnte;
+    } else if (numeroAnte === 1) {
+      kit1 = 1;
+    } else if (numeroAnte === 2) {
+      kit1 = 1;
+      kit2 = 1;
+    } else if (numeroAnte === 3) {
+      kit1 = 2;
+      kit2 = 1;
+    } else if (numeroAnte >= 4) {
+      kit1 = 2;
+      kit3 = numeroAnte - 2;
+    }
+
+    let kitRidottaCount = 0;
+    const kitRidottaSelection = optionalGeneral.get(PRICE_TABLE.SCORRIMENTO.KIT1S.code);
+    if (kitRidottaSelection) {
+      kitRidottaCount = config.model === 'SINGOLA' && config.tipologia !== '1+1' ? 1 : 2;
+      optionalGeneral.delete(PRICE_TABLE.SCORRIMENTO.KIT1S.code);
+    }
+    const autoRidotta =
+      config.model !== 'MAGNETICA' &&
+      config.model !== 'SINGOLA' &&
+      derived.larghezzaAnta >= LARGHEZZA_MIN &&
+      derived.larghezzaAnta <= 600;
+    if (autoRidotta) {
+      kitRidottaCount = Math.max(kitRidottaCount, kit1);
+    }
+    if (kitRidottaCount > 0) {
+      addOrUpdateItem(list, {
+        codice: PRICE_TABLE.SCORRIMENTO.KIT1S.code,
+        descrizione: PRICE_TABLE.SCORRIMENTO.KIT1S.description,
+        quantita: kitRidottaCount,
+        prezzo: PRICE_TABLE.SCORRIMENTO.KIT1S.price,
+      });
+      kit1 = Math.max(kit1 - kitRidottaCount, 0);
+    }
+
+    if (kit1 > 0) {
+      addOrUpdateItem(list, {
+        codice: PRICE_TABLE.SCORRIMENTO.KIT1.code,
+        descrizione: PRICE_TABLE.SCORRIMENTO.KIT1.description,
+        quantita: kit1,
+        prezzo: PRICE_TABLE.SCORRIMENTO.KIT1.price,
+      });
+    }
+    if (kit2 > 0) {
+      addOrUpdateItem(list, {
+        codice: PRICE_TABLE.SCORRIMENTO.KIT2.code,
+        descrizione: PRICE_TABLE.SCORRIMENTO.KIT2.description,
+        quantita: kit2,
+        prezzo: PRICE_TABLE.SCORRIMENTO.KIT2.price,
+      });
+    }
+    if (kit3 > 0) {
+      addOrUpdateItem(list, {
+        codice: PRICE_TABLE.SCORRIMENTO.KIT3.code,
+        descrizione: PRICE_TABLE.SCORRIMENTO.KIT3.description,
+        quantita: kit3,
+        prezzo: PRICE_TABLE.SCORRIMENTO.KIT3.price,
+      });
+    }
+
+    let pushToOpen = optionalGeneral.get(PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.code);
+    if (config.doorBox === 'Si' && !pushToOpen) {
+      pushToOpen = {
+        value: PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.code,
+        name: PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.description,
+        price: PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.price,
+      };
+    }
+    if (pushToOpen) {
+      const quantity = config.model === 'SINGOLA' && config.tipologia !== '1+1' ? 1 : 2;
+      addOrUpdateItem(list, {
+        codice: PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.code,
+        descrizione: PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.description,
+        quantita: quantity,
+        prezzo: PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.price,
+      });
+      optionalGeneral.delete(PRICE_TABLE.SCORRIMENTO.PUSH_TO_OPEN.code);
+    }
+
+    if (config.model === 'TRASCINAMENTO') {
+      let cintaQuantity = 0;
+      const cintaSelection = optionalGeneral.get(PRICE_TABLE.SCORRIMENTO.CINTA_MAGGIORATA.code);
+      if (cintaSelection) {
+        cintaQuantity = Math.max(cintaQuantity, 1);
+        optionalGeneral.delete(PRICE_TABLE.SCORRIMENTO.CINTA_MAGGIORATA.code);
+      }
+      if (derived.larghezzaAnta >= 1236 && derived.larghezzaAnta <= 1500 && numeroAnte >= 2) {
+        cintaQuantity = Math.max(cintaQuantity, numeroAnte === 2 ? 1 : numeroAnte - 2);
+      }
+      if (cintaQuantity > 0) {
+        addOrUpdateItem(list, {
+          codice: PRICE_TABLE.SCORRIMENTO.CINTA_MAGGIORATA.code,
+          descrizione: PRICE_TABLE.SCORRIMENTO.CINTA_MAGGIORATA.description,
+          quantita: cintaQuantity,
+          prezzo: PRICE_TABLE.SCORRIMENTO.CINTA_MAGGIORATA.price,
+        });
+      }
+    }
+
+    if (config.model === 'SINGOLA') {
+      const quantity = config.tipologia === '1+1' ? 2 : 1;
+      const telaio =
+        config.pannelloFisso === 'Si'
+          ? PRICE_TABLE.TELAI.PER_ANTA
+          : PRICE_TABLE.TELAI.SINGOLA_STANDARD;
+      addOrUpdateItem(list, {
+        codice: telaio.code,
+        descrizione: telaio.description,
+        quantita: quantity,
+        prezzo: telaio.price,
+      });
+    } else if (numeroAnte > 0) {
+      if (numeroAnte === 1) {
+        addOrUpdateItem(list, {
+          codice: PRICE_TABLE.TELAI.PER_ANTA.code,
+          descrizione: PRICE_TABLE.TELAI.PER_ANTA.description,
+          quantita: 1,
+          prezzo: PRICE_TABLE.TELAI.PER_ANTA.price,
+        });
+      } else if (numeroAnte === 2) {
+        addOrUpdateItem(list, {
+          codice: PRICE_TABLE.TELAI.PER_ANTA.code,
+          descrizione: PRICE_TABLE.TELAI.PER_ANTA.description,
+          quantita: 2,
+          prezzo: PRICE_TABLE.TELAI.PER_ANTA.price,
+        });
+      } else {
+        addOrUpdateItem(list, {
+          codice: PRICE_TABLE.TELAI.PER_ANTA.code,
+          descrizione: PRICE_TABLE.TELAI.PER_ANTA.description,
+          quantita: 2,
+          prezzo: PRICE_TABLE.TELAI.PER_ANTA.price,
+        });
+        addOrUpdateItem(list, {
+          codice: PRICE_TABLE.TELAI.CENTRALE.code,
+          descrizione: PRICE_TABLE.TELAI.CENTRALE.description,
+          quantita: numeroAnte - 2,
+          prezzo: PRICE_TABLE.TELAI.CENTRALE.price,
+        });
+      }
+    }
+  }
+
+  optionalGeneral.forEach((item) => {
+    addOrUpdateItem(list, {
+      codice: item.value,
+      descrizione: item.name,
+      quantita: 1,
+      prezzo: item.price,
+    });
+  });
+
+  optionalMagnetica.forEach((item) => {
+    addOrUpdateItem(list, {
+      codice: item.value,
+      descrizione: item.name,
+      quantita: 1,
+      prezzo: item.price,
+    });
+  });
+}
+
+function buildFixedPanelItems(list, config, derived) {
+  if (config.pannelloFisso !== 'Si') return;
+  const pannelliCount = Math.max(config.numeroPannelliFissi || 1, 1);
+  const profili = PRICE_TABLE.FISSI.PROFILI;
+
+  if (config.pannelliSuBinari === 'No') {
+    let meters = derived.lunghezzaBinarioMetri || 0;
+    if (config.profiloSuperioreFissi !== 'Quanto tutto il binario') {
+      const widthSource =
+        config.sceltaPannelloFisso === 'manuale' && config.larghezzaPannelloFisso
+          ? config.larghezzaPannelloFisso
+          : derived.larghezzaAnta;
+      meters = ((widthSource || 0) * pannelliCount) / 1000;
+    }
+    const code = selectProfileCode(meters);
+    const profile = profili[code] ?? profili[20];
+    if (profile) {
+      addOrUpdateItem(list, {
+        codice: profile.code,
+        descrizione: profile.description,
+        quantita: 1,
+        prezzo: profile.price,
+      });
+    }
+  }
+
+  const kit = PRICE_TABLE.FISSI.KIT_ACCESSORI;
+  addOrUpdateItem(list, {
+    codice: kit.code,
+    descrizione: kit.description,
+    quantita: pannelliCount,
+    prezzo: kit.price,
+  });
+
+  const telaio = PRICE_TABLE.FISSI.TELAIO;
+  addOrUpdateItem(list, {
+    codice: telaio.code,
+    descrizione: telaio.description,
+    quantita: pannelliCount,
+    prezzo: telaio.price,
+  });
+}
+
+function buildDoorBoxItems(list, config) {
+  if (config.doorBox !== 'Si') return;
+  const side = config.doorBoxMounting === 'Sinistra' ? 'Sinistra' : 'Destra';
+  const doorBox = PRICE_TABLE.DOOR_BOX[side];
+  if (doorBox) {
+    addOrUpdateItem(list, {
+      codice: doorBox.code,
+      descrizione: doorBox.description,
+      quantita: 1,
+      prezzo: doorBox.price,
+    });
+  }
+}
+
+function buildManiglieItems(list, config) {
+  config.maniglieDetails.forEach((item) => {
+    addOrUpdateItem(list, {
+      codice: item.code,
+      descrizione: item.name,
+      quantita: item.quantity,
+      prezzo: item.price,
+    });
+  });
+}
+
+function buildKitItems(list, config) {
+  config.kitDetails.forEach((item) => {
+    addOrUpdateItem(list, {
+      codice: item.value,
+      descrizione: item.name,
+      quantita: 1,
+      prezzo: item.price,
+    });
+  });
+}
+
+function buildTraversinoItems(list, config) {
+  if (config.traversino !== 'Si') return;
+  const meters = Math.max(Number(config.traversinoMeters) || 0, 0);
+  if (meters <= 0) return;
+  const traversino = PRICE_TABLE.MANIGLIE.DEP01;
+  addOrUpdateItem(list, {
+    codice: traversino.code,
+    descrizione: traversino.description,
+    quantita: meters,
+    prezzo: traversino.price,
+  });
+}
+
 function calculateQuote(config) {
-  if (!config || !config.width || !config.height) {
+  const derived = deriveConfiguration(config);
+  if (!derived) {
+    return { categories: [], total: 0, derived: null };
+  }
+  if (!derived.larghezzaAntaValida) {
     return {
-      basePrice: 0,
-      structurePrice: 0,
-      finishPrice: 0,
-      handlePrice: 0,
-      accessoriesPrice: 0,
+      categories: [],
       total: 0,
+      derived,
+      error: `La larghezza di ogni anta deve essere compresa tra ${LARGHEZZA_MIN} e ${LARGHEZZA_MAX} mm.`,
     };
   }
 
-  const areaSqm = Math.max((config.width * config.height) / 1_000_000, MIN_AREA);
-  const modelData = MODEL_CONFIG[config.model] ?? MODEL_CONFIG.TRASCINAMENTO;
-  const basePrice = areaSqm * BASE_RATE * (modelData.multiplier ?? 1);
+  const optionalGeneral = new Map(config.optionalDetails.map((item) => [item.value, item]));
+  const optionalMagnetica = new Map(config.optionalMagneticaDetails.map((item) => [item.value, item]));
+  MAGNETICA_DEPENDENCIES.forEach((dependency, code) => {
+    if (optionalMagnetica.has(code) && !optionalMagnetica.has(dependency)) {
+      const meta = getCheckboxMeta(selectors.optionalMagneticaCheckboxes, dependency);
+      if (meta) {
+        optionalMagnetica.set(dependency, meta);
+      }
+    }
+  });
 
-  const binarioData = BINARIO_CONFIG[config.binario] ?? BINARIO_CONFIG['A vista'];
-  const trackExtra = basePrice * (binarioData.multiplier - 1) + config.lunghezzaBinario * BINARIO_EXTRA_PER_MM;
+  const categories = [];
 
-  let pannelloFissoExtra = 0;
-  if (config.pannelloFisso === 'Si') {
-    pannelloFissoExtra += (config.numeroPannelliFissi || 1) * PANNELLO_FISSO_PRICE;
-    if (config.pannelliSuBinari === 'Si') {
-      pannelloFissoExtra += PANNELLI_BINARIO_EXTRA;
-    }
-    if (config.profiloSuperioreFissi === 'Quanto tutto il binario') {
-      pannelloFissoExtra += PROFILO_BINARIO_EXTRA;
-    }
-    if (config.sceltaPannelloFisso === 'manuale' && config.larghezzaPannelloFisso) {
-      pannelloFissoExtra += config.larghezzaPannelloFisso * MANUAL_PANEL_RATE;
-    }
+  const binariItems = [];
+  buildTrackItems(binariItems, config, derived);
+  if (binariItems.length > 0) {
+    categories.push({ label: 'Binari con Cover', items: binariItems });
   }
 
-  const doorBoxExtra = config.doorBox === 'Si' ? DOOR_BOX_PRICE : 0;
-  const anteNascosteExtra = config.anteNascoste === 'Si' ? ANTE_NASCOSTE_EXTRA : 0;
+  const coverItems = [];
+  buildCoverItems(coverItems, config, derived);
+  if (coverItems.length > 0) {
+    categories.push({ label: 'Cover di Montaggio', items: coverItems });
+  }
 
-  const structurePrice = Math.max(0, trackExtra) + pannelloFissoExtra + doorBoxExtra + anteNascosteExtra;
+  const scorrimentoItems = [];
+  buildScorrimentoItems(scorrimentoItems, config, derived, optionalGeneral, optionalMagnetica);
+  if (scorrimentoItems.length > 0) {
+    categories.push({ label: 'Carrelli e Meccaniche di Scorrimento', items: scorrimentoItems });
+  }
 
-  const handlePrice = config.maniglieDetails.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+  const fissiItems = [];
+  buildFixedPanelItems(fissiItems, config, derived);
+  if (fissiItems.length > 0) {
+    categories.push({ label: 'Binari, Accessori e Telai per Pannello fisso', items: fissiItems });
+  }
+
+  const doorBoxItems = [];
+  buildDoorBoxItems(doorBoxItems, config);
+  if (doorBoxItems.length > 0) {
+    categories.push({ label: 'Door Box', items: doorBoxItems });
+  }
+
+  const maniglieItems = [];
+  buildManiglieItems(maniglieItems, config);
+  if (maniglieItems.length > 0) {
+    categories.push({ label: 'Maniglie e Nicchie', items: maniglieItems });
+  }
+
+  const kitItems = [];
+  buildKitItems(kitItems, config);
+  if (kitItems.length > 0) {
+    categories.push({ label: 'Kit di Lavorazione Profili', items: kitItems });
+  }
+
+  const traversinoItems = [];
+  buildTraversinoItems(traversinoItems, config);
+  if (traversinoItems.length > 0) {
+    categories.push({ label: 'Traversino Decorativo Adesivo', items: traversinoItems });
+  }
+
+  const total = categories.reduce(
+    (sum, category) =>
+      sum +
+      category.items.reduce((acc, item) => acc + Number(item.prezzo || 0) * Number(item.quantita || 0), 0),
     0
   );
 
-  const traversinoPrice =
-    config.traversino === 'Si' ? (config.traversinoMeters || 0) * TRAVERSINO_PRICE_PER_METER : 0;
-  const optionalPrice = config.optionalDetails.reduce((sum, item) => sum + item.price, 0);
-  const magneticaPrice = config.optionalMagneticaDetails.reduce((sum, item) => sum + item.price, 0);
-  const kitPrice = config.kitDetails.reduce((sum, item) => sum + item.price, 0);
-
-  const finishPrice = 0;
-  const accessoriesPrice = traversinoPrice + optionalPrice + magneticaPrice + kitPrice;
-
-  const total = basePrice + structurePrice + finishPrice + handlePrice + accessoriesPrice;
-
-  return { basePrice, structurePrice, finishPrice, handlePrice, accessoriesPrice, total };
+  return { categories, total, derived };
 }
 
-function calculateCuts(config) {
+function calculateCuts(config, derived) {
   if (!config || !config.width || !config.height) return [];
-  const leaves = Math.max(Number(config.leaves) || 1, 1);
-  const stileLength = Math.round(config.height - 90);
-  const leafWidth = Math.round(config.width / leaves);
-  const railLength = Math.round(leafWidth + 60);
+  const effective = derived || deriveConfiguration(config);
+  const leaves = Math.max(effective?.numeroAnte || config.leaves || 1, 1);
+  const stileLength = Math.max(Math.round(config.height - 90), 0);
+  const leafWidth = Math.max(Math.round((config.lunghezzaBinario || config.width) / leaves), 0);
+  const railLength = Math.max(Math.round(leafWidth + 60), 0);
   const glassWidth = Math.max(Math.round(leafWidth - 90), 40);
-  const glassHeight = Math.round(stileLength - 60);
-  const trackLength = config.lunghezzaBinario || Math.round(config.width * 1.2);
+  const glassHeight = Math.max(Math.round(stileLength - 60), 0);
+  const trackLength = Math.max(Math.round(effective?.lunghezzaBinarioMm || config.lunghezzaBinario || config.width * 1.2), 0);
 
   const cuts = [
     { element: 'Montanti verticali anta', quantity: leaves * 2, length: stileLength },
@@ -1049,7 +1779,7 @@ function calculateCuts(config) {
       length:
         config.sceltaPannelloFisso === 'manuale' && config.larghezzaPannelloFisso
           ? `${Math.round(config.larghezzaPannelloFisso)} × ${config.height}`
-          : `Uguali alle ante (${leafWidth} mm)`
+          : `Uguali alle ante (${Math.round(effective?.larghezzaAnta || leafWidth)} mm)`
     });
   }
 
@@ -1059,6 +1789,7 @@ function calculateCuts(config) {
 
   return cuts;
 }
+
 
 function renderCutsTable(cuts) {
   if (!selectors.cutsBody) return;
@@ -1074,152 +1805,103 @@ function renderCutsTable(cuts) {
   });
 }
 
-function renderSelectionSummary(config) {
-  if (!selectors.summaryList) return;
-  const items = [];
-  items.push({
-    label: 'Dimensioni vano',
-    value:
-      config.width && config.height ? `${config.width} × ${config.height} mm` : '—',
+function renderQuoteBreakdown(categories) {
+  if (!selectors.quoteBreakdown) return;
+  selectors.quoteBreakdown.innerHTML = '';
+  categories.forEach((category) => {
+    const section = document.createElement('section');
+    section.className = 'quote-breakdown__section';
+    const heading = document.createElement('h3');
+    heading.textContent = category.label;
+    section.appendChild(heading);
+
+    const list = document.createElement('ul');
+    list.className = 'quote-breakdown__list';
+    category.items.forEach((item) => {
+      const li = document.createElement('li');
+      li.className = 'quote-breakdown__item';
+      const total = Number(item.prezzo || 0) * Number(item.quantita || 0);
+      li.textContent = `${item.descrizione} (Codice: ${item.codice}, Quantità: ${item.quantita}, Prezzo unitario: ${formatCurrency(item.prezzo)}, Totale: ${formatCurrency(total)})`;
+      list.appendChild(li);
+    });
+
+    section.appendChild(list);
+    selectors.quoteBreakdown.appendChild(section);
   });
+}
+
+function renderSelectionSummary(config, derived) {
+  if (!selectors.summaryList) return;
+
+  const items = [];
 
   items.push({
     label: 'Modello',
     value: MODEL_CONFIG[config.model]?.label ?? config.model ?? '—',
   });
 
-  if (config.model === 'SOLO_PANNELLO') {
-    items.push({ label: 'Numero pannelli', value: config.soloPannelloCount || '—' });
-  } else if (config.model === 'SOLO_ANTA') {
-    items.push({ label: 'Numero ante', value: config.soloAntaCount || '—' });
-  } else {
-    items.push({ label: 'Numero ante', value: config.numeroAnte ?? config.leaves });
-  }
-
-  if (config.aperturaAnte) {
-    items.push({
-      label: 'Apertura ante',
-      value: getCardLabel(selectors.aperturaAnteContainer, '.apertura-ante-option', config.aperturaAnte, config.aperturaAnte),
-    });
-  }
-
-  if (config.tipologia) {
+  if (config.model === 'SINGOLA') {
     items.push({
       label: 'Tipologia',
       value: getCardLabel(selectors.tipologiaContainer, '.tipologia-option', config.tipologia, config.tipologia),
     });
   }
 
-  items.push({ label: 'Pannello fisso', value: config.pannelloFisso || '—' });
-
-  if (config.pannelloFisso === 'Si') {
-    if (config.numeroPannelliFissi) {
-      items.push({ label: 'Numero pannelli fissi', value: config.numeroPannelliFissi });
-    }
-    if (config.pannelliSuBinari) {
-      items.push({
-        label: 'Fissi su binario',
-        value: getCardLabel(
-          selectors.pannelliSuBinariContainer,
-          '.pannello-option',
-          config.pannelliSuBinari,
-          config.pannelliSuBinari
-        ),
-      });
-    }
-    if (config.sceltaPannelloFisso) {
-      items.push({
-        label: 'Dimensioni fissi',
-        value:
-          config.sceltaPannelloFisso === 'manuale'
-            ? config.larghezzaPannelloFisso
-              ? `${config.larghezzaPannelloFisso} mm`
-              : 'Manuale'
-            : 'Uguale alle ante',
-      });
-    }
-    if (config.profiloSuperioreFissi) {
-      items.push({
-        label: 'Profilo superiore',
-        value: getCardLabel(
-          selectors.profiloSuperioreContainer,
-          '.profilo-superiore-option',
-          config.profiloSuperioreFissi,
-          config.profiloSuperioreFissi
-        ),
-      });
-    }
-  }
-
+  const rawNumeroAnte = Number(derived?.numeroAnte ?? config.numeroAnte ?? config.leaves ?? 0);
   items.push({
-    label: 'Ante nascoste',
-    value: getCardLabel(selectors.anteNascosteContainer, '.ante-nascoste-option', config.anteNascoste, config.anteNascoste),
+    label: 'Numero ante',
+    value: Number.isFinite(rawNumeroAnte) ? rawNumeroAnte : '—',
   });
 
-  items.push({ label: 'Door Box', value: config.doorBox || '—' });
+  const rawNumeroBinari = Number(derived?.numeroBinari ?? 0);
+  items.push({
+    label: 'Numero binari',
+    value: Number.isFinite(rawNumeroBinari) ? rawNumeroBinari : '—',
+  });
 
-  if (config.doorBox === 'Si' && config.doorBoxMounting) {
-    items.push({
-      label: 'Montaggio Door Box',
-      value: getCardLabel(
-        selectors.doorBoxMountingContainer,
-        '.door-box-mounting-option',
-        config.doorBoxMounting,
-        config.doorBoxMounting
-      ),
-    });
-  }
+  const aperturaLabel = getCardLabel(
+    selectors.aperturaAnteContainer,
+    '.apertura-ante-option',
+    config.aperturaAnte,
+    config.aperturaAnte || '—'
+  );
+  items.push({ label: 'Apertura', value: aperturaLabel });
+
+  items.push({ label: 'Montaggio', value: derived?.montaggioEffettivo || config.montaggio || '—' });
+
+  const doorBoxValue =
+    config.doorBox === 'Si'
+      ? config.doorBoxMounting
+        ? `Si (${config.doorBoxMounting})`
+        : 'Si'
+      : 'No';
+  items.push({ label: 'Door Box', value: doorBoxValue });
 
   items.push({
     label: 'Binario',
     value: BINARIO_CONFIG[config.binario]?.label ?? config.binario ?? '—',
   });
 
-  if (config.montaggio) {
-    items.push({ label: 'Montaggio', value: config.montaggio });
+  const lengthLabel =
+    derived?.lunghezzaBinarioLabel ||
+    (derived?.lunghezzaBinarioMetri ? `${formatMeters(derived.lunghezzaBinarioMetri)} Metri` : '—');
+  items.push({ label: 'Lunghezza binario', value: lengthLabel });
+
+  const traversinoMeters = Number(config.traversinoMeters) || 0;
+  const traversinoValue =
+    config.traversino === 'Si'
+      ? traversinoMeters > 0
+        ? `Si (${traversinoMeters} m)`
+        : 'Si'
+      : 'No';
+  items.push({ label: 'Traversino decorativo', value: traversinoValue });
+
+  items.push({ label: 'Finitura', value: 'Nera' });
+  items.push({ label: 'Spessore vetro consigliato', value: '4+4 mm' });
+
+  if (config.width && config.height) {
+    items.push({ label: 'Dimensioni vano', value: `${config.width} × ${config.height} mm` });
   }
-
-  if (config.lunghezzaBinario) {
-    items.push({ label: 'Lunghezza binario', value: `${config.lunghezzaBinario} mm` });
-  }
-
-  items.push({
-    label: 'Traversino decorativo',
-    value:
-      config.traversino === 'Si'
-        ? `${config.traversino} (${config.traversinoMeters || 0} m)`
-        : config.traversino || '—',
-  });
-
-  items.push({
-    label: 'Optional Magnetica',
-    value: config.optionalMagneticaDetails.length
-      ? config.optionalMagneticaDetails
-          .map((item) => `${item.value} (${formatter.format(item.price)})`)
-          .join(', ')
-      : 'Nessuno',
-  });
-
-  items.push({
-    label: 'Optional',
-    value: config.optionalDetails.length
-      ? config.optionalDetails.map((item) => `${item.value} (${formatter.format(item.price)})`).join(', ')
-      : 'Nessuno',
-  });
-
-  items.push({
-    label: 'Kit lavorazione',
-    value: config.kitDetails.length
-      ? config.kitDetails.map((item) => `${item.value} (${formatter.format(item.price)})`).join(', ')
-      : 'Nessuno',
-  });
-
-  items.push({
-    label: 'Maniglie & nicchie',
-    value: config.maniglieDetails.length
-      ? config.maniglieDetails.map((item) => `${item.code} ×${item.quantity}`).join(', ')
-      : 'Nessuna selezione',
-  });
 
   selectors.summaryList.innerHTML = '';
   items.forEach((item) => {
@@ -1237,20 +1919,24 @@ function refreshOutputs({ force = false } = {}) {
   if (!config) return;
 
   const quote = calculateQuote(config);
-  const cuts = calculateCuts(config);
+  if (quote.error) {
+    alert(quote.error);
+    return;
+  }
 
-  selectors.basePrice.textContent = formatter.format(quote.basePrice);
-  selectors.structurePrice.textContent = formatter.format(quote.structurePrice);
-  selectors.finishPrice.textContent = formatter.format(quote.finishPrice);
-  selectors.handlePrice.textContent = formatter.format(quote.handlePrice);
-  selectors.accessoriesPrice.textContent = formatter.format(quote.accessoriesPrice);
-  selectors.totalPrice.textContent = formatter.format(quote.total);
+  const derived = quote.derived || deriveConfiguration(config);
+  const cuts = calculateCuts(config, derived);
 
-  renderSelectionSummary(config);
+  if (selectors.quoteTotal) {
+    selectors.quoteTotal.textContent = `${formatCurrency(quote.total)} + IVA e Spese di Trasporto`;
+  }
+
+  renderQuoteBreakdown(quote.categories || []);
+  renderSelectionSummary(config, derived);
   renderCutsTable(cuts);
 
   const isSoloPannello = config.model === 'SOLO_PANNELLO';
-  const slidingLeaves = isSoloPannello ? 0 : Math.max(config.leaves, 1);
+  const slidingLeaves = isSoloPannello ? 0 : Math.max(derived?.numeroAnte || config.leaves || 1, 1);
   const soloPanelCount = isSoloPannello ? Math.max(config.soloPannelloCount || config.leaves || 1, 1) : 0;
   const fixedPanelsCount =
     !isSoloPannello && config.pannelloFisso === 'Si' ? Math.max(config.numeroPannelliFissi || 1, 1) : 0;
@@ -1402,7 +2088,7 @@ modelGroup = setupSelectionGroup(selectors.modelContainer, '.model-option', docu
       updatePanelDimensions(selectors.panelDimensionsAnta, 0, 'anta');
     }
 
-    const showNumeroAnte = !isSoloPannello && !isSoloAnta;
+    const showNumeroAnte = !isSoloPannello && !isSoloAnta && value !== 'SINGOLA';
     setFlexVisibility(selectors.numeroAnteSection, showNumeroAnte);
     toggleRequired(selectors.numeroAnteSelect, showNumeroAnte);
     if (!showNumeroAnte && aperturaGroup) {
@@ -1447,6 +2133,7 @@ modelGroup = setupSelectionGroup(selectors.modelContainer, '.model-option', docu
     });
 
     setFlexVisibility(selectors.magneticaOptionalSection, value === 'MAGNETICA');
+    updateTrackLengthOptions();
   },
 });
 
@@ -1490,7 +2177,12 @@ doorBoxMountingGroup = setupSelectionGroup(
   selectors.doorBoxMountingInput
 );
 
-binarioGroup = setupSelectionGroup(selectors.binarioContainer, '.binario-option', selectors.binarioInput);
+binarioGroup = setupSelectionGroup(selectors.binarioContainer, '.binario-option', selectors.binarioInput, {
+  onChange: () => {
+    updateTrackLengthOptions();
+    refreshOutputs();
+  },
+});
 
 traversinoGroup = setupSelectionGroup(
   selectors.traversinoContainer,
@@ -1498,6 +2190,26 @@ traversinoGroup = setupSelectionGroup(
   selectors.traversinoInput,
   { onChange: handleTraversinoChange }
 );
+
+selectors.optionalMagneticaCheckboxes?.forEach((checkbox) => {
+  checkbox.addEventListener('change', (event) => {
+    if (event.target.checked && MAGNETICA_DEPENDENCIES.has(event.target.value)) {
+      const dependency = MAGNETICA_DEPENDENCIES.get(event.target.value);
+      setMagneticaOptionalChecked(dependency, true);
+    } else if (!event.target.checked && MAGNETICA_DEPENDENCIES.has(event.target.value)) {
+      const dependency = MAGNETICA_DEPENDENCIES.get(event.target.value);
+      const stillRequired = Array.from(selectors.optionalMagneticaCheckboxes ?? []).some(
+        (input) =>
+          input.checked &&
+          MAGNETICA_DEPENDENCIES.get(input.value) === dependency
+      );
+      if (!stillRequired) {
+        setMagneticaOptionalChecked(dependency, false);
+      }
+    }
+    refreshOutputs();
+  });
+});
 
 selectors.numeroAnteSelect?.addEventListener('change', () => {
   handleNumeroAnteChange();
@@ -1534,7 +2246,10 @@ selectors.heightInput?.addEventListener('input', () => {
 });
 
 selectors.lunghezzaBinarioSelect?.addEventListener('change', () => refreshOutputs());
-selectors.montaggioSelect?.addEventListener('change', () => refreshOutputs());
+selectors.montaggioSelect?.addEventListener('change', () => {
+  updateTrackLengthOptions();
+  refreshOutputs();
+});
 selectors.traversinoMetersInput?.addEventListener('input', () => refreshOutputs());
 
 selectors.form?.addEventListener('change', (event) => {
