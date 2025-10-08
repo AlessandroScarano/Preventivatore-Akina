@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preventivatore Porta Akina</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__overlay"></div>
+      <div class="hero__content container">
+        <p class="hero__eyebrow">Configura la tua porta Akina</p>
+        <h1>Preventivatore professionale</h1>
+        <p>
+          Rispondi alle domande del configuratore, calcola i tagli dei profili e
+          visualizza in tempo reale il modello 3D della porta Akina.
+        </p>
+      </div>
+    </header>
+
+    <main class="container layout">
+      <section class="card card--config" aria-labelledby="configuratore-titolo">
+        <div class="card__header">
+          <h2 id="configuratore-titolo">Configuratore</h2>
+          <p>Segui i passaggi e personalizza ogni dettaglio della tua porta.</p>
+        </div>
+
+        <ol class="stepper" id="stepper" role="list">
+          <li class="stepper__item stepper__item--active" data-step="1">Dimensioni</li>
+          <li class="stepper__item" data-step="2">Struttura</li>
+          <li class="stepper__item" data-step="3">Finiture</li>
+          <li class="stepper__item" data-step="4">Accessori</li>
+        </ol>
+
+        <form id="config-form" class="form" novalidate>
+          <section class="form-step form-step--active" data-step="1" aria-label="Dimensioni porta">
+            <h3>Dimensioni porta</h3>
+            <p class="form-step__description">
+              Inserisci le misure nette del vano e indica il numero di ante desiderate.
+            </p>
+            <div class="form__grid">
+              <label class="form__field">
+                <span>Larghezza vano (mm)</span>
+                <input
+                  type="number"
+                  name="width"
+                  id="width"
+                  min="700"
+                  max="1800"
+                  step="5"
+                  value="900"
+                  required
+                />
+              </label>
+
+              <label class="form__field">
+                <span>Altezza vano (mm)</span>
+                <input
+                  type="number"
+                  name="height"
+                  id="height"
+                  min="2000"
+                  max="3000"
+                  step="5"
+                  value="2200"
+                  required
+                />
+              </label>
+
+              <label class="form__field">
+                <span>Numero di ante</span>
+                <select name="leaves" id="leaves" required>
+                  <option value="1">1 anta</option>
+                  <option value="2">2 ante contrapposte</option>
+                </select>
+              </label>
+
+              <label class="form__field">
+                <span>Senso di apertura</span>
+                <select name="swing" id="swing" required>
+                  <option value="sinistra">Apertura a sinistra</option>
+                  <option value="destra">Apertura a destra</option>
+                  <option value="centrale">Apertura centrale</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-step" data-step="2" aria-label="Struttura e scorrimento">
+            <h3>Struttura e scorrimento</h3>
+            <p class="form-step__description">
+              Definisci il tipo di apertura e il sistema di scorrimento/battuta.
+            </p>
+            <div class="form__grid">
+              <label class="form__field">
+                <span>Tipologia di apertura</span>
+                <select name="opening" id="opening" required>
+                  <option value="scorrevole-parete">Scorrevole esterno muro</option>
+                  <option value="scorrevole-muro">Scorrevole interno muro</option>
+                  <option value="battente">A battente</option>
+                </select>
+              </label>
+
+              <label class="form__field">
+                <span>Sistema di binario</span>
+                <select name="track" id="track" required>
+                  <option value="standard">Binario standard</option>
+                  <option value="incasso">Binario incassato</option>
+                  <option value="filo-muro">Binario filo muro</option>
+                </select>
+              </label>
+
+              <label class="form__field">
+                <span>Guida inferiore</span>
+                <select name="floorGuide" id="floorGuide" required>
+                  <option value="standard">Guida standard</option>
+                  <option value="invisibile">Guida invisibile</option>
+                  <option value="autoallineante">Guida autoallineante</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-step" data-step="3" aria-label="Finiture">
+            <h3>Finiture e vetro</h3>
+            <p class="form-step__description">
+              Seleziona le finiture dei profili e il tipo di vetro per la porta Akina.
+            </p>
+            <div class="form__grid">
+              <label class="form__field">
+                <span>Finitura profili</span>
+                <select name="profileFinish" id="profileFinish" required>
+                  <option value="nero-micaceo">Nero micaceo</option>
+                  <option value="champagne">Champagne satinato</option>
+                  <option value="bronzo">Bronzo antico</option>
+                  <option value="bianco">Bianco opaco</option>
+                </select>
+              </label>
+
+              <label class="form__field">
+                <span>Tipologia vetro</span>
+                <select name="glassType" id="glassType" required>
+                  <option value="extrachiaro">Extrachiaro trasparente</option>
+                  <option value="satinato">Satinato acidato</option>
+                  <option value="fume">Fumè grigio</option>
+                  <option value="bronzo">Bronzo riflettente</option>
+                </select>
+              </label>
+
+              <label class="form__field">
+                <span>Trattamento vetro</span>
+                <select name="glassTreatment" id="glassTreatment" required>
+                  <option value="nessuno">Nessun trattamento</option>
+                  <option value="anticalcare">Trattamento anticalcare</option>
+                  <option value="strutturato">Vetro strutturato 3D</option>
+                </select>
+              </label>
+
+              <label class="form__field">
+                <span>Tipologia maniglia</span>
+                <select name="handle" id="handle" required>
+                  <option value="standard">Maniglia standard</option>
+                  <option value="incassata">Maniglia incassata</option>
+                  <option value="totale">Maniglione a tutta altezza</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-step" data-step="4" aria-label="Accessori">
+            <h3>Accessori e dotazioni</h3>
+            <p class="form-step__description">
+              Completa la configurazione con gli accessori opzionali richiesti.
+            </p>
+            <div class="form__grid form__grid--full">
+              <fieldset class="form__field form__field--checkboxes">
+                <legend>Seleziona accessori</legend>
+                <div class="checkbox-group">
+                  <label>
+                    <input type="checkbox" name="accessories" value="soft-close" />
+                    Sistema soft-close
+                  </label>
+                  <label>
+                    <input type="checkbox" name="accessories" value="kit-montaggio" />
+                    Kit montaggio completo
+                  </label>
+                  <label>
+                    <input type="checkbox" name="accessories" value="serratura" />
+                    Serratura magnetica
+                  </label>
+                  <label>
+                    <input type="checkbox" name="accessories" value="guarnizioni" />
+                    Guarnizioni acustiche
+                  </label>
+                  <label>
+                    <input type="checkbox" name="accessories" value="trattamento" />
+                    Trattamento anti-impronta
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+          </section>
+
+          <div class="form-navigation">
+            <button type="button" class="button button--ghost" data-action="prev">
+              Indietro
+            </button>
+            <button type="button" class="button" data-action="next">Avanti</button>
+            <button type="submit" class="button button--primary">Aggiorna preventivo</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="preventivo-titolo">
+        <div class="card__header">
+          <h2 id="preventivo-titolo">Preventivo</h2>
+          <p>Riepilogo economico aggiornato in tempo reale.</p>
+        </div>
+        <div id="quote-results" class="results">
+          <div class="results__highlight">
+            <span>Totale</span>
+            <strong id="total-price">€ 0,00</strong>
+          </div>
+          <div class="results__details">
+            <dl>
+              <div>
+                <dt>Struttura base</dt>
+                <dd id="base-price">€ 0,00</dd>
+              </div>
+              <div>
+                <dt>Struttura &amp; scorrimento</dt>
+                <dd id="structure-price">€ 0,00</dd>
+              </div>
+              <div>
+                <dt>Finiture &amp; vetro</dt>
+                <dd id="finish-price">€ 0,00</dd>
+              </div>
+              <div>
+                <dt>Maniglia</dt>
+                <dd id="handle-price">€ 0,00</dd>
+              </div>
+              <div>
+                <dt>Accessori</dt>
+                <dd id="accessories-price">€ 0,00</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="results__summary">
+            <h3>Selezioni configurate</h3>
+            <ul id="selection-summary" class="selection-summary"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="tagli-titolo">
+        <div class="card__header">
+          <h2 id="tagli-titolo">Tagli profili</h2>
+          <p>Lista dei tagli necessari per la produzione.</p>
+        </div>
+        <table class="cuts-table">
+          <thead>
+            <tr>
+              <th>Elemento</th>
+              <th>Quantità</th>
+              <th>Lunghezza (mm)</th>
+            </tr>
+          </thead>
+          <tbody id="cuts-body"></tbody>
+        </table>
+      </section>
+
+      <section class="card card--visualizer" aria-labelledby="visualizer-titolo">
+        <div class="card__header">
+          <h2 id="visualizer-titolo">Visualizzatore 3D</h2>
+          <p>Anteprima interattiva della porta Akina.</p>
+        </div>
+        <div id="viewer" class="viewer" role="img" aria-label="Anteprima 3D"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>© 2024 Akina Doors – Preventivatore professionale</p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
