@@ -206,7 +206,7 @@ class DoorVisualizer {
   constructor(container) {
     this.container = container;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#0a0c14');
+    this.scene.background = null;
 
     this.camera = new THREE.PerspectiveCamera(
       42,
@@ -218,6 +218,7 @@ class DoorVisualizer {
     this.camera.lookAt(new THREE.Vector3(0, 120, 0));
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer.setClearColor(0x000000, 0);
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(this.renderer.domElement);
@@ -1917,39 +1918,27 @@ function renderSelectionSummary(config, derived) {
   });
 }
 
-function refreshOutputs({ force = false } = {}) {
-  if (!selectors.form) return;
-  const isValid = force ? selectors.form.reportValidity() : selectors.form.checkValidity();
-  if (!isValid) return;
-  const config = collectConfiguration();
+function updateVisualizerPreview(config, derived) {
   if (!config) return;
 
-  const quote = calculateQuote(config);
-  if (quote.error) {
-    alert(quote.error);
-    return;
-  }
-
-  const derived = quote.derived || deriveConfiguration(config);
-  const cuts = calculateCuts(config, derived);
-
-  if (selectors.quoteTotal) {
-    selectors.quoteTotal.textContent = `${formatCurrency(quote.total)} + IVA e Spese di Trasporto`;
-  }
-
-  renderQuoteBreakdown(quote.categories || []);
-  renderSelectionSummary(config, derived);
-  renderCutsTable(cuts);
-
   if (selectors.viewerHeightLabel) {
-    selectors.viewerHeightLabel.textContent = `${formatMillimeters(config.height)} mm`;
+    const heightLabel = Number(config.height) ? `${formatMillimeters(config.height)} mm` : '—';
+    selectors.viewerHeightLabel.textContent = heightLabel;
   }
+
   if (selectors.viewerWidthLabel) {
-    selectors.viewerWidthLabel.textContent = `A: ${formatMillimeters(config.width)} mm`;
+    const widthLabel = Number(config.width) ? `A: ${formatMillimeters(config.width)} mm` : 'A: —';
+    selectors.viewerWidthLabel.textContent = widthLabel;
   }
+
   if (selectors.viewerTrackLabel) {
-    const trackLabel = config.lunghezzaBinarioLabel ||
-      (config.lunghezzaBinarioMetri ? `${formatMeters(config.lunghezzaBinarioMetri)} m` : '—');
+    const trackLabel =
+      derived?.lunghezzaBinarioLabel ||
+      config.lunghezzaBinarioLabel ||
+      (() => {
+        const meters = derived?.lunghezzaBinarioMetri ?? config.lunghezzaBinarioMetri;
+        return meters ? `${formatMeters(meters)} m` : '—';
+      })();
     selectors.viewerTrackLabel.textContent = `Binario: ${trackLabel}`;
   }
 
@@ -1984,7 +1973,7 @@ function refreshOutputs({ force = false } = {}) {
 
   const handleType = (() => {
     if (isSoloPannello) return 'hidden';
-    if (config.maniglieDetails.length > 0) return 'incassata';
+    if (config.maniglieDetails?.length > 0) return 'incassata';
     return 'standard';
   })();
 
@@ -2027,6 +2016,41 @@ function refreshOutputs({ force = false } = {}) {
     doorBoxSide: config.doorBoxMounting || 'Destra',
     isSoloPanelModel: isSoloPannello,
   });
+}
+
+function refreshOutputs({ force = false } = {}) {
+  if (!selectors.form) return;
+  const config = collectConfiguration();
+  if (!config) return;
+
+  let derived = deriveConfiguration(config) || {};
+
+  updateVisualizerPreview(config, derived);
+
+  const isValid = force ? selectors.form.reportValidity() : selectors.form.checkValidity();
+  if (!isValid) {
+    return;
+  }
+
+  const quote = calculateQuote(config);
+  if (quote.error) {
+    alert(quote.error);
+    return;
+  }
+
+  derived = quote.derived || derived;
+  updateVisualizerPreview(config, derived);
+
+  const cuts = calculateCuts(config, derived);
+
+  if (selectors.quoteTotal) {
+    selectors.quoteTotal.textContent = `${formatCurrency(quote.total)} + IVA e Spese di Trasporto`;
+  }
+
+  renderQuoteBreakdown(quote.categories || []);
+  renderSelectionSummary(config, derived);
+  renderCutsTable(cuts);
+
 }
 
 function setupSelectionGroup(container, optionSelector, hiddenInput, { onChange } = {}) {
