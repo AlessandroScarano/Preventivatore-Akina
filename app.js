@@ -232,9 +232,11 @@ class DoorVisualizer {
 
     const floorGeometry = new THREE.CircleGeometry(360, 64);
     const floorMaterial = new THREE.MeshStandardMaterial({
-      color: '#121726',
-      roughness: 0.85,
-      metalness: 0.05,
+      color: '#f1f5ff',
+      roughness: 0.95,
+      metalness: 0.02,
+      transparent: true,
+      opacity: 0.65,
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
@@ -658,6 +660,27 @@ class DoorVisualizer {
 }
 
 const visualizer = new DoorVisualizer(document.getElementById('viewer'));
+
+const initialWidth = Number(document.getElementById('width')?.value) || 1200;
+const initialHeight = Number(document.getElementById('height')?.value) || 2200;
+const initialLeaves = Math.max(Number(document.getElementById('numero-ante-select')?.value) || 2, 1);
+
+visualizer.updateDoor({
+  width: initialWidth,
+  height: initialHeight,
+  leaves: initialLeaves,
+  profileColor: DEFAULT_PROFILE_COLOR,
+  glassColor: DEFAULT_GLASS_COLOR,
+  opening: MODEL_CONFIG.TRASCINAMENTO.defaultOpening,
+  swing: 'sinistra',
+  handle: 'standard',
+  track: BINARIO_CONFIG['A vista'].track,
+  floorGuide: 'standard',
+  fixedPanels: { count: 0, mode: '', manualWidth: 0, shareTrack: true },
+  doorBox: false,
+  doorBoxSide: 'Destra',
+  isSoloPanelModel: false,
+});
 
 const selectors = {
   form: document.getElementById('akina-configurator-form'),
