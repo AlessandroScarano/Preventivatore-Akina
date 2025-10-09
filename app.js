@@ -748,6 +748,17 @@ class DoorVisualizer {
     params.glassHeight = Math.max(params.heightM - 0.1, 0.05);
     params.slidingLeavesCount = slidingLeaves.length;
     params.fixedPanelsCount = fixedPanels.length;
+    const requestedTrackCount =
+      Number.isFinite(options.trackCount) && options.trackCount !== null
+        ? Math.max(Math.floor(options.trackCount), 0)
+        : null;
+    const fallbackTrackCount = params.slidingLeavesCount > 0 ? params.slidingLeavesCount : 0;
+    params.trackCount =
+      requestedTrackCount !== null
+        ? requestedTrackCount > 0 || fallbackTrackCount === 0
+          ? requestedTrackCount
+          : fallbackTrackCount
+        : fallbackTrackCount;
     const averageLeafWidthMm =
       params.slidingLeavesCount > 0
         ? params.slidingLeaves.reduce((sum, leaf) => sum + leaf.widthMm, 0) /
@@ -864,32 +875,68 @@ class DoorVisualizer {
     }
 
     if (mode === 'single-left') {
+      const totalWidth = segments.reduce((sum, segment) => sum + segment.widthM, 0);
+      const firstWidth = segments[0]?.widthM ?? 0;
+      const stackStart =
+        count === 1
+          ? start - totalWidth
+          : start - Math.max(totalWidth - firstWidth, 0);
+      let cursor = stackStart;
       for (let i = 0; i < count; i += 1) {
         const width = segments[i].widthM;
-        positions[i] = start + width / 2;
+        positions[i] = cursor + width / 2;
+        cursor += width;
       }
       return positions;
     }
 
     if (mode === 'single-right') {
-      for (let i = 0; i < count; i += 1) {
+      const totalWidth = segments.reduce((sum, segment) => sum + segment.widthM, 0);
+      const lastWidth = segments[count - 1]?.widthM ?? 0;
+      const stackEnd =
+        count === 1
+          ? end + totalWidth
+          : end + Math.max(totalWidth - lastWidth, 0);
+      let cursor = stackEnd;
+      for (let i = count - 1; i >= 0; i -= 1) {
         const width = segments[i].widthM;
-        positions[i] = end - width / 2;
+        cursor -= width;
+        positions[i] = cursor + width / 2;
       }
       return positions;
     }
 
     const leftCount = Math.floor(count / 2);
-    const rightStart = leftCount;
+    const rightCount = count - leftCount;
+    const leftWidth = segments.slice(0, leftCount).reduce((sum, segment) => sum + segment.widthM, 0);
+    const rightWidth = segments.slice(leftCount).reduce((sum, segment) => sum + segment.widthM, 0);
 
-    for (let i = 0; i < leftCount; i += 1) {
-      const width = segments[i].widthM;
-      positions[i] = start + width / 2;
+    if (leftCount > 0) {
+      const firstWidth = segments[0]?.widthM ?? 0;
+      const leftStart =
+        leftCount === 1
+          ? start - firstWidth
+          : start - Math.max(leftWidth - firstWidth, 0);
+      let leftCursor = leftStart;
+      for (let i = 0; i < leftCount; i += 1) {
+        const width = segments[i].widthM;
+        positions[i] = leftCursor + width / 2;
+        leftCursor += width;
+      }
     }
 
-    for (let i = rightStart; i < count; i += 1) {
-      const width = segments[i].widthM;
-      positions[i] = end - width / 2;
+    if (rightCount > 0) {
+      const lastWidth = segments[count - 1]?.widthM ?? 0;
+      const rightEnd =
+        rightCount === 1
+          ? end + lastWidth
+          : end + Math.max(rightWidth - lastWidth, 0);
+      let rightCursor = rightEnd;
+      for (let i = count - 1; i >= leftCount; i -= 1) {
+        const width = segments[i].widthM;
+        rightCursor -= width;
+        positions[i] = rightCursor + width / 2;
+      }
     }
 
     return positions;
@@ -961,8 +1008,8 @@ class DoorVisualizer {
     });
 
     clearGroup(this.tracksGroup);
-    if (params.slidingLeavesCount > 0) {
-      for (let i = 0; i < params.slidingLeavesCount; i += 1) {
+    if (params.trackCount > 0) {
+      for (let i = 0; i < params.trackCount; i += 1) {
         const track = this.buildTrack(i, params);
         if (track) {
           this.tracksGroup.add(track);
@@ -1152,7 +1199,7 @@ class DoorVisualizer {
         name: 'Binario',
         code: 'GS1',
         dimensions: `Lunghezza: ${formatMillimeters(params.totalWidthMm)} mm`,
-        pieces: Math.max(params.slidingLeavesCount || 1, 1),
+        pieces: Math.max(params.trackCount || 1, 1),
         images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-312.png',
       }
     );
@@ -1274,6 +1321,7 @@ class DoorVisualizer {
     timeline.to({}, { duration: 1 });
 
     this.autoTimeline = timeline;
+    this.autoTimeline.play(0);
   }
 
   showPartInfo(info) {
@@ -1471,6 +1519,7 @@ const selectors = {
   widthInput: document.getElementById('width'),
   heightInput: document.getElementById('height'),
   modelContainer: document.querySelector('.model-selection'),
+  modelInput: document.getElementById('model-select'),
   soloPannelloSection: document.getElementById('solo-pannello-section'),
   numPanelsPannelloInput: document.getElementById('num-panels-pannello'),
   panelDimensionsPannello: document.getElementById('panel-dimensions-container-pannello'),
@@ -1764,6 +1813,31 @@ function updateNumeroAnteOptions(model) {
   select.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+function isBipartingAllowed(model, count) {
+  if (!model || !Number.isFinite(count)) return false;
+  if (count <= 0 || count % 2 !== 0) return false;
+  return model === 'TRASCINAMENTO' || model === 'INDIPENDENTE';
+}
+
+function updateAperturaAvailability() {
+  const option = selectors.aperturaAnteContainer?.querySelector(
+    '.apertura-ante-option[data-value="Destra Sinistra"]'
+  );
+  if (!option) return;
+
+  const model = selectors.modelInput?.value || '';
+  const anteCount = Number(selectors.numeroAnteSelect?.value || 0);
+  const allowed = isBipartingAllowed(model, anteCount);
+
+  option.classList.toggle('is-disabled', !allowed);
+  option.setAttribute('aria-disabled', allowed ? 'false' : 'true');
+  option.tabIndex = allowed ? 0 : -1;
+
+  if (!allowed && selectors.aperturaAnteInput?.value === 'Destra Sinistra') {
+    aperturaGroup?.select('Normale');
+  }
+}
+
 function handleNumeroAnteChange() {
   const count = Number(selectors.numeroAnteSelect?.value || 0);
   const shouldShow = count > 1;
@@ -1772,6 +1846,7 @@ function handleNumeroAnteChange() {
   if (!shouldShow && aperturaGroup) {
     aperturaGroup.clear();
   }
+  updateAperturaAvailability();
 }
 
 function handleNumeroPannelliFissiChange() {
@@ -2025,13 +2100,16 @@ function deriveConfiguration(config) {
     numeroAnte = config.leaves || 0;
   }
 
-  const apertura = config.aperturaAnte;
-  const isDoubleOpening = apertura === 'Destra Sinistra' || apertura === 'Sinistra Destra';
+  let apertura = config.aperturaAnte;
+  const canBiparting = apertura === 'Destra Sinistra' && isBipartingAllowed(model, numeroAnte);
+  if (apertura === 'Destra Sinistra' && !canBiparting) {
+    apertura = 'Normale';
+  }
 
   let numeroBinari = numeroAnte;
   if (model === 'SINGOLA') {
     numeroBinari = 1;
-  } else if (isDoubleOpening) {
+  } else if (canBiparting) {
     numeroBinari = Math.max(Math.floor(numeroAnte / 2), 1);
   }
 
@@ -2916,11 +2994,17 @@ function updateVisualizerPreview(config, derived) {
     }
   }
 
+  const openingChoice = derived?.aperturaEffettiva || config.aperturaAnte;
   const openingMode = (() => {
-    if (config.aperturaAnte === 'Destra Sinistra') return 'biparting';
-    if (config.aperturaAnte === 'Sinistra') return 'single-left';
+    if (openingChoice === 'Destra Sinistra') return 'biparting';
+    if (openingChoice === 'Sinistra') return 'single-left';
     return 'single-right';
   })();
+
+  const rawTrackCount = Number(derived?.numeroBinari ?? 0);
+  const trackCount = Number.isFinite(rawTrackCount) && rawTrackCount > 0
+    ? Math.floor(rawTrackCount)
+    : Math.max(slidingLeavesSpecs.length, 0);
 
   visualizer.updateDoor({
     heightMm: config.height,
@@ -2933,6 +3017,7 @@ function updateVisualizerPreview(config, derived) {
     showCover: !isSoloPannello && config.binario === 'A vista',
     openingMode,
     environment: config.environment || 'soloporta',
+    trackCount,
   });
 }
 
@@ -3318,11 +3403,23 @@ function setupSelectionGroup(container, optionSelector, hiddenInput, { onChange 
     if (onChange) onChange('');
   };
 
+  const isDisabled = (node) =>
+    node.classList.contains('is-disabled') || node.getAttribute('aria-disabled') === 'true';
+
   options.forEach((option) => {
-    option.tabIndex = 0;
-    option.addEventListener('click', () => select(option.dataset.value || ''));
+    if (!option.hasAttribute('tabindex')) {
+      option.tabIndex = 0;
+    }
+    option.addEventListener('click', () => {
+      if (isDisabled(option)) return;
+      select(option.dataset.value || '');
+    });
     option.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
+        if (isDisabled(option)) {
+          event.preventDefault();
+          return;
+        }
         event.preventDefault();
         select(option.dataset.value || '');
       }
@@ -3410,6 +3507,7 @@ modelGroup = setupSelectionGroup(selectors.modelContainer, '.model-option', docu
 
     setFlexVisibility(selectors.magneticaOptionalSection, value === 'MAGNETICA');
     updateTrackLengthOptions();
+    updateAperturaAvailability();
   },
 });
 
@@ -3583,4 +3681,5 @@ binarioGroup.select('A vista');
 traversinoGroup.select('No');
 aperturaGroup.select('Normale');
 updateTrackLengthOptions();
+updateAperturaAvailability();
 refreshOutputs();

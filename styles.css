@@ -746,6 +746,17 @@ a {
   color: var(--accent-strong);
 }
 
+.apertura-ante-option.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+}
+
+.apertura-ante-option.is-disabled img {
+  filter: grayscale(0.55);
+}
+
 .configurator-section--error {
   border-color: rgba(239, 68, 68, 0.6);
   box-shadow: 0 10px 24px rgba(239, 68, 68, 0.15);
