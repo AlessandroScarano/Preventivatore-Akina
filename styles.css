@@ -31,6 +31,7 @@ body {
   color: var(--text);
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 img {
@@ -160,6 +161,8 @@ a {
   flex-direction: column;
   gap: 1.5rem;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .viewer-stage {
@@ -178,6 +181,8 @@ a {
   display: grid;
   align-items: stretch;
   justify-items: stretch;
+  width: 100%;
+  max-width: 100%;
 }
 
 .viewer {
@@ -186,12 +191,15 @@ a {
   height: 100%;
   min-height: 100%;
   display: block;
+  max-width: 100%;
 }
 
 .viewer canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .viewer-loading {

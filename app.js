@@ -382,6 +382,10 @@ class DoorVisualizer {
     this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
+    this.renderer.domElement.style.maxWidth = '100%';
+    this.renderer.domElement.style.maxHeight = '100%';
+    this.renderer.domElement.style.objectFit = 'contain';
+    this.renderer.domElement.style.display = 'block';
     container.appendChild(this.renderer.domElement);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -694,9 +698,9 @@ class DoorVisualizer {
   }
 
   updateDoor(options = {}) {
-    if (!this.assetsReady) {
+    const shouldQueueUpdate = !this.assetsReady;
+    if (shouldQueueUpdate) {
       this.pendingUpdate = { ...options };
-      return;
     }
 
     const heightMm = Number(options.heightMm ?? options.height ?? 0);
@@ -1142,7 +1146,7 @@ const initialHeight = Number(document.getElementById('height')?.value) || 2200;
 const initialLeaves = Math.max(Number(document.getElementById('numero-ante-select')?.value) || 2, 1);
 const initialLeafWidth = Math.max(Math.floor(initialWidth / Math.max(initialLeaves, 1)), 1);
 
-visualizer.updateDoor({
+const initialDoorConfig = {
   heightMm: initialHeight,
   leafWidthMm: initialLeafWidth,
   numDoors: initialLeaves,
@@ -1151,7 +1155,20 @@ visualizer.updateDoor({
   trackVisibility: 'visible',
   showCover: true,
   environment: 'soloporta',
-});
+};
+
+visualizer.updateDoor(initialDoorConfig);
+
+if (visualizer.preloadPromise && typeof visualizer.preloadPromise.finally === 'function') {
+  visualizer.preloadPromise
+    .catch((error) => {
+      console.warn('Impossibile completare il preload iniziale dei modelli 3D:', error);
+    })
+    .finally(() => {
+      visualizer.updateDoor(initialDoorConfig);
+      visualizer.handleResize();
+    });
+}
 
 const selectors = {
   form: document.getElementById('akina-configurator-form'),
