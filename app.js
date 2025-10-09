@@ -894,73 +894,68 @@ class DoorVisualizer {
     const start = Math.min(areaStart, areaEnd);
     const end = Math.max(areaStart, areaEnd);
     const positions = new Array(count);
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const smallestWidth = segments.reduce(
+      (min, segment) => Math.min(min, segment.widthM || min),
+      Number.POSITIVE_INFINITY
+    );
+    const stackSpacing = clamp(
+      smallestWidth * 0.25,
+      Math.min((end - start) * 0.02, 0.04),
+      0.12
+    );
 
     if (mode === 'none') {
       return segments.map((segment) => segment.closedX ?? segment.center ?? 0);
     }
 
     if (mode === 'single-left') {
-      const totalWidth = segments.reduce((sum, segment) => sum + segment.widthM, 0);
-      const firstWidth = segments[0]?.widthM ?? 0;
-      const stackStart =
-        count === 1
-          ? start - totalWidth
-          : start - Math.max(totalWidth - firstWidth, 0);
-      let cursor = stackStart;
+      const base = start + (segments[0]?.widthM ?? 0) / 2;
       for (let i = 0; i < count; i += 1) {
         const width = segments[i].widthM;
-        positions[i] = cursor + width / 2;
-        cursor += width;
+        const target = base + i * stackSpacing;
+        const min = start + width / 2;
+        const max = end - width / 2;
+        positions[i] = clamp(target, min, max);
       }
       return positions;
     }
 
     if (mode === 'single-right') {
-      const totalWidth = segments.reduce((sum, segment) => sum + segment.widthM, 0);
-      const lastWidth = segments[count - 1]?.widthM ?? 0;
-      const stackEnd =
-        count === 1
-          ? end + totalWidth
-          : end + Math.max(totalWidth - lastWidth, 0);
-      let cursor = stackEnd;
+      const base = end - (segments[count - 1]?.widthM ?? 0) / 2;
       for (let i = count - 1; i >= 0; i -= 1) {
         const width = segments[i].widthM;
-        cursor -= width;
-        positions[i] = cursor + width / 2;
+        const offset = (count - 1 - i) * stackSpacing;
+        const target = base - offset;
+        const min = start + width / 2;
+        const max = end - width / 2;
+        positions[i] = clamp(target, min, max);
       }
       return positions;
     }
 
     const leftCount = Math.floor(count / 2);
     const rightCount = count - leftCount;
-    const leftWidth = segments.slice(0, leftCount).reduce((sum, segment) => sum + segment.widthM, 0);
-    const rightWidth = segments.slice(leftCount).reduce((sum, segment) => sum + segment.widthM, 0);
-
     if (leftCount > 0) {
-      const firstWidth = segments[0]?.widthM ?? 0;
-      const leftStart =
-        leftCount === 1
-          ? start - firstWidth
-          : start - Math.max(leftWidth - firstWidth, 0);
-      let leftCursor = leftStart;
+      const baseLeft = start + (segments[0]?.widthM ?? 0) / 2;
       for (let i = 0; i < leftCount; i += 1) {
         const width = segments[i].widthM;
-        positions[i] = leftCursor + width / 2;
-        leftCursor += width;
+        const target = baseLeft + i * stackSpacing;
+        const min = start + width / 2;
+        const max = end - width / 2;
+        positions[i] = clamp(target, min, max);
       }
     }
 
     if (rightCount > 0) {
-      const lastWidth = segments[count - 1]?.widthM ?? 0;
-      const rightEnd =
-        rightCount === 1
-          ? end + lastWidth
-          : end + Math.max(rightWidth - lastWidth, 0);
-      let rightCursor = rightEnd;
-      for (let i = count - 1; i >= leftCount; i -= 1) {
-        const width = segments[i].widthM;
-        rightCursor -= width;
-        positions[i] = rightCursor + width / 2;
+      const baseRight = end - (segments[count - 1]?.widthM ?? 0) / 2;
+      for (let i = 0; i < rightCount; i += 1) {
+        const index = leftCount + i;
+        const width = segments[index].widthM;
+        const target = baseRight - i * stackSpacing;
+        const min = start + width / 2;
+        const max = end - width / 2;
+        positions[index] = clamp(target, min, max);
       }
     }
 
