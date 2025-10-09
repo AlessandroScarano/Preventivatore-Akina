@@ -964,11 +964,8 @@ class DoorVisualizer {
       }
     );
     if (!track) return null;
-    track.position.set(
-      0,
-      params.heightM / 2 + this.frameThickness - (params.trackMode === 'hidden' ? 0.02 : 0),
-      index * this.zOffset
-    );
+    const trackVerticalOffset = this.frameThickness - (params.trackMode === 'hidden' ? 0.02 : 0);
+    track.position.set(0, params.heightM + trackVerticalOffset, index * this.zOffset);
     track.scale.set(params.totalWidthM, 1, 1);
     return track;
   }
