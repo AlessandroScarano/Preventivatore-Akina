@@ -551,6 +551,12 @@ a {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.configurator-hint {
+  margin: -0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .configurator-section input:focus,
 .configurator-section select:focus {
   outline: none;
@@ -662,6 +668,7 @@ a {
 }
 
 .model-selection,
+.environment-selection,
 .apertura-ante-selection,
 .tipologia-selection,
 .pannello-fisso-selection,
@@ -677,6 +684,7 @@ a {
 }
 
 .model-option,
+.environment-option,
 .apertura-ante-option,
 .tipologia-option,
 .pannello-fisso-option,
@@ -704,6 +712,7 @@ a {
 }
 
 .model-option img,
+.environment-option img,
 .apertura-ante-option img,
 .tipologia-option img,
 .pannello-fisso-option img,
@@ -721,6 +730,7 @@ a {
 }
 
 .model-option.selected,
+.environment-option.selected,
 .apertura-ante-option.selected,
 .tipologia-option.selected,
 .pannello-fisso-option.selected,
@@ -735,6 +745,46 @@ a {
   box-shadow: 0 12px 28px rgba(49, 104, 255, 0.18);
   transform: translateY(-3px);
   color: var(--accent-strong);
+}
+
+.environment-option p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.environment-option__preview {
+  width: 100%;
+  height: 90px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(226, 234, 255, 0.9));
+  border: 1px solid rgba(205, 215, 240, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.environment-option__preview--soloporta::after,
+.environment-option__preview--classico::after,
+.environment-option__preview--moderno::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.05) brightness(1.05);
+  opacity: 0.9;
+}
+
+.environment-option__preview--soloporta::after {
+  background-image: linear-gradient(135deg, rgba(92, 125, 255, 0.2), rgba(255, 255, 255, 0.85));
+}
+
+.environment-option__preview--classico::after {
+  background-image: linear-gradient(135deg, rgba(255, 230, 210, 0.65), rgba(255, 255, 255, 0.85));
+}
+
+.environment-option__preview--moderno::after {
+  background-image: linear-gradient(135deg, rgba(120, 229, 255, 0.5), rgba(255, 255, 255, 0.9));
 }
 
 .configurator-section--error {

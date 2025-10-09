@@ -12,6 +12,12 @@ const MODEL_CONFIG = {
   SOLO_ANTA: { label: 'Solo anta', defaultOpening: 'scorrevole-parete' },
 };
 
+const ENVIRONMENT_CONFIG = {
+  soloporta: { label: 'Solo porta' },
+  classico: { label: 'Villa classica' },
+  moderno: { label: 'Villa moderna' },
+};
+
 const MODEL_ANTE_OPTIONS = {
   TRASCINAMENTO: [2, 3, 4, 5, 6, 7, 8, 9, 10],
   INDIPENDENTE: [2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -1167,6 +1173,8 @@ const initialHeight = Number(document.getElementById('height')?.value) || 2200;
 const initialLeaves = Math.max(Number(document.getElementById('numero-ante-select')?.value) || 2, 1);
 const initialLeafWidth = Math.max(Math.floor(initialWidth / Math.max(initialLeaves, 1)), 1);
 
+const initialEnvironment = document.getElementById('environment-select')?.value || 'soloporta';
+
 const initialDoorConfig = {
   heightMm: initialHeight,
   leafWidthMm: initialLeafWidth,
@@ -1175,7 +1183,7 @@ const initialDoorConfig = {
   glassColor: DEFAULT_GLASS_COLOR,
   trackVisibility: 'visible',
   showCover: true,
-  environment: 'soloporta',
+  environment: initialEnvironment,
 };
 
 visualizer.updateDoor(initialDoorConfig);
@@ -1201,6 +1209,7 @@ const selectors = {
   widthInput: document.getElementById('width'),
   heightInput: document.getElementById('height'),
   modelContainer: document.querySelector('.model-selection'),
+  environmentContainer: document.querySelector('.environment-selection'),
   soloPannelloSection: document.getElementById('solo-pannello-section'),
   numPanelsPannelloInput: document.getElementById('num-panels-pannello'),
   panelDimensionsPannello: document.getElementById('panel-dimensions-container-pannello'),
@@ -1248,6 +1257,7 @@ const selectors = {
   traversinoInput: document.getElementById('traversino-select'),
   traversinoMetersWrapper: document.getElementById('traversino-meters'),
   traversinoMetersInput: document.getElementById('traversino-meters-input'),
+  environmentInput: document.getElementById('environment-select'),
   magneticaOptionalSection: document.getElementById('magnetica-optional-section'),
   optionalTrascinamento: document.querySelectorAll('.optional-trascinamento'),
   kitTrascinamento: document.querySelectorAll('.kit-trascinamento-only'),
@@ -1733,6 +1743,7 @@ function collectConfiguration() {
     maniglieDetails,
     soloPannelloCount,
     soloAntaCount,
+    environment: data.get('environment') || 'soloporta',
   };
 }
 
@@ -2377,6 +2388,14 @@ function buildSelectionSummaryItems(config, derived) {
     value: MODEL_CONFIG[config.model]?.label ?? config.model ?? '—',
   });
 
+  const environmentLabel = getCardLabel(
+    selectors.environmentContainer,
+    '.environment-option',
+    config.environment,
+    ENVIRONMENT_CONFIG[config.environment]?.label ?? '—'
+  );
+  items.push({ label: 'Ambientazione 3D', value: environmentLabel });
+
   if (config.model === 'SINGOLA') {
     items.push({
       label: 'Tipologia',
@@ -2558,7 +2577,7 @@ function updateVisualizerPreview(config, derived) {
     glassColor: DEFAULT_GLASS_COLOR,
     trackVisibility: trackType === 'incasso' ? 'hidden' : 'visible',
     showCover: !isSoloPannello && config.binario === 'A vista',
-    environment: 'soloporta',
+    environment: config.environment || 'soloporta',
   });
 }
 
@@ -2635,104 +2654,282 @@ async function handleSavePdf() {
   const pdf = new JsPdfConstructor('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 15;
-  let cursorY = margin;
+  const margin = 18;
+  const contentWidth = pageWidth - margin * 2;
 
-  const ensureSpace = (space) => {
-    if (cursorY + space > pageHeight - margin) {
-      pdf.addPage();
-      cursorY = margin;
-    }
+  const palette = {
+    headerDark: [26, 32, 52],
+    headerLight: [45, 58, 88],
+    text: [36, 42, 58],
+    muted: [110, 118, 142],
+    accent: [84, 104, 255],
+    accentSoft: [226, 232, 255],
+    panel: [247, 249, 255],
+    border: [214, 222, 242],
   };
 
-  pdf.setFontSize(18);
-  pdf.text('Preventivo Porta Akina', pageWidth / 2, cursorY, { align: 'center' });
-  cursorY += 10;
+  const fillRect = (color, x, y, width, height) => {
+    pdf.setFillColor(color[0], color[1], color[2]);
+    pdf.rect(x, y, width, height, 'F');
+  };
+
+  fillRect(palette.headerDark, 0, 0, pageWidth, 30);
+  fillRect(palette.headerLight, 0, 30, pageWidth, 14);
+
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(20);
+  pdf.text('Preventivo Porta Akina', margin, 20);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(11);
+  pdf.text(new Date().toLocaleDateString('it-IT'), pageWidth - margin, 20, { align: 'right' });
+
+  let cursorY = 46;
+  pdf.setTextColor(palette.text[0], palette.text[1], palette.text[2]);
 
   if (snapshot) {
     try {
-      const imageProps = pdf.getImageProperties(snapshot);
-      const imageWidth = pageWidth - margin * 2;
-      const imageHeight = (imageProps.height * imageWidth) / imageProps.width;
-      ensureSpace(imageHeight + 8);
-      pdf.addImage(snapshot, 'PNG', margin, cursorY, imageWidth, imageHeight);
-      cursorY += imageHeight + 8;
+      const props = pdf.getImageProperties(snapshot);
+      const maxImageHeight = Math.min(70, pageHeight * 0.28);
+      const imageHeight = Math.min(maxImageHeight, (props.height * contentWidth) / props.width);
+      pdf.addImage(snapshot, 'PNG', margin, cursorY, contentWidth, imageHeight);
+      cursorY += imageHeight + 10;
     } catch (error) {
-      console.warn('Impossibile aggiungere l\'immagine al PDF.', error);
+      console.warn("Impossibile aggiungere l'immagine al PDF.", error);
     }
   }
 
+  pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(14);
   pdf.text('Riepilogo configurazione', margin, cursorY);
   cursorY += 6;
-  pdf.setFontSize(11);
 
-  summaryItems.forEach((item) => {
-    const line = `${item.label}: ${item.value}`;
-    const wrapped = pdf.splitTextToSize(line, pageWidth - margin * 2);
-    wrapped.forEach((segment) => {
-      ensureSpace(6);
-      pdf.text(segment, margin, cursorY);
-      cursorY += 6;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+
+  const summaryColumns = 2;
+  const summaryGap = 10;
+  const summaryPadding = 8;
+  const columnWidth = (contentWidth - summaryGap) / summaryColumns;
+  const columnItems = Array.from({ length: summaryColumns }, () => []);
+  summaryItems.forEach((item, index) => {
+    columnItems[index % summaryColumns].push(item);
+  });
+
+  const columnHeights = columnItems.map((items) => {
+    let height = 0;
+    items.forEach((item) => {
+      const valueLines = pdf.splitTextToSize(String(item.value ?? '—'), columnWidth - 6);
+      height += 6 + valueLines.length * 4.2 + 4;
+    });
+    return height;
+  });
+
+  const summaryBoxHeight = summaryPadding * 2 + Math.max(...columnHeights, 16);
+  pdf.setFillColor(palette.panel[0], palette.panel[1], palette.panel[2]);
+  pdf.setDrawColor(palette.border[0], palette.border[1], palette.border[2]);
+  pdf.roundedRect(margin, cursorY, contentWidth, summaryBoxHeight, 4, 4, 'FD');
+
+  columnItems.forEach((items, columnIndex) => {
+    let columnY = cursorY + summaryPadding + 2;
+    const columnX = margin + summaryPadding + columnIndex * (columnWidth + summaryGap);
+    items.forEach((item) => {
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(item.label, columnX, columnY + 3);
+      pdf.setFont('helvetica', 'normal');
+      const valueLines = pdf.splitTextToSize(String(item.value ?? '—'), columnWidth - 6);
+      valueLines.forEach((line, lineIndex) => {
+        pdf.text(line, columnX, columnY + 6.4 + lineIndex * 4.2);
+      });
+      columnY += 6 + valueLines.length * 4.2 + 4;
     });
   });
 
-  if (categories.length > 0) {
-    cursorY += 2;
+  cursorY += summaryBoxHeight + 12;
+
+  const footerReserve = 32;
+  let availableHeight = pageHeight - margin - cursorY - footerReserve;
+  if (availableHeight < 40) {
+    availableHeight = 40;
   }
 
-  categories.forEach((category) => {
-    if (!Array.isArray(category.items) || !category.items.length) return;
-    ensureSpace(8);
-    pdf.setFontSize(13);
-    pdf.text(category.label, margin, cursorY);
-    cursorY += 5;
-    pdf.setFontSize(11);
+  const descriptionWidth = contentWidth * 0.46;
+  const codeWidth = contentWidth * 0.18;
+  const quantityWidth = contentWidth * 0.1;
+  const unitWidth = contentWidth * 0.1;
+  const totalWidth = contentWidth - (descriptionWidth + codeWidth + quantityWidth + unitWidth);
 
-    category.items.forEach((item) => {
-      const unitPrice = Number(item.prezzo || 0);
-      const quantity = Number(item.quantita || 0);
-      const line = `${item.descrizione} (Codice: ${item.codice}, Quantità: ${quantity}, Prezzo: ${formatCurrency(unitPrice)}, Totale: ${formatCurrency(unitPrice * quantity)})`;
-      const wrapped = pdf.splitTextToSize(line, pageWidth - margin * 2);
-      wrapped.forEach((segment) => {
-        ensureSpace(5);
-        pdf.text(segment, margin, cursorY);
-        cursorY += 5;
+  const columnPositions = {
+    description: margin + 8,
+    code: margin + 8 + descriptionWidth,
+    quantity: margin + 8 + descriptionWidth + codeWidth,
+    unit: margin + 8 + descriptionWidth + codeWidth + quantityWidth,
+    total: margin + 8 + descriptionWidth + codeWidth + quantityWidth + unitWidth,
+  };
+
+  const paddingTop = 8;
+  const paddingBottom = 8;
+  let tableFontSize = 10;
+  let itemRowHeight = 6;
+  let sectionRowHeight = 7;
+  const headerRowHeight = 7;
+
+  const buildTableRows = (fontSize) => {
+    const previousFontSize = pdf.getFontSize();
+    pdf.setFontSize(fontSize);
+    const rows = [];
+
+    categories.forEach((category) => {
+      if (!Array.isArray(category.items) || category.items.length === 0) return;
+      rows.push({ type: 'section', text: category.label });
+      category.items.forEach((item) => {
+        const quantity = Number(item.quantita || 0);
+        const unitPrice = Number(item.prezzo || 0);
+        const totalLine = unitPrice * quantity;
+        const description = item.descrizione || '';
+        const descLines = pdf.splitTextToSize(description, Math.max(descriptionWidth - 6, 20));
+        descLines.forEach((line, lineIndex) => {
+          rows.push({
+            type: 'item',
+            description: line,
+            code: lineIndex === 0 ? item.codice : '',
+            quantity: lineIndex === 0 && quantity ? quantity : '',
+            unit: lineIndex === 0 ? formatCurrency(unitPrice) : '',
+            total: lineIndex === 0 ? formatCurrency(totalLine) : '',
+          });
+        });
       });
     });
 
-    cursorY += 3;
-  });
+    pdf.setFontSize(previousFontSize);
+    return rows;
+  };
 
-  ensureSpace(10);
+  const computeTableHeight = (rows) =>
+    rows.reduce((sum, row) => sum + (row.type === 'section' ? sectionRowHeight : itemRowHeight), 0);
+
+  let tableRows = buildTableRows(tableFontSize);
+  const availableTableHeight = Math.max(availableHeight - paddingTop - paddingBottom - headerRowHeight, 16);
+
+  let attempts = 0;
+  while (tableRows.length > 0 && computeTableHeight(tableRows) > availableTableHeight && attempts < 6) {
+    const currentHeight = computeTableHeight(tableRows);
+    const scale = Math.max(availableTableHeight / currentHeight, 0.55);
+    tableFontSize = Math.max(6.8, tableFontSize * scale);
+    itemRowHeight = Math.max(3.6, itemRowHeight * scale);
+    sectionRowHeight = Math.max(4.2, sectionRowHeight * scale);
+    tableRows = buildTableRows(tableFontSize);
+    attempts += 1;
+  }
+
+  let tableContentHeight = computeTableHeight(tableRows);
+  if (tableRows.length > 0 && tableContentHeight > availableTableHeight) {
+    const scale = Math.max(availableTableHeight / tableContentHeight, 0.45);
+    tableFontSize = Math.max(6.2, tableFontSize * scale);
+    itemRowHeight = Math.max(3.2, itemRowHeight * scale);
+    sectionRowHeight = Math.max(3.8, sectionRowHeight * scale);
+    tableRows = buildTableRows(tableFontSize);
+    tableContentHeight = computeTableHeight(tableRows);
+  }
+
+  if (tableRows.length === 0) {
+    const placeholderHeight = 24;
+    pdf.setFillColor(palette.panel[0], palette.panel[1], palette.panel[2]);
+    pdf.roundedRect(margin, cursorY, contentWidth, placeholderHeight, 4, 4, 'F');
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(10);
+    pdf.text('Nessuna voce di preventivo disponibile.', margin + 10, cursorY + placeholderHeight / 2 + 3);
+    cursorY += placeholderHeight + 12;
+  } else {
+    const tableBoxHeight = paddingTop + headerRowHeight + tableContentHeight + paddingBottom;
+    pdf.setFillColor(palette.panel[0], palette.panel[1], palette.panel[2]);
+    pdf.setDrawColor(palette.border[0], palette.border[1], palette.border[2]);
+    pdf.roundedRect(margin, cursorY, contentWidth, tableBoxHeight, 4, 4, 'FD');
+
+    const headerY = cursorY + paddingTop;
+    pdf.setFillColor(palette.accentSoft[0], palette.accentSoft[1], palette.accentSoft[2]);
+    pdf.rect(margin, headerY, contentWidth, headerRowHeight, 'F');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(tableFontSize);
+    pdf.setTextColor(palette.text[0], palette.text[1], palette.text[2]);
+    pdf.text('Descrizione', columnPositions.description, headerY + headerRowHeight - 2);
+    pdf.text('Codice', columnPositions.code, headerY + headerRowHeight - 2);
+    pdf.text('Qtà', columnPositions.quantity, headerY + headerRowHeight - 2);
+    pdf.text('Prezzo', columnPositions.unit, headerY + headerRowHeight - 2);
+    pdf.text('Totale', columnPositions.total, headerY + headerRowHeight - 2);
+
+    let rowCursor = headerY + headerRowHeight;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(tableFontSize);
+
+    tableRows.forEach((row, index) => {
+      const height = row.type === 'section' ? sectionRowHeight : itemRowHeight;
+      const baseline = rowCursor + height - 1.6;
+
+      if (row.type === 'section') {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(row.text, columnPositions.description, baseline);
+        pdf.setFont('helvetica', 'normal');
+      } else {
+        pdf.text(row.description, columnPositions.description, baseline);
+        if (row.code) {
+          pdf.text(row.code, columnPositions.code + codeWidth - 2, baseline, { align: 'right' });
+        }
+        if (row.quantity !== '') {
+          pdf.text(String(row.quantity), columnPositions.quantity + quantityWidth - 2, baseline, { align: 'right' });
+        }
+        if (row.unit) {
+          pdf.text(row.unit, columnPositions.unit + unitWidth - 2, baseline, { align: 'right' });
+        }
+        if (row.total) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(row.total, columnPositions.total + totalWidth - 2, baseline, { align: 'right' });
+          pdf.setFont('helvetica', 'normal');
+        }
+      }
+
+      rowCursor += height;
+      if (index < tableRows.length - 1) {
+        pdf.setDrawColor(palette.border[0], palette.border[1], palette.border[2]);
+        pdf.line(margin + 6, rowCursor, margin + contentWidth - 6, rowCursor);
+      }
+    });
+
+    cursorY += tableBoxHeight + 12;
+  }
+
+  const totalBoxHeight = 24;
+  pdf.setFillColor(palette.accentSoft[0], palette.accentSoft[1], palette.accentSoft[2]);
+  pdf.roundedRect(margin, cursorY, contentWidth, totalBoxHeight, 4, 4, 'F');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(palette.text[0], palette.text[1], palette.text[2]);
+  pdf.text('Totale', margin + 8, cursorY + totalBoxHeight / 2 + 3);
+
   pdf.setFontSize(14);
-  pdf.text(`Totale: ${formatCurrency(total)} + IVA e Spese di Trasporto`, margin, cursorY);
-  cursorY += 8;
+  pdf.setTextColor(palette.accent[0], palette.accent[1], palette.accent[2]);
+  pdf.text(
+    `${formatCurrency(total)} + IVA e Spese di Trasporto`,
+    margin + contentWidth - 8,
+    cursorY + totalBoxHeight / 2 + 3,
+    { align: 'right' }
+  );
 
+  cursorY += totalBoxHeight + 6;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(palette.muted[0], palette.muted[1], palette.muted[2]);
   const disclaimerLines = pdf.splitTextToSize(
-    '* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell\'utilizzo del Tool.',
-    pageWidth - margin * 2
+    'La Glass Com non si assume responsabilità per errori nei calcoli e nell’utilizzo del tool. Utilizzare sempre cataloghi, listini e schede tecniche aggiornati.',
+    contentWidth
   );
-  const noteLines = pdf.splitTextToSize(
-    'Vi preghiamo di utilizzare i cataloghi, i listini e le schede tecniche a disposizione.',
-    pageWidth - margin * 2
-  );
-
-  pdf.setFontSize(9);
-  disclaimerLines.forEach((segment) => {
-    ensureSpace(4);
-    pdf.text(segment, margin, cursorY);
-    cursorY += 4;
-  });
-  noteLines.forEach((segment) => {
-    ensureSpace(4);
-    pdf.text(segment, margin, cursorY);
-    cursorY += 4;
-  });
+  pdf.text(disclaimerLines, margin, cursorY + 4);
 
   const timestamp = new Date().toISOString().slice(0, 10);
-  const filename = `preventivo-akina-${timestamp}.pdf`;
-  pdf.save(filename);
+  pdf.save(`preventivo-akina-${timestamp}.pdf`);
 }
 
 function setupSelectionGroup(container, optionSelector, hiddenInput, { onChange } = {}) {
@@ -2780,6 +2977,7 @@ function setupSelectionGroup(container, optionSelector, hiddenInput, { onChange 
   return { select, clear };
 }
 
+let environmentGroup;
 let modelGroup;
 let aperturaGroup;
 let tipologiaGroup;
@@ -2792,6 +2990,17 @@ let doorBoxGroup;
 let doorBoxMountingGroup;
 let binarioGroup;
 let traversinoGroup;
+
+environmentGroup = setupSelectionGroup(
+  selectors.environmentContainer,
+  '.environment-option',
+  selectors.environmentInput,
+  {
+    onChange: () => {
+      refreshOutputs();
+    },
+  }
+);
 
 modelGroup = setupSelectionGroup(selectors.modelContainer, '.model-option', document.getElementById('model-select'), {
   onChange: (value) => {
@@ -3021,6 +3230,9 @@ Array.from(selectors.progressSteps ?? []).forEach((node, index) => {
 });
 
 // Default selections
+if (environmentGroup) {
+  environmentGroup.select(selectors.environmentInput?.value || 'soloporta');
+}
 modelGroup.select('TRASCINAMENTO');
 pannelloFissoGroup.select('No');
 anteNascosteGroup.select('No');
