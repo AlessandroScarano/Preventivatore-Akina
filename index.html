@@ -37,6 +37,15 @@
       <div class="app-main">
         <section class="viewer-area" aria-labelledby="visualizer-titolo">
           <div class="viewer-stage">
+            <div id="viewer-loading" class="viewer-loading is-hidden" aria-live="polite">
+              <div class="viewer-loading__panel">
+                <p class="viewer-loading__title">Caricamento modelli 3D…</p>
+                <div class="viewer-loading__bar">
+                  <span id="viewer-loading-bar"></span>
+                </div>
+                <span id="viewer-loading-percent" class="viewer-loading__percent">0%</span>
+              </div>
+            </div>
             <div id="viewer" class="viewer" role="img" aria-label="Anteprima 3D parametrica"></div>
             <div class="viewer-dimension viewer-dimension--height">
               <span id="viewer-height-label">2200 mm</span>
@@ -45,6 +54,36 @@
               <span id="viewer-width-label">1200 mm</span>
             </div>
             <div class="viewer-track" id="viewer-track-label">Binario: 2 m</div>
+            <div id="dimensions-info" class="viewer-dimensions-info">Ante: 2 · Larghezza anta: 600 mm · Altezza: 2200 mm · Larghezza totale: 1200 mm</div>
+            <div id="part-info" class="viewer-part-info" hidden></div>
+          </div>
+          <div class="viewer-controls" aria-label="Controlli visualizzatore 3D">
+            <div id="part-buttons" class="viewer-controls__row is-hidden">
+              <button type="button" data-part="topProfile">Profilo superiore</button>
+              <button type="button" data-part="bottomProfile">Profilo inferiore</button>
+              <button type="button" data-part="leftProfile">Profilo sinistro</button>
+              <button type="button" data-part="rightProfile">Profilo destro</button>
+              <button type="button" data-part="track">Binario</button>
+              <button type="button" data-part="cover">Cover</button>
+            </div>
+            <div class="viewer-controls__row viewer-controls__row--actions">
+              <button type="button" id="reset-colors">Reset evidenziazione</button>
+              <button type="button" id="reset-camera">Reset Camera</button>
+              <button type="button" id="open-doors">Apri Porte</button>
+              <button type="button" id="close-doors">Chiudi Porte</button>
+              <button type="button" id="fullscreen-toggle">Schermo intero</button>
+            </div>
+            <div
+              id="door-move-controls"
+              class="viewer-controls__row viewer-controls__row--move is-hidden"
+              aria-hidden="true"
+            >
+              <span class="viewer-controls__label">Sposta ante</span>
+              <div class="viewer-controls__group">
+                <button type="button" id="move-doors-left" aria-label="Sposta ante a sinistra">◀</button>
+                <button type="button" id="move-doors-right" aria-label="Sposta ante a destra">▶</button>
+              </div>
+            </div>
           </div>
         </section>
 

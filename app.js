@@ -1,4 +1,7 @@
-import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js';
+import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.4/index.js';
 
 const MODEL_CONFIG = {
   TRASCINAMENTO: { label: 'Trascinamento', defaultOpening: 'scorrevole-parete' },
@@ -152,6 +155,22 @@ const LARGHEZZA_MAX = 1500;
 const DEFAULT_PROFILE_COLOR = '#23283a';
 const DEFAULT_GLASS_COLOR = '#d6e9ff';
 
+const ASSET_PATHS = {
+  environments: {
+    classico: '/profili3dakina/villaclassica.glb',
+    moderno: '/profili3dakina/conf3dvillaGL5.glb',
+  },
+  parts: {
+    leftProfile: '/profili3dakina/profiloVertSx.glb',
+    rightProfile: '/profili3dakina/profiloVertDx.glb',
+    topProfile: '/profili3dakina/profiloOrizzSup.glb',
+    bottomProfile: '/profili3dakina/profiloOrizzInf.glb',
+    track: '/profili3dakina/binario.glb',
+    coverLeft: '/profili3dakina/coverSx.glb',
+    coverRight: '/profili3dakina/coverDx.glb',
+  },
+};
+
 const formatter = new Intl.NumberFormat('it-IT', {
   style: 'currency',
   currency: 'EUR',
@@ -176,6 +195,47 @@ function formatMillimeters(value) {
 
 function mmFromCode(code) {
   return Math.round(Number(code || 0) * 100);
+}
+
+function disposeObject3D(object) {
+  if (!object) return;
+  object.traverse((child) => {
+    if (child.isMesh) {
+      if (child.geometry) {
+        child.geometry.dispose?.();
+      }
+      if (Array.isArray(child.material)) {
+        child.material.forEach((material) => material?.dispose?.());
+      } else if (child.material) {
+        child.material.dispose?.();
+      }
+    }
+  });
+}
+
+function clearGroup(group) {
+  if (!group) return;
+  while (group.children.length) {
+    const child = group.children.pop();
+    group.remove(child);
+    disposeObject3D(child);
+  }
+}
+
+function cloneGltfScene(gltf) {
+  if (!gltf) return null;
+  const clone = gltf.scene.clone(true);
+  clone.traverse((node) => {
+    if (node.isMesh) {
+      node.geometry = node.geometry?.clone?.() ?? node.geometry;
+      if (Array.isArray(node.material)) {
+        node.material = node.material.map((material) => material?.clone?.() ?? material);
+      } else if (node.material) {
+        node.material = node.material.clone();
+      }
+    }
+  });
+  return clone;
 }
 
 function findTrackOptions(model, binario, montaggio) {
@@ -205,456 +265,683 @@ function addOrUpdateItem(list, item) {
 class DoorVisualizer {
   constructor(container) {
     this.container = container;
+    this.overlay = document.getElementById('viewer-loading');
+    this.overlayBar = document.getElementById('viewer-loading-bar');
+    this.overlayPercent = document.getElementById('viewer-loading-percent');
+    this.partButtonsContainer = document.getElementById('part-buttons');
+    this.partInfoBox = document.getElementById('part-info');
+    this.dimensionsInfo = document.getElementById('dimensions-info');
+    this.moveControls = document.getElementById('door-move-controls');
+    this.moveLeftButton = document.getElementById('move-doors-left');
+    this.moveRightButton = document.getElementById('move-doors-right');
+    this.resetButton = document.getElementById('reset-colors');
+    this.openButton = document.getElementById('open-doors');
+    this.closeButton = document.getElementById('close-doors');
+    this.resetCameraButton = document.getElementById('reset-camera');
+    this.fullscreenButton = document.getElementById('fullscreen-toggle');
+
     this.scene = new THREE.Scene();
     this.scene.background = null;
 
-    this.camera = new THREE.PerspectiveCamera(
-      42,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      1000
-    );
-    this.camera.position.set(180, 180, 360);
-    this.camera.lookAt(new THREE.Vector3(0, 120, 0));
+    const width = Math.max(container.clientWidth, 1);
+    const height = Math.max(container.clientHeight, 1);
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 50);
+    this.camera.position.set(2.4, 2.1, 3.6);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setClearColor(0x000000, 0);
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setSize(width, height);
+    this.renderer.setClearAlpha(0);
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
     container.appendChild(this.renderer.domElement);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.75);
-    const rim = new THREE.DirectionalLight(0xffffff, 0.6);
-    rim.position.set(-200, 200, 160);
-    const key = new THREE.SpotLight(0xffffff, 0.85, 0, Math.PI / 6, 0.4, 1);
-    key.position.set(220, 280, 180);
-    this.scene.add(ambient, rim, key);
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enableDamping = true;
+    this.controls.enablePan = false;
+    this.controls.target.set(0, 1, 0);
 
-    const floorGeometry = new THREE.CircleGeometry(360, 64);
-    const floorMaterial = new THREE.MeshStandardMaterial({
-      color: '#f1f5ff',
-      roughness: 0.95,
-      metalness: 0.02,
-      transparent: true,
-      opacity: 0.65,
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -2;
-    this.scene.add(floor);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    const directional = new THREE.DirectionalLight(0xffffff, 0.85);
+    directional.position.set(2, 3, 2);
+    this.scene.add(ambient, directional);
 
-    this.doorGroup = new THREE.Group();
-    this.scene.add(this.doorGroup);
+    this.doorRoot = new THREE.Group();
+    this.doorFrames = new THREE.Group();
+    this.tracksGroup = new THREE.Group();
+    this.doorRoot.add(this.doorFrames);
+    this.doorRoot.add(this.tracksGroup);
+    this.scene.add(this.doorRoot);
 
-    window.addEventListener('resize', () => this.handleResize());
+    this.villaGroup = null;
 
-    this.scaleFactor = 0.1;
-    this.leafGroups = [];
-    this.slideAmplitude = 0;
-    this.currentOpening = 'scorrevole-parete';
-    this.clock = new THREE.Clock();
+    this.loadingManager = new THREE.LoadingManager();
+    this.loadingManager.onStart = () => this.showOverlay(0);
+    this.loadingManager.onProgress = (_, loaded, total) => {
+      const percent = total ? Math.round((loaded / total) * 100) : 0;
+      this.showOverlay(percent);
+    };
+    this.loadingManager.onLoad = () => this.onAssetsReady();
+
+    this.loader = new GLTFLoader(this.loadingManager);
+    this.gltfCache = new Map();
+
+    this.assetsReady = false;
+    this.pendingUpdate = null;
+    this.partMeshes = [];
+    this.leafData = [];
+    this.movableLeafData = [];
+    this.closedOffset = 0;
+    this.isClosed = true;
+    this.frameThickness = 0.045;
+    this.zOffset = 0.051;
+    this.environmentMode = 'soloporta';
+    this.lastParams = null;
+    this.moveInterval = null;
+
+    this.bindUIControls();
+
+    this.animate = this.animate.bind(this);
+    this.handleResize = this.handleResize.bind(this);
+    window.addEventListener('resize', this.handleResize);
+    document.addEventListener('fullscreenchange', this.handleResize);
+
+    this.preloadPromise = this.preloadAssets();
 
     this.animate();
   }
 
-  handleResize() {
-    const { clientWidth, clientHeight } = this.container;
-    this.camera.aspect = clientWidth / clientHeight;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(clientWidth, clientHeight);
+  bindUIControls() {
+    if (this.partButtonsContainer) {
+      this.partButtonsContainer.classList.add('is-hidden');
+      const buttons = this.partButtonsContainer.querySelectorAll('[data-part]');
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const part = button.dataset.part;
+          if (part) {
+            this.highlightPart(part);
+          }
+        });
+      });
+    }
+
+    if (this.moveControls) {
+      this.moveControls.classList.add('is-hidden');
+      this.moveControls.setAttribute('aria-hidden', 'true');
+    }
+
+    this.resetButton?.addEventListener('click', () => this.resetHighlights());
+    this.openButton?.addEventListener('click', () => this.openDoors());
+    this.closeButton?.addEventListener('click', () => this.closeDoors());
+    this.resetCameraButton?.addEventListener('click', () => this.resetCamera());
+    this.fullscreenButton?.addEventListener('click', () => this.toggleFullscreen());
+
+    if (this.moveLeftButton && this.moveRightButton) {
+      const attach = (button, direction) => {
+        const startMove = () => this.startContinuousMove(direction);
+        const stopMove = () => this.stopContinuousMove();
+        button.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          startMove();
+        });
+        button.addEventListener(
+          'touchstart',
+          (event) => {
+            event.preventDefault();
+            startMove();
+          },
+          { passive: false }
+        );
+        ['mouseup', 'mouseleave'].forEach((type) =>
+          button.addEventListener(type, stopMove)
+        );
+        ['touchend', 'touchcancel'].forEach((type) =>
+          button.addEventListener(type, stopMove)
+        );
+      };
+      attach(this.moveLeftButton, -1);
+      attach(this.moveRightButton, 1);
+    }
   }
 
-  updateDoor({
-    width,
-    height,
-    leaves,
-    profileColor,
-    glassColor,
-    opening,
-    swing,
-    handle,
-    track,
-    floorGuide,
-    fixedPanels = {},
-    doorBox = false,
-    doorBoxSide = 'Destra',
-    isSoloPanelModel = false,
-  }) {
-    this.doorGroup.clear();
-    this.leafGroups = [];
+  preloadAssets() {
+    const environmentUrls = Object.values(ASSET_PATHS.environments || {});
+    const partUrls = Object.values(ASSET_PATHS.parts || {});
+    const urls = [...environmentUrls, ...partUrls];
+    if (!urls.length) {
+      this.onAssetsReady();
+      return Promise.resolve();
+    }
+    this.showOverlay(0);
+    return Promise.all(urls.map((url) => this.loadAsset(url)));
+  }
 
-    if (!width || !height) {
+  loadAsset(url) {
+    if (this.gltfCache.has(url)) {
+      return Promise.resolve(this.gltfCache.get(url));
+    }
+    return new Promise((resolve) => {
+      this.loader.load(
+        url,
+        (gltf) => {
+          this.gltfCache.set(url, gltf);
+          resolve(gltf);
+        },
+        undefined,
+        (error) => {
+          console.error('Impossibile caricare l'asset 3D:', url, error);
+          resolve(null);
+        }
+      );
+    });
+  }
+
+  showOverlay(percent = 0) {
+    if (this.overlay) {
+      this.overlay.classList.remove('is-hidden');
+    }
+    if (this.overlayBar) {
+      const clamped = Math.min(Math.max(percent, 0), 100);
+      this.overlayBar.style.width = `${clamped}%`;
+    }
+    if (this.overlayPercent) {
+      const clamped = Math.min(Math.max(Math.round(percent), 0), 100);
+      this.overlayPercent.textContent = `${clamped}%`;
+    }
+  }
+
+  hideOverlay() {
+    if (this.overlay) {
+      this.overlay.classList.add('is-hidden');
+    }
+  }
+
+  onAssetsReady() {
+    this.assetsReady = true;
+    this.hideOverlay();
+    if (this.partButtonsContainer) {
+      this.partButtonsContainer.classList.remove('is-hidden');
+    }
+    if (this.pendingUpdate) {
+      const queued = this.pendingUpdate;
+      this.pendingUpdate = null;
+      this.updateDoor(queued);
+    }
+  }
+
+  handleResize() {
+    const width = Math.max(this.container.clientWidth, 1);
+    const height = Math.max(this.container.clientHeight, 1);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height);
+  }
+
+  clonePart(key) {
+    const url = ASSET_PATHS.parts?.[key];
+    if (!url) return null;
+    const cached = this.gltfCache.get(url);
+    if (!cached) return null;
+    return cloneGltfScene(cached);
+  }
+
+  decoratePart(root, name, color, info) {
+    if (!root) return null;
+    const partInfo = { ...info };
+    root.name = name;
+    root.traverse((node) => {
+      if (!node.isMesh) return;
+      node.name = name;
+      if (node.material) {
+        node.material = node.material.clone();
+        if (node.material.color) {
+          node.material.color.set(color);
+        }
+      }
+      node.userData.originalColor = node.material?.color?.clone?.();
+      node.userData.partInfo = partInfo;
+      this.partMeshes.push(node);
+    });
+    return root;
+  }
+
+  updateDoor(options = {}) {
+    if (!this.assetsReady) {
+      this.pendingUpdate = { ...options };
       return;
     }
 
-    const scale = this.scaleFactor;
-    const doorHeight = height * scale;
-    const totalWidth = width * scale;
-    const frameThickness = 4.5;
-    const stileWidth = 4.5;
-    const panelInset = 0.3;
-    const baseOffset = 1.2;
+    const heightMm = Number(options.heightMm ?? options.height ?? 0);
+    const doorWidthMm = Number(options.leafWidthMm ?? options.width ?? 0);
+    const numDoors = Math.max(Number(options.numDoors) || 1, 1);
 
-    const frameMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(profileColor),
-      metalness: 0.45,
-      roughness: 0.3,
-    });
+    if (!heightMm || !doorWidthMm) {
+      clearGroup(this.doorFrames);
+      clearGroup(this.tracksGroup);
+      this.toggleMoveControls(false);
+      return;
+    }
 
-    const panelMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(glassColor),
-      metalness: 0.1,
-      roughness: 0.08,
-      transparent: true,
-      opacity: 0.82,
-    });
+    const totalWidthMm = doorWidthMm * numDoors;
+    const params = {
+      heightMm,
+      doorWidthMm,
+      numDoors,
+      totalWidthMm,
+      heightM: heightMm / 1000,
+      doorWidthM: doorWidthMm / 1000,
+      totalWidthM: totalWidthMm / 1000,
+      profileColor: options.profileColor || DEFAULT_PROFILE_COLOR,
+      glassColor: options.glassColor || DEFAULT_GLASS_COLOR,
+      trackMode: options.trackVisibility === 'hidden' ? 'hidden' : 'visible',
+      showCover: Boolean(options.showCover),
+      environment: options.environment || this.environmentMode || 'soloporta',
+    };
+    params.glassWidth = Math.max(params.doorWidthM - 0.05, 0.05);
+    params.glassHeight = Math.max(params.heightM - 0.1, 0.05);
 
-    const createHandle = (type) => {
-      const handleMaterial = new THREE.MeshStandardMaterial({
-        color: new THREE.Color('#d8dbe6'),
-        metalness: 0.8,
-        roughness: 0.25,
-      });
+    this.lastParams = params;
 
-      if (type === 'totale') {
-        const geometry = new THREE.BoxGeometry(scale * 40, doorHeight - scale * 240, scale * 18);
-        return new THREE.Mesh(geometry, handleMaterial);
+    this.resetHighlights();
+    this.buildDoor(params);
+    this.updateDimensionsInfo(params);
+  }
+
+  buildDoor(params) {
+    clearGroup(this.doorFrames);
+    clearGroup(this.tracksGroup);
+    if (this.villaGroup) {
+      this.scene.remove(this.villaGroup);
+      disposeObject3D(this.villaGroup);
+      this.villaGroup = null;
+    }
+
+    this.partMeshes = [];
+    this.leafData = [];
+    this.movableLeafData = [];
+    this.closedOffset = 0;
+    this.isClosed = true;
+
+    this.applyEnvironment(params);
+
+    this.doorFrames.position.set(0, params.heightM / 2, 0);
+
+    for (let i = 0; i < params.numDoors; i += 1) {
+      const leaf = this.buildLeaf(i, params);
+      if (leaf) {
+        this.doorFrames.add(leaf.group);
+        this.leafData.push(leaf);
+        if (!leaf.isFixed) {
+          this.movableLeafData.push(leaf);
+        }
       }
+    }
 
-      if (type === 'incassata') {
-        const geometry = new THREE.BoxGeometry(scale * 30, scale * 240, scale * 6);
-        return new THREE.Mesh(geometry, handleMaterial);
+    for (let i = 0; i < params.numDoors; i += 1) {
+      const track = this.buildTrack(i, params);
+      if (track) {
+        this.tracksGroup.add(track);
       }
+    }
 
-      const geometry = new THREE.CapsuleGeometry(scale * 20, scale * 200, 6, 12);
-      return new THREE.Mesh(geometry, handleMaterial);
+    this.closeDoors(true);
+    this.toggleMoveControls(this.movableLeafData.length > 0);
+    this.updateCamera(params);
+  }
+
+  applyEnvironment(params) {
+    this.environmentMode = params.environment || 'soloporta';
+    if (this.environmentMode === 'soloporta') {
+      return;
+    }
+    const url = ASSET_PATHS.environments?.[this.environmentMode];
+    const cached = url ? this.gltfCache.get(url) : null;
+    if (!cached) {
+      return;
+    }
+    const villa = cloneGltfScene(cached);
+    if (!villa) {
+      return;
+    }
+    const totalWidthMm = params.totalWidthMm || 2700;
+    villa.position.set(0.045, 0.1, 0);
+    villa.scale.set(totalWidthMm / 2700, params.heightMm / 2700, 1);
+    this.scene.add(villa);
+    this.villaGroup = villa;
+  }
+
+  buildLeaf(index, params) {
+    const group = new THREE.Group();
+    group.name = `doorLeaf_${index}`;
+    group.position.set(0, 0, index * this.zOffset);
+
+    const commonInfo = {
+      dimensions: `Altezza: ${formatMillimeters(params.heightMm)} mm`,
+      pieces: params.numDoors,
     };
 
-    const rawLeaves = Math.max(Number(leaves) || 0, 0);
-    const slidingLeafCount = isSoloPanelModel ? 0 : Math.max(rawLeaves, 0);
-    const fixedCount = Math.max(Number(fixedPanels.count) || 0, 0);
-    const fallbackLeafCount = slidingLeafCount > 0 ? slidingLeafCount : Math.max(fixedCount, 1);
-    const computedLeafWidth = fallbackLeafCount > 0 ? totalWidth / fallbackLeafCount : totalWidth;
-    const leafWidth = Math.max(computedLeafWidth, stileWidth * 2 + scale * 20);
-
-    const manualWidthScaled = Math.max(Number(fixedPanels.manualWidth) || 0, 0) * scale;
-    const fixedPanelWidth =
-      fixedPanels.mode === 'manuale' && manualWidthScaled ? manualWidthScaled : leafWidth;
-    const fixedSpacing = scale * 16;
-    const fixedClusterWidth =
-      fixedCount > 0
-        ? fixedCount * fixedPanelWidth + Math.max(0, fixedCount - 1) * fixedSpacing
-        : 0;
-
-    const addsExtraWidth =
-      slidingLeafCount > 0 && fixedCount > 0 && !fixedPanels.shareTrack;
-    const extraWidth = addsExtraWidth ? fixedClusterWidth + scale * 24 : 0;
-
-    let stageWidth = totalWidth + extraWidth;
-    if (slidingLeafCount === 0 && fixedClusterWidth > 0) {
-      stageWidth = fixedClusterWidth;
-    }
-    if (!Number.isFinite(stageWidth) || stageWidth <= 0) {
-      stageWidth = totalWidth || fixedClusterWidth || scale * 100;
-    }
-
-    const slidingOffsetX = addsExtraWidth ? -extraWidth / 2 : 0;
-    const baseY = doorHeight / 2 + baseOffset;
-    const slideSpacing = scale * (slidingLeafCount <= 1 ? 18 : 24);
-    const handleDepthOffset = frameThickness / 2 + 0.6;
-    const showHandles = !isSoloPanelModel && handle !== 'hidden';
-
-    const isSliding = opening === 'scorrevole-parete' || opening === 'scorrevole-muro';
-    const isSwing = opening === 'battente';
-
-    const trackGroup = new THREE.Group();
-    if (isSliding) {
-      const trackSpan = totalWidth;
-      const trackOffsetX = slidingOffsetX;
-      const trackLength =
-        trackSpan + (track === 'filo-muro' ? scale * 120 : track === 'incasso' ? scale * 80 : scale * 60);
-      const trackHeight = scale * 40;
-      const trackDepth = frameThickness + scale * 6;
-      const trackMaterial = new THREE.MeshStandardMaterial({
-        color:
-          track === 'filo-muro'
-            ? '#bfc3cc'
-            : track === 'incasso'
-            ? '#ccd0d8'
-            : '#9aa0ad',
-        metalness: 0.65,
-        roughness: 0.3,
-      });
-
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(trackLength, trackHeight, trackDepth), trackMaterial);
-      rail.position.set(trackOffsetX, baseOffset + doorHeight + trackHeight / 2, -frameThickness / 2);
-
-      if (track !== 'incasso') {
-        const cover = new THREE.Mesh(
-          new THREE.BoxGeometry(trackLength, trackHeight / 2, trackDepth + scale * 14),
-          new THREE.MeshStandardMaterial({
-            color: track === 'filo-muro' ? '#e2e5ed' : '#d4d7df',
-            metalness: 0.3,
-            roughness: 0.6,
-          })
-        );
-        cover.position.set(trackOffsetX, rail.position.y + trackHeight / 1.8, rail.position.z + scale * 6);
-        trackGroup.add(cover);
+    const leftProfile = this.decoratePart(
+      this.clonePart('leftProfile'),
+      `leftProfile_${index}`,
+      params.profileColor,
+      {
+        ...commonInfo,
+        name: 'Profilo Sinistro',
+        code: 'UNK-A202-40',
+        images: '/wp-content/uploads/2024/10/Tavola-disegno-112.png',
       }
-
-      trackGroup.add(rail);
-    } else if (isSwing) {
-      const jambMaterial = new THREE.MeshStandardMaterial({
-        color: '#b7b9c2',
-        metalness: 0.2,
-        roughness: 0.6,
-      });
-      const jambThickness = scale * 45;
-      const jambWidth = scale * 35;
-      const jambHeight = doorHeight + scale * 120;
-      const halfSpan = stageWidth / 2;
-      const jambLeft = new THREE.Mesh(
-        new THREE.BoxGeometry(jambWidth, jambHeight, jambThickness),
-        jambMaterial
-      );
-      jambLeft.position.set(-halfSpan - jambWidth / 2, baseOffset + jambHeight / 2 - scale * 60, -frameThickness);
-      const jambRight = jambLeft.clone();
-      jambRight.position.x = halfSpan + jambWidth / 2;
-      const head = new THREE.Mesh(
-        new THREE.BoxGeometry(stageWidth + jambWidth * 2, jambWidth, jambThickness),
-        jambMaterial
-      );
-      head.position.set(0, jambLeft.position.y + jambHeight / 2 + jambWidth / 2, -frameThickness);
-      trackGroup.add(jambLeft, jambRight, head);
-    }
-
-    const guideGroup = new THREE.Group();
-    const showGuide = isSliding && floorGuide !== 'none';
-    if (showGuide) {
-      const guideMaterial = new THREE.MeshStandardMaterial({
-        color: floorGuide === 'invisibile' ? '#a4aab6' : floorGuide === 'autoallineante' ? '#88909f' : '#767d8a',
-        metalness: 0.4,
-        roughness: 0.45,
-      });
-      const guideWidth = floorGuide === 'autoallineante' ? scale * 120 : scale * 90;
-      const guideHeight = scale * 20;
-      const guideDepth = scale * 40;
-      const guide = new THREE.Mesh(
-        new THREE.BoxGeometry(guideWidth, guideHeight, guideDepth),
-        guideMaterial
-      );
-      guide.position.set(slidingOffsetX, baseOffset - guideHeight / 2, 0);
-      guideGroup.add(guide);
-    }
-
-    const backdropMaterial = new THREE.MeshStandardMaterial({
-      color: '#121826',
-      metalness: 0.05,
-      roughness: 0.9,
-      transparent: true,
-      opacity: 0.92,
-    });
-    const backdrop = new THREE.Mesh(
-      new THREE.PlaneGeometry(stageWidth + scale * 240, doorHeight + scale * 260),
-      backdropMaterial
     );
-    backdrop.position.set(0, baseOffset + doorHeight / 2, -frameThickness * 2);
-
-    for (let i = 0; i < slidingLeafCount; i += 1) {
-      const leafGroup = new THREE.Group();
-      const offsetX = (leafWidth + slideSpacing) * (i - (slidingLeafCount - 1) / 2) + slidingOffsetX;
-      leafGroup.position.set(offsetX, baseY, 0);
-
-      const railHeight = scale * 45;
-      const stileHeight = doorHeight - scale * 90;
-      const panelWidth = Math.max(leafWidth - stileWidth * 2, scale * 40);
-      const panelHeight = doorHeight - scale * 120;
-
-      const topRail = new THREE.Mesh(
-        new THREE.BoxGeometry(leafWidth, railHeight, frameThickness),
-        frameMaterial
-      );
-      topRail.position.set(0, doorHeight / 2 - railHeight / 2, 0);
-
-      const bottomRail = topRail.clone();
-      bottomRail.position.y = -doorHeight / 2 + railHeight / 2;
-
-      const stileGeometry = new THREE.BoxGeometry(stileWidth, stileHeight, frameThickness);
-      const leftStile = new THREE.Mesh(stileGeometry, frameMaterial);
-      leftStile.position.set(-leafWidth / 2 + stileWidth / 2, 0, 0);
-      const rightStile = leftStile.clone();
-      rightStile.position.x = leafWidth / 2 - stileWidth / 2;
-
-      const panel = new THREE.Mesh(
-        new THREE.BoxGeometry(panelWidth, panelHeight, frameThickness - panelInset),
-        panelMaterial
-      );
-      panel.position.set(0, 0, -panelInset / 2);
-
-      leafGroup.add(topRail, bottomRail, leftStile, rightStile, panel);
-
-      if (showHandles) {
-        const handleMesh = createHandle(handle);
-        const handleOffsetX = (() => {
-          if (opening === 'battente') {
-            if (slidingLeafCount === 1) {
-              if (swing === 'sinistra') return leafWidth / 2 - scale * 70;
-              if (swing === 'destra') return -leafWidth / 2 + scale * 70;
-              return 0;
-            }
-            if (slidingLeafCount === 2) {
-              return i === 0 ? leafWidth / 2 - scale * 70 : -leafWidth / 2 + scale * 70;
-            }
-          }
-
-          if (slidingLeafCount === 1) {
-            return leafWidth / 2 - scale * 80;
-          }
-          return i === 0 ? leafWidth / 2 - scale * 80 : -leafWidth / 2 + scale * 80;
-        })();
-
-        handleMesh.position.set(handleOffsetX, 0, handleDepthOffset);
-        if (handle === 'incassata') {
-          handleMesh.position.z = handleDepthOffset - scale * 2.2;
-        } else if (handle === 'totale') {
-          handleMesh.position.z = handleDepthOffset + scale * 0.8;
-        }
-        leafGroup.add(handleMesh);
-      }
-
-      if (opening === 'battente') {
-        const baseRotation = THREE.MathUtils.degToRad(slidingLeafCount === 1 ? 12 : i === 0 ? -10 : 10);
-        leafGroup.rotation.y = baseRotation;
-        leafGroup.userData.baseRotation = baseRotation;
-      } else {
-        leafGroup.userData.baseRotation = 0;
-      }
-
-      if (opening === 'scorrevole-muro') {
-        leafGroup.position.z = i % 2 === 0 ? frameThickness / 1.5 : -frameThickness / 1.5;
-      }
-
-      leafGroup.userData.baseX = offsetX;
-      this.leafGroups.push(leafGroup);
-      this.doorGroup.add(leafGroup);
+    if (leftProfile) {
+      leftProfile.position.x = -params.doorWidthM / 2;
+      leftProfile.scale.set(1, params.heightM, 1);
+      group.add(leftProfile);
     }
 
-    if (fixedCount > 0) {
-      const clusterSpan = fixedClusterWidth || stageWidth;
-      const startX = (() => {
-        if (slidingLeafCount === 0) {
-          return clusterSpan / 2 - fixedPanelWidth / 2;
-        }
-        if (fixedPanels.shareTrack) {
-          return totalWidth / 2 - fixedPanelWidth / 2 + slidingOffsetX;
-        }
-        return stageWidth / 2 - fixedPanelWidth / 2;
-      })();
+    const rightProfile = this.decoratePart(
+      this.clonePart('rightProfile'),
+      `rightProfile_${index}`,
+      params.profileColor,
+      {
+        ...commonInfo,
+        name: 'Profilo Destro',
+        code: 'UNK-A202-40',
+        images: '/wp-content/uploads/2024/10/Tavola-disegno-112.png',
+      }
+    );
+    if (rightProfile) {
+      rightProfile.position.x = params.doorWidthM / 2;
+      rightProfile.scale.set(1, params.heightM, 1);
+      group.add(rightProfile);
+    }
 
-      for (let index = 0; index < fixedCount; index += 1) {
-        const panelGroup = new THREE.Group();
-        const railHeight = scale * 45;
-        const stileHeight = doorHeight - scale * 90;
-        const panelHeight = doorHeight - scale * 120;
-        const visiblePanelWidth = Math.max(fixedPanelWidth - stileWidth * 2, scale * 30);
+    const horizontalInfo = {
+      name: 'Profilo Superiore',
+      code: 'UNK-A201-40',
+      dimensions: `Lunghezza: ${formatMillimeters(params.doorWidthMm)} mm`,
+      pieces: params.numDoors,
+      images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-412.png',
+    };
+    const topProfile = this.decoratePart(
+      this.clonePart('topProfile'),
+      `topProfile_${index}`,
+      params.profileColor,
+      horizontalInfo
+    );
+    if (topProfile) {
+      topProfile.position.y = params.heightM / 2;
+      topProfile.scale.set(params.doorWidthM, 1, 1);
+      group.add(topProfile);
+    }
 
-        const topRail = new THREE.Mesh(
-          new THREE.BoxGeometry(fixedPanelWidth, railHeight, frameThickness),
-          frameMaterial
-        );
-        topRail.position.set(0, doorHeight / 2 - railHeight / 2, 0);
-        const bottomRail = topRail.clone();
-        bottomRail.position.y = -doorHeight / 2 + railHeight / 2;
+    const bottomProfile = this.decoratePart(
+      this.clonePart('bottomProfile'),
+      `bottomProfile_${index}`,
+      params.profileColor,
+      {
+        ...horizontalInfo,
+        name: 'Profilo Inferiore',
+      }
+    );
+    if (bottomProfile) {
+      bottomProfile.position.y = -params.heightM / 2;
+      bottomProfile.scale.set(params.doorWidthM, 1, 1);
+      group.add(bottomProfile);
+    }
 
-        const stileGeometry = new THREE.BoxGeometry(stileWidth, stileHeight, frameThickness);
-        const leftStile = new THREE.Mesh(stileGeometry, frameMaterial);
-        leftStile.position.set(-fixedPanelWidth / 2 + stileWidth / 2, 0, 0);
-        const rightStile = leftStile.clone();
-        rightStile.position.x = fixedPanelWidth / 2 - stileWidth / 2;
-
-        const panelMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(visiblePanelWidth, panelHeight, frameThickness - panelInset),
-          panelMaterial
-        );
-        panelMesh.position.set(0, 0, -panelInset / 2);
-
-        panelGroup.add(topRail, bottomRail, leftStile, rightStile, panelMesh);
-
-        const offset =
-          (fixedPanels.shareTrack && slidingLeafCount > 0 ? slidingOffsetX : 0) +
-          (startX - index * (fixedPanelWidth + fixedSpacing));
-
-        panelGroup.position.set(offset, baseY, 0);
-        this.doorGroup.add(panelGroup);
+    if (params.showCover) {
+      const coverInfo = {
+        name: 'Cover',
+        code: 'UNK-A203-40',
+        dimensions: `Altezza: ${formatMillimeters(params.heightMm)} mm`,
+        pieces: params.numDoors * 2,
+        images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia12.png',
+      };
+      const coverLeft = this.decoratePart(
+        this.clonePart('coverLeft'),
+        `coverLeft_${index}`,
+        params.profileColor,
+        coverInfo
+      );
+      if (coverLeft) {
+        coverLeft.position.x = -params.doorWidthM / 2;
+        coverLeft.scale.set(1, params.heightM, 1);
+        group.add(coverLeft);
+      }
+      const coverRight = this.decoratePart(
+        this.clonePart('coverRight'),
+        `coverRight_${index}`,
+        params.profileColor,
+        coverInfo
+      );
+      if (coverRight) {
+        coverRight.position.x = params.doorWidthM / 2;
+        coverRight.scale.set(1, params.heightM, 1);
+        group.add(coverRight);
       }
     }
 
-    if (doorBox) {
-      const boxWidth = scale * 120;
-      const boxDepth = frameThickness * 1.6;
-      const boxHeight = doorHeight + scale * 160;
-      const doorBoxMaterial = new THREE.MeshStandardMaterial({
-        color: '#1f2434',
-        metalness: 0.6,
-        roughness: 0.35,
+    const glass = new THREE.Mesh(
+      new THREE.PlaneGeometry(params.glassWidth, params.glassHeight),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(params.glassColor),
+        transparent: true,
+        opacity: 0.1,
+        side: THREE.DoubleSide,
+      })
+    );
+    glass.name = `glassPanel_${index}`;
+    glass.position.set(0, 0, 0);
+    glass.renderOrder = 1;
+    glass.userData.originalColor = glass.material.color.clone();
+    glass.userData.partInfo = {
+      name: 'Pannello Vetrato',
+      code: 'GLASS',
+      dimensions: `Larghezza: ${formatMillimeters(Math.max(params.doorWidthMm - 50, 0))} mm · Altezza: ${formatMillimeters(Math.max(params.heightMm - 100, 0))} mm`,
+      pieces: params.numDoors,
+      images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-412.png',
+    };
+    this.partMeshes.push(glass);
+    group.add(glass);
+
+    const openX = (index - (params.numDoors - 1) / 2) * params.doorWidthM;
+    group.userData.closedX = 0;
+    group.userData.openX = openX;
+    group.userData.isFixed = false;
+
+    return {
+      group,
+      openX,
+      closedX: 0,
+      isFixed: false,
+    };
+  }
+
+  buildTrack(index, params) {
+    const track = this.decoratePart(
+      this.clonePart('track'),
+      `track_${index}`,
+      params.profileColor,
+      {
+        name: 'Binario',
+        code: 'GS1',
+        dimensions: `Lunghezza: ${formatMillimeters(params.totalWidthMm)} mm`,
+        pieces: params.numDoors,
+        images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-312.png',
+      }
+    );
+    if (!track) return null;
+    track.position.set(
+      0,
+      params.heightM / 2 + this.frameThickness - (params.trackMode === 'hidden' ? 0.02 : 0),
+      index * this.zOffset
+    );
+    track.scale.set(params.totalWidthM, 1, 1);
+    return track;
+  }
+
+  updateCamera(params) {
+    const distance = Math.max(2.4, params.totalWidthM * 1.35, params.heightM * 1.2);
+    this.camera.position.set(distance, params.heightM * 0.75 + 0.4, distance);
+    this.controls.target.set(0, params.heightM / 2, 0);
+    this.controls.update();
+  }
+
+  updateDimensionsInfo(params) {
+    if (!this.dimensionsInfo) return;
+    const parts = [
+      `Ante: ${params.numDoors}`,
+      `Larghezza anta: ${formatMillimeters(params.doorWidthMm)} mm`,
+      `Altezza: ${formatMillimeters(params.heightMm)} mm`,
+      `Larghezza totale: ${formatMillimeters(params.totalWidthMm)} mm`,
+    ];
+    this.dimensionsInfo.textContent = parts.join(' · ');
+  }
+
+  highlightPart(partName) {
+    if (!partName) return;
+    this.resetHighlights();
+    const matches = this.partMeshes.filter((mesh) => {
+      if (partName === 'cover') {
+        return mesh.name?.startsWith('coverLeft_') || mesh.name?.startsWith('coverRight_');
+      }
+      return mesh.name?.startsWith(partName);
+    });
+    if (!matches.length) {
+      this.showPartInfo(null);
+      return;
+    }
+    matches.forEach((mesh) => {
+      mesh.material?.color?.set?.(0xee0000);
+    });
+    this.showPartInfo(matches[0].userData?.partInfo || null);
+  }
+
+  resetHighlights() {
+    this.partMeshes.forEach((mesh) => {
+      if (mesh.userData?.originalColor && mesh.material?.color) {
+        mesh.material.color.copy(mesh.userData.originalColor);
+      }
+    });
+    this.showPartInfo(null);
+  }
+
+  showPartInfo(info) {
+    if (!this.partInfoBox) return;
+    if (!info) {
+      this.partInfoBox.setAttribute('hidden', 'true');
+      this.partInfoBox.innerHTML = '';
+      return;
+    }
+    const imageMarkup = info.images
+      ? `<div class="viewer-part-info__media"><img src="${info.images}" alt="${info.name}" /></div>`
+      : '';
+    this.partInfoBox.innerHTML = `${imageMarkup}<div class="viewer-part-info__content"><p class="viewer-part-info__title">${info.name}</p><p class="viewer-part-info__code">Codice: ${info.code}</p><p class="viewer-part-info__dimensions">${info.dimensions}</p><p class="viewer-part-info__pieces">Numero di pezzi: ${info.pieces}</p></div>`;
+    this.partInfoBox.removeAttribute('hidden');
+  }
+
+  openDoors() {
+    if (!this.movableLeafData.length) return;
+    this.isClosed = false;
+    this.stopContinuousMove();
+    this.toggleMoveControls(false);
+    this.movableLeafData.forEach((leaf) => {
+      gsap.to(leaf.group.position, {
+        x: leaf.openX,
+        duration: 1,
+        ease: 'power2.inOut',
       });
-      const box = new THREE.Mesh(
-        new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth),
-        doorBoxMaterial
-      );
-      const sideFactor = doorBoxSide === 'Sinistra' ? -1 : 1;
-      box.position.set(
-        (stageWidth / 2 + boxWidth / 2 + scale * 12) * sideFactor,
-        baseOffset + boxHeight / 2 - scale * 80,
-        -frameThickness / 2
-      );
+    });
+  }
 
-      const glow = new THREE.Mesh(
-        new THREE.BoxGeometry(boxWidth * 0.6, boxHeight * 0.9, boxDepth * 0.6),
-        new THREE.MeshStandardMaterial({
-          color: '#3b82f6',
-          emissive: '#3b82f6',
-          emissiveIntensity: 0.3,
-          transparent: true,
-          opacity: 0.35,
-          roughness: 0.6,
-          metalness: 0.2,
-        })
-      );
-      glow.position.set(0, 0, boxDepth / 4);
-      box.add(glow);
-      this.doorGroup.add(box);
+  closeDoors(immediate = false) {
+    if (!this.movableLeafData.length) return;
+    this.isClosed = true;
+    this.stopContinuousMove();
+    const total = this.movableLeafData.length;
+    let completed = 0;
+    const onComplete = () => {
+      this.toggleMoveControls(true);
+    };
+
+    if (immediate) {
+      this.movableLeafData.forEach((leaf) => {
+        leaf.group.position.x = leaf.closedX + this.closedOffset;
+      });
+      onComplete();
+      return;
     }
 
-    this.slideAmplitude = isSliding && slidingLeafCount > 0 ? Math.min(leafWidth * 0.25, scale * 120) : 0;
-    this.currentOpening = opening;
+    this.movableLeafData.forEach((leaf) => {
+      gsap.to(leaf.group.position, {
+        x: leaf.closedX + this.closedOffset,
+        duration: 1,
+        ease: 'power2.inOut',
+        onComplete: () => {
+          completed += 1;
+          if (completed === total) {
+            onComplete();
+          }
+        },
+      });
+    });
+  }
 
-    this.doorGroup.add(backdrop);
-    if (trackGroup.children.length) {
-      this.doorGroup.add(trackGroup);
+  moveDoors(delta) {
+    if (!this.isClosed || !this.movableLeafData.length || !this.lastParams) return;
+    const maxMove = Math.max(this.lastParams.totalWidthM / 2 - this.lastParams.doorWidthM / 2, 0);
+    const newOffset = THREE.MathUtils.clamp(this.closedOffset + delta, -maxMove, maxMove);
+    const actual = newOffset - this.closedOffset;
+    if (Math.abs(actual) < 1e-6) return;
+    this.closedOffset = newOffset;
+    this.movableLeafData.forEach((leaf) => {
+      leaf.group.position.x = leaf.closedX + this.closedOffset;
+    });
+  }
+
+  startContinuousMove(direction) {
+    if (!this.isClosed || !this.lastParams) return;
+    const step = Math.max(this.lastParams.doorWidthM * 0.04, 0.01) * direction;
+    this.moveDoors(step);
+    this.stopContinuousMove();
+    this.moveInterval = window.setInterval(() => this.moveDoors(step), 80);
+  }
+
+  stopContinuousMove() {
+    if (this.moveInterval) {
+      clearInterval(this.moveInterval);
+      this.moveInterval = null;
     }
-    if (guideGroup.children.length) {
-      this.doorGroup.add(guideGroup);
+  }
+
+  toggleMoveControls(show) {
+    if (!this.moveControls) return;
+    if (show) {
+      this.moveControls.classList.remove('is-hidden');
+      this.moveControls.removeAttribute('aria-hidden');
+    } else {
+      this.moveControls.classList.add('is-hidden');
+      this.moveControls.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  resetCamera() {
+    if (!this.lastParams) return;
+    this.updateCamera(this.lastParams);
+  }
+
+  toggleFullscreen() {
+    const element = this.container;
+    if (!document.fullscreenElement) {
+      element.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
     }
   }
 
   animate() {
-    requestAnimationFrame(() => this.animate());
-    const elapsed = this.clock.getElapsedTime();
-
-    if (this.currentOpening === 'scorrevole-parete' || this.currentOpening === 'scorrevole-muro') {
-      this.leafGroups.forEach((group, index) => {
-        const direction = index % 2 === 0 ? 1 : -1;
-        group.position.x = group.userData.baseX + Math.sin(elapsed * 0.6) * this.slideAmplitude * direction;
-      });
-    } else if (this.currentOpening === 'battente') {
-      this.leafGroups.forEach((group, index) => {
-        const wobble = THREE.MathUtils.degToRad(2.2) * (index % 2 === 0 ? 1 : -1);
-        group.rotation.y = group.userData.baseRotation + Math.sin(elapsed * 0.7) * wobble;
-      });
-    }
-
-    this.doorGroup.rotation.y = Math.sin(elapsed * 0.25) * 0.18;
+    requestAnimationFrame(this.animate);
+    this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
 }
@@ -664,22 +951,17 @@ const visualizer = new DoorVisualizer(document.getElementById('viewer'));
 const initialWidth = Number(document.getElementById('width')?.value) || 1200;
 const initialHeight = Number(document.getElementById('height')?.value) || 2200;
 const initialLeaves = Math.max(Number(document.getElementById('numero-ante-select')?.value) || 2, 1);
+const initialLeafWidth = Math.max(Math.floor(initialWidth / Math.max(initialLeaves, 1)), 1);
 
 visualizer.updateDoor({
-  width: initialWidth,
-  height: initialHeight,
-  leaves: initialLeaves,
+  heightMm: initialHeight,
+  leafWidthMm: initialLeafWidth,
+  numDoors: initialLeaves,
   profileColor: DEFAULT_PROFILE_COLOR,
   glassColor: DEFAULT_GLASS_COLOR,
-  opening: MODEL_CONFIG.TRASCINAMENTO.defaultOpening,
-  swing: 'sinistra',
-  handle: 'standard',
-  track: BINARIO_CONFIG['A vista'].track,
-  floorGuide: 'standard',
-  fixedPanels: { count: 0, mode: '', manualWidth: 0, shareTrack: true },
-  doorBox: false,
-  doorBoxSide: 'Destra',
-  isSoloPanelModel: false,
+  trackVisibility: 'visible',
+  showCover: true,
+  environment: 'soloporta',
 });
 
 const selectors = {
@@ -2023,21 +2305,27 @@ function updateVisualizerPreview(config, derived) {
     shareTrack: !isSoloPannello && config.pannelliSuBinari === 'Si',
   };
 
+  const realLeaves = Math.max(derived?.realNumeroAnte || slidingLeaves || 1, 1);
+  const computedLeafWidth = (() => {
+    if (derived?.larghezzaAnta) {
+      return derived.larghezzaAnta;
+    }
+    const baseWidth = Number(config.width) || 0;
+    if (!baseWidth || realLeaves <= 0) {
+      return 0;
+    }
+    return Math.floor(baseWidth / realLeaves);
+  })();
+
   visualizer.updateDoor({
-    width: config.width,
-    height: config.height,
-    leaves: slidingLeaves || 1,
+    heightMm: config.height,
+    leafWidthMm: computedLeafWidth,
+    numDoors: realLeaves,
     profileColor: DEFAULT_PROFILE_COLOR,
     glassColor: DEFAULT_GLASS_COLOR,
-    opening: openingType,
-    swing: swingDirection,
-    handle: handleType,
-    track: trackType,
-    floorGuide: floorGuideType,
-    fixedPanels: fixedPanelDetails,
-    doorBox: config.doorBox === 'Si',
-    doorBoxSide: config.doorBoxMounting || 'Destra',
-    isSoloPanelModel: isSoloPannello,
+    trackVisibility: trackType === 'incasso' ? 'hidden' : 'visible',
+    showCover: !isSoloPannello && config.binario === 'A vista',
+    environment: 'soloporta',
   });
 }
 
