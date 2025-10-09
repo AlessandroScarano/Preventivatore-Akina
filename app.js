@@ -346,8 +346,6 @@ class DoorVisualizer {
     this.moveLeftButton = document.getElementById('move-doors-left');
     this.moveRightButton = document.getElementById('move-doors-right');
     this.resetButton = document.getElementById('reset-colors');
-    this.openButton = document.getElementById('open-doors');
-    this.closeButton = document.getElementById('close-doors');
     this.resetCameraButton = document.getElementById('reset-camera');
     this.fullscreenButton = document.getElementById('fullscreen-toggle');
 
@@ -420,6 +418,7 @@ class DoorVisualizer {
     this.environmentMode = 'soloporta';
     this.lastParams = null;
     this.moveInterval = null;
+    this.autoTimeline = null;
 
     this.bindUIControls();
 
@@ -462,8 +461,6 @@ class DoorVisualizer {
     }
 
     this.resetButton?.addEventListener('click', () => this.resetHighlights());
-    this.openButton?.addEventListener('click', () => this.openDoors());
-    this.closeButton?.addEventListener('click', () => this.closeDoors());
     this.resetCameraButton?.addEventListener('click', () => this.resetCamera());
     this.fullscreenButton?.addEventListener('click', () => this.toggleFullscreen());
 
@@ -898,6 +895,7 @@ class DoorVisualizer {
   }
 
   buildDoor(params) {
+    this.stopAutoCycle();
     clearGroup(this.doorFrames);
     clearGroup(this.tracksGroup);
     if (this.villaGroup) {
@@ -978,7 +976,7 @@ class DoorVisualizer {
     }
 
     this.toggleMoveControls(false);
-    this.openDoors(true);
+    this.startAutoCycle();
     this.updateCamera(params);
   }
 
@@ -1216,6 +1214,67 @@ class DoorVisualizer {
     this.showPartInfo(null);
   }
 
+  stopAutoCycle() {
+    if (this.autoTimeline) {
+      this.autoTimeline.kill();
+      this.autoTimeline = null;
+    }
+  }
+
+  startAutoCycle() {
+    this.stopAutoCycle();
+    if (!this.movableLeafData.length) {
+      this.isClosed = true;
+      return;
+    }
+
+    this.openDoors(true);
+    this.isClosed = false;
+    this.closedOffset = 0;
+    this.toggleMoveControls(false);
+
+    const timeline = gsap.timeline({ repeat: -1, repeatDelay: 0.6 });
+
+    timeline.to({}, { duration: 1.2 });
+
+    timeline.add(() => {
+      this.isClosed = true;
+    });
+    this.movableLeafData.forEach((leaf) => {
+      timeline.to(
+        leaf.group.position,
+        {
+          x: leaf.closedX,
+          duration: 1.1,
+          ease: 'power2.inOut',
+        },
+        '<'
+      );
+    });
+
+    timeline.to({}, { duration: 0.9 });
+
+    timeline.add(() => {
+      this.isClosed = false;
+      this.closedOffset = 0;
+    });
+    this.movableLeafData.forEach((leaf) => {
+      timeline.to(
+        leaf.group.position,
+        {
+          x: leaf.openX,
+          duration: 1.1,
+          ease: 'power2.inOut',
+        },
+        '<'
+      );
+    });
+
+    timeline.to({}, { duration: 1 });
+
+    this.autoTimeline = timeline;
+  }
+
   showPartInfo(info) {
     if (!this.partInfoBox) return;
     if (!info) {
@@ -1231,6 +1290,7 @@ class DoorVisualizer {
   }
 
   openDoors(immediate = false) {
+    this.stopAutoCycle();
     this.isClosed = false;
     this.closedOffset = 0;
     this.stopContinuousMove();
@@ -1254,6 +1314,7 @@ class DoorVisualizer {
   }
 
   closeDoors(immediate = false) {
+    this.stopAutoCycle();
     if (!this.movableLeafData.length) return;
     this.isClosed = true;
     this.stopContinuousMove();
