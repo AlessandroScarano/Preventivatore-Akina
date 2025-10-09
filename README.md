@@ -28,9 +28,12 @@ Applicazione web responsive per configurare e preventivare la porta Akina con un
 Il visualizzatore Three.js utilizza modelli GLB per profili, cover e ambienti. Per evitare errori di CORS, gli asset devono essere
 serviti dalla **stessa origine** del configuratore.
 
-1. Crea la cartella `profili3dakina/` nella radice del progetto (già inclusa).
-2. Copia all'interno i file GLB forniti da Glasscom (es. `villaclassica.glb`, `profiloVertSx.glb`, ecc.).
+1. Crea la cartella `profili3dakina/` accanto a `index.html` (già inclusa nel repository).
+2. Copia al suo interno i file GLB forniti da Glasscom (es. `villaclassica.glb`, `profiloVertSx.glb`, ecc.).
 3. Avviando `node preview.js` gli asset verranno serviti correttamente su `http://localhost:4173/profili3dakina/...`.
+
+Se la pagina è pubblicata in una sottocartella (es. `https://dominio.it/preventivatore/`), assicurati che i file si trovino in
+`https://dominio.it/preventivatore/profili3dakina/`. Il visualizzatore mostra un avviso contestuale quando non riesce a raggiungere gli asset.
 
 Se devi caricare i file da un dominio esterno che espone le intestazioni CORS adeguate, definisci le variabili globali prima di
 `app.js`:

@@ -156,7 +156,7 @@ const DEFAULT_PROFILE_COLOR = '#23283a';
 const DEFAULT_GLASS_COLOR = '#d6e9ff';
 
 const isBrowserContext = typeof window !== 'undefined';
-const DEFAULT_LOCAL_ASSET_BASE = '/profili3dakina/';
+const DEFAULT_LOCAL_ASSET_BASE = './profili3dakina/';
 
 const rawCustomAssetBase =
   isBrowserContext && typeof window.AKINA_ASSET_BASE === 'string'
@@ -354,6 +354,7 @@ class DoorVisualizer {
     this.overlay = document.getElementById('viewer-loading');
     this.overlayBar = document.getElementById('viewer-loading-bar');
     this.overlayPercent = document.getElementById('viewer-loading-percent');
+    this.assetWarning = document.getElementById('viewer-asset-warning');
     this.partButtonsContainer = document.getElementById('part-buttons');
     this.partInfoBox = document.getElementById('part-info');
     this.dimensionsInfo = document.getElementById('dimensions-info');
@@ -505,6 +506,7 @@ class DoorVisualizer {
     }
 
     this.showOverlay(0);
+    this.hideAssetWarning();
 
     const availability = await Promise.all(
       urls.map((url) => this.checkAssetAvailability(url))
@@ -512,6 +514,18 @@ class DoorVisualizer {
 
     const availableUrls = urls.filter((_, index) => availability[index]);
     this.availableAssetUrls = new Set(availableUrls);
+
+    if (availableUrls.length !== urls.length) {
+      const baseMessage = GLASSCOM_ASSET_BASE || DEFAULT_LOCAL_ASSET_BASE;
+      const instruction = this.allowRemoteAssets
+        ?
+            'Verifica i permessi del dominio remoto oppure copia i file GLB nella cartella <strong>profili3dakina</strong> accanto alla pagina.'
+        :
+            'Copia i file GLB forniti da Glasscom nella cartella <strong>profili3dakina</strong> accanto alla pagina oppure abilita <code>window.AKINA_ALLOW_REMOTE_ASSETS = true</code> per usare un CDN autorizzato.';
+      this.showAssetWarning(
+        `<strong>Asset 3D mancanti</strong><p>Non è stato possibile raggiungere i modelli GLB da <code>${baseMessage}</code>.</p><p>${instruction}</p>`
+      );
+    }
 
     if (!availableUrls.length) {
       this.showOverlay(100);
@@ -598,6 +612,20 @@ class DoorVisualizer {
     if (this.overlay) {
       this.overlay.classList.add('is-hidden');
     }
+  }
+
+  showAssetWarning(message) {
+    if (!this.assetWarning) return;
+    this.assetWarning.innerHTML = message;
+    this.assetWarning.classList.remove('is-hidden');
+    this.assetWarning.removeAttribute('hidden');
+  }
+
+  hideAssetWarning() {
+    if (!this.assetWarning) return;
+    this.assetWarning.textContent = '';
+    this.assetWarning.classList.add('is-hidden');
+    this.assetWarning.setAttribute('hidden', '');
   }
 
   onAssetsReady() {

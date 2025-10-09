@@ -21,7 +21,7 @@
       }
     </script>
     <script>
-      window.AKINA_ASSET_BASE = '/profili3dakina/';
+      window.AKINA_ASSET_BASE = './profili3dakina/';
       window.AKINA_ALLOW_REMOTE_ASSETS = false;
     </script>
   </head>
@@ -59,6 +59,13 @@
                 <span id="viewer-loading-percent" class="viewer-loading__percent">0%</span>
               </div>
             </div>
+            <div
+              id="viewer-asset-warning"
+              class="viewer-warning is-hidden"
+              role="status"
+              aria-live="assertive"
+              hidden
+            ></div>
             <div id="viewer" class="viewer" role="img" aria-label="Anteprima 3D parametrica"></div>
             <div class="viewer-dimension viewer-dimension--height">
               <span id="viewer-height-label">2200 mm</span>
