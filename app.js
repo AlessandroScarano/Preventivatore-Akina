@@ -692,39 +692,209 @@ class DoorVisualizer {
     }
 
     const heightMm = Number(options.heightMm ?? options.height ?? 0);
-    const doorWidthMm = Number(options.leafWidthMm ?? options.width ?? 0);
-    const numDoors = Math.max(Number(options.numDoors) || 1, 1);
+    const totalWidthMm = Number(options.totalWidthMm ?? options.width ?? 0);
 
-    if (!heightMm || !doorWidthMm) {
+    const slidingLeavesInput = Array.isArray(options.slidingLeaves) ? options.slidingLeaves : [];
+    const fixedPanelsInput = Array.isArray(options.fixedPanels) ? options.fixedPanels : [];
+
+    const slidingLeaves = slidingLeavesInput
+      .map((leaf, index) => {
+        const widthMm = Number(leaf?.widthMm ?? leaf ?? 0);
+        if (!Number.isFinite(widthMm) || widthMm <= 0) return null;
+        return {
+          index,
+          widthMm,
+          widthM: widthMm / 1000,
+        };
+      })
+      .filter(Boolean);
+
+    const fixedPanels = fixedPanelsInput
+      .map((panel, index) => {
+        const widthMm = Number(panel?.widthMm ?? panel ?? 0);
+        if (!Number.isFinite(widthMm) || widthMm <= 0) return null;
+        const side = panel?.side === 'left' ? 'left' : 'right';
+        return {
+          index,
+          side,
+          widthMm,
+          widthM: widthMm / 1000,
+        };
+      })
+      .filter(Boolean);
+
+    const hasSegments = slidingLeaves.length > 0 || fixedPanels.length > 0;
+
+    if (!heightMm || !totalWidthMm || !hasSegments) {
       clearGroup(this.doorFrames);
       clearGroup(this.tracksGroup);
       this.toggleMoveControls(false);
+      this.lastParams = null;
       return;
     }
 
-    const totalWidthMm = doorWidthMm * numDoors;
     const params = {
       heightMm,
-      doorWidthMm,
-      numDoors,
       totalWidthMm,
       heightM: heightMm / 1000,
-      doorWidthM: doorWidthMm / 1000,
       totalWidthM: totalWidthMm / 1000,
       profileColor: options.profileColor || DEFAULT_PROFILE_COLOR,
       glassColor: options.glassColor || DEFAULT_GLASS_COLOR,
       trackMode: options.trackVisibility === 'hidden' ? 'hidden' : 'visible',
       showCover: Boolean(options.showCover),
       environment: options.environment || this.environmentMode || 'soloporta',
+      openingMode: options.openingMode || 'single-right',
+      slidingLeaves,
+      fixedPanels,
     };
-    params.glassWidth = Math.max(params.doorWidthM - 0.05, 0.05);
+
     params.glassHeight = Math.max(params.heightM - 0.1, 0.05);
+    params.slidingLeavesCount = slidingLeaves.length;
+    params.fixedPanelsCount = fixedPanels.length;
+    const averageLeafWidthMm =
+      params.slidingLeavesCount > 0
+        ? params.slidingLeaves.reduce((sum, leaf) => sum + leaf.widthMm, 0) /
+          Math.max(params.slidingLeavesCount, 1)
+        : params.totalWidthMm;
+    params.primaryLeafWidthMm = averageLeafWidthMm;
+    params.primaryLeafWidthM = params.primaryLeafWidthMm / 1000;
+    params.glassWidth = Math.max(params.primaryLeafWidthM - 0.05, 0.05);
 
     this.lastParams = params;
 
     this.resetHighlights();
     this.buildDoor(params);
-    this.updateDimensionsInfo(params);
+    this.updateDimensionsInfo(this.lastParams);
+  }
+
+  prepareSegments(params) {
+    const layout = [];
+    const slidingSegments = [];
+    const leftFixed = params.fixedPanels.filter((panel) => panel.side === 'left');
+    const rightFixed = params.fixedPanels.filter((panel) => panel.side === 'right');
+
+    const totalWidthM = params.totalWidthM;
+    const leftFixedWidthM = leftFixed.reduce((sum, panel) => sum + panel.widthM, 0);
+    const rightFixedWidthM = rightFixed.reduce((sum, panel) => sum + panel.widthM, 0);
+
+    const slidingAreaStart = -totalWidthM / 2 + leftFixedWidthM;
+    const slidingAreaEnd = totalWidthM / 2 - rightFixedWidthM;
+
+    let cursor = -totalWidthM / 2;
+    let zIndex = 0;
+
+    const pushSegment = (segment) => {
+      layout.push({ ...segment, zIndex });
+      zIndex += 1;
+    };
+
+    leftFixed.forEach((panel) => {
+      const center = cursor + panel.widthM / 2;
+      pushSegment({
+        ...panel,
+        type: 'fixed',
+        center,
+        closedX: center,
+        openX: center,
+        isFixed: true,
+      });
+      cursor += panel.widthM;
+    });
+
+    params.slidingLeaves.forEach((leaf) => {
+      const center = cursor + leaf.widthM / 2;
+      const segment = {
+        ...leaf,
+        type: 'sliding',
+        center,
+        closedX: center,
+        isFixed: false,
+      };
+      slidingSegments.push(segment);
+      pushSegment(segment);
+      cursor += leaf.widthM;
+    });
+
+    rightFixed.forEach((panel) => {
+      const center = cursor + panel.widthM / 2;
+      pushSegment({
+        ...panel,
+        type: 'fixed',
+        center,
+        closedX: center,
+        openX: center,
+        isFixed: true,
+      });
+      cursor += panel.widthM;
+    });
+
+    const openPositions = this.computeOpenPositions(
+      params.openingMode,
+      slidingSegments,
+      slidingAreaStart,
+      slidingAreaEnd
+    );
+
+    slidingSegments.forEach((segment, index) => {
+      segment.openX = openPositions[index];
+    });
+
+    layout.forEach((segment) => {
+      if (segment.isFixed) {
+        segment.openX = segment.closedX;
+      }
+    });
+
+    return {
+      layout,
+      slidingSegments,
+      slidingAreaStart,
+      slidingAreaEnd,
+      slidingAreaWidth: Math.max(slidingAreaEnd - slidingAreaStart, 0),
+    };
+  }
+
+  computeOpenPositions(mode, segments, areaStart, areaEnd) {
+    const count = segments.length;
+    if (count === 0) return [];
+    const start = Math.min(areaStart, areaEnd);
+    const end = Math.max(areaStart, areaEnd);
+    const positions = new Array(count);
+
+    if (mode === 'single-left') {
+      let cursor = start;
+      for (let i = 0; i < count; i += 1) {
+        const width = segments[i].widthM;
+        positions[i] = cursor + width / 2;
+        cursor += width;
+      }
+      return positions;
+    }
+
+    if (mode === 'biparting') {
+      const half = Math.ceil(count / 2);
+      let leftCursor = start;
+      for (let i = 0; i < half; i += 1) {
+        const width = segments[i].widthM;
+        positions[i] = leftCursor + width / 2;
+        leftCursor += width;
+      }
+      let rightCursor = end;
+      for (let i = count - 1; i >= half; i -= 1) {
+        const width = segments[i].widthM;
+        positions[i] = rightCursor - width / 2;
+        rightCursor -= width;
+      }
+      return positions;
+    }
+
+    let cursor = end;
+    for (let i = count - 1; i >= 0; i -= 1) {
+      const width = segments[i].widthM;
+      positions[i] = cursor - width / 2;
+      cursor -= width;
+    }
+    return positions;
   }
 
   buildDoor(params) {
@@ -746,27 +916,68 @@ class DoorVisualizer {
 
     this.doorFrames.position.set(0, params.heightM / 2, 0);
 
-    for (let i = 0; i < params.numDoors; i += 1) {
-      const leaf = this.buildLeaf(i, params);
+    const {
+      layout,
+      slidingAreaStart,
+      slidingAreaEnd,
+      slidingAreaWidth,
+    } = this.prepareSegments(params);
+
+    params.slidingAreaStart = slidingAreaStart;
+    params.slidingAreaEnd = slidingAreaEnd;
+    params.slidingAreaWidth = slidingAreaWidth;
+    const averageLeafWidthMm =
+      params.slidingLeavesCount > 0
+        ? params.slidingLeaves.reduce((sum, leaf) => sum + leaf.widthMm, 0) /
+          Math.max(params.slidingLeavesCount, 1)
+        : params.totalWidthMm;
+    params.primaryLeafWidthMm = averageLeafWidthMm;
+    params.primaryLeafWidthM = params.primaryLeafWidthMm / 1000;
+    this.lastParams = params;
+
+    layout.forEach((segment) => {
+      const segmentParams = {
+        heightMm: params.heightMm,
+        heightM: params.heightM,
+        profileColor: params.profileColor,
+        glassColor: params.glassColor,
+        showCover: !segment.isFixed && params.showCover,
+        glassHeight: params.glassHeight,
+        slidingLeavesCount: params.slidingLeavesCount,
+        fixedPanelsCount: params.fixedPanelsCount,
+        doorWidthMm: segment.widthMm,
+        doorWidthM: segment.widthM,
+      };
+      const leaf = this.buildLeaf(segment, segmentParams);
       if (leaf) {
+        leaf.openX = segment.openX ?? segment.closedX ?? 0;
+        leaf.closedX = segment.closedX ?? 0;
+        leaf.group.position.set(leaf.openX, 0, segment.zIndex * this.zOffset);
         this.doorFrames.add(leaf.group);
         this.leafData.push(leaf);
         if (!leaf.isFixed) {
           this.movableLeafData.push(leaf);
         }
       }
-    }
+    });
 
-    for (let i = 0; i < params.numDoors; i += 1) {
-      const track = this.buildTrack(i, params);
-      if (track) {
-        this.tracksGroup.add(track);
+    clearGroup(this.tracksGroup);
+    if (params.slidingLeavesCount > 0) {
+      for (let i = 0; i < params.slidingLeavesCount; i += 1) {
+        const track = this.buildTrack(i, params);
+        if (track) {
+          this.tracksGroup.add(track);
+        }
       }
     }
 
     if (!this.movableLeafData.length) {
       this.toggleMoveControls(false);
+      this.updateCamera(params);
+      return;
     }
+
+    this.toggleMoveControls(false);
     this.openDoors(true);
     this.updateCamera(params);
   }
@@ -775,19 +986,29 @@ class DoorVisualizer {
     this.environmentMode = params.environment || 'soloporta';
   }
 
-  buildLeaf(index, params) {
+  buildLeaf(segment, params) {
+    const suffix = segment.zIndex ?? segment.index ?? 0;
     const group = new THREE.Group();
-    group.name = `doorLeaf_${index}`;
-    group.position.set(0, 0, index * this.zOffset);
+    group.name = `${segment.isFixed ? 'fixedPanel' : 'doorLeaf'}_${suffix}`;
+    group.position.set(0, 0, 0);
+
+    const pieces = segment.isFixed
+      ? Math.max(params.fixedPanelsCount || 0, 1)
+      : Math.max(params.slidingLeavesCount || 0, 1);
+
+    const doorWidthM = params.doorWidthM || 0;
+    const doorWidthMm = params.doorWidthMm || 0;
+    const heightM = params.heightM || 0;
+    const heightMm = params.heightMm || 0;
 
     const commonInfo = {
-      dimensions: `Altezza: ${formatMillimeters(params.heightMm)} mm`,
-      pieces: params.numDoors,
+      dimensions: `Altezza: ${formatMillimeters(heightMm)} mm`,
+      pieces,
     };
 
     const leftProfile = this.decoratePart(
       this.clonePart('leftProfile'),
-      `leftProfile_${index}`,
+      `leftProfile_${suffix}`,
       params.profileColor,
       {
         ...commonInfo,
@@ -797,14 +1018,14 @@ class DoorVisualizer {
       }
     );
     if (leftProfile) {
-      leftProfile.position.x = -params.doorWidthM / 2;
-      leftProfile.scale.set(1, params.heightM, 1);
+      leftProfile.position.x = -doorWidthM / 2;
+      leftProfile.scale.set(1, heightM, 1);
       group.add(leftProfile);
     }
 
     const rightProfile = this.decoratePart(
       this.clonePart('rightProfile'),
-      `rightProfile_${index}`,
+      `rightProfile_${suffix}`,
       params.profileColor,
       {
         ...commonInfo,
@@ -814,33 +1035,33 @@ class DoorVisualizer {
       }
     );
     if (rightProfile) {
-      rightProfile.position.x = params.doorWidthM / 2;
-      rightProfile.scale.set(1, params.heightM, 1);
+      rightProfile.position.x = doorWidthM / 2;
+      rightProfile.scale.set(1, heightM, 1);
       group.add(rightProfile);
     }
 
     const horizontalInfo = {
       name: 'Profilo Superiore',
       code: 'UNK-A201-40',
-      dimensions: `Lunghezza: ${formatMillimeters(params.doorWidthMm)} mm`,
-      pieces: params.numDoors,
+      dimensions: `Lunghezza: ${formatMillimeters(doorWidthMm)} mm`,
+      pieces,
       images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-412.png',
     };
     const topProfile = this.decoratePart(
       this.clonePart('topProfile'),
-      `topProfile_${index}`,
+      `topProfile_${suffix}`,
       params.profileColor,
       horizontalInfo
     );
     if (topProfile) {
-      topProfile.position.y = params.heightM / 2;
-      topProfile.scale.set(params.doorWidthM, 1, 1);
+      topProfile.position.y = heightM / 2;
+      topProfile.scale.set(doorWidthM, 1, 1);
       group.add(topProfile);
     }
 
     const bottomProfile = this.decoratePart(
       this.clonePart('bottomProfile'),
-      `bottomProfile_${index}`,
+      `bottomProfile_${suffix}`,
       params.profileColor,
       {
         ...horizontalInfo,
@@ -848,8 +1069,8 @@ class DoorVisualizer {
       }
     );
     if (bottomProfile) {
-      bottomProfile.position.y = -params.heightM / 2;
-      bottomProfile.scale.set(params.doorWidthM, 1, 1);
+      bottomProfile.position.y = -heightM / 2;
+      bottomProfile.scale.set(doorWidthM, 1, 1);
       group.add(bottomProfile);
     }
 
@@ -857,36 +1078,39 @@ class DoorVisualizer {
       const coverInfo = {
         name: 'Cover',
         code: 'UNK-A203-40',
-        dimensions: `Altezza: ${formatMillimeters(params.heightMm)} mm`,
-        pieces: params.numDoors * 2,
+        dimensions: `Altezza: ${formatMillimeters(heightMm)} mm`,
+        pieces: pieces * 2,
         images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia12.png',
       };
       const coverLeft = this.decoratePart(
         this.clonePart('coverLeft'),
-        `coverLeft_${index}`,
+        `coverLeft_${suffix}`,
         params.profileColor,
         coverInfo
       );
       if (coverLeft) {
-        coverLeft.position.x = -params.doorWidthM / 2;
-        coverLeft.scale.set(1, params.heightM, 1);
+        coverLeft.position.x = -doorWidthM / 2;
+        coverLeft.scale.set(1, heightM, 1);
         group.add(coverLeft);
       }
       const coverRight = this.decoratePart(
         this.clonePart('coverRight'),
-        `coverRight_${index}`,
+        `coverRight_${suffix}`,
         params.profileColor,
         coverInfo
       );
       if (coverRight) {
-        coverRight.position.x = params.doorWidthM / 2;
-        coverRight.scale.set(1, params.heightM, 1);
+        coverRight.position.x = doorWidthM / 2;
+        coverRight.scale.set(1, heightM, 1);
         group.add(coverRight);
       }
     }
 
+    const glassWidth = Math.max(doorWidthM - 0.05, 0.05);
+    const glassHeight = Math.max((params.glassHeight ?? heightM - 0.1), 0.05);
+
     const glass = new THREE.Mesh(
-      new THREE.PlaneGeometry(params.glassWidth, params.glassHeight),
+      new THREE.PlaneGeometry(glassWidth, glassHeight),
       new THREE.MeshStandardMaterial({
         color: new THREE.Color(params.glassColor),
         transparent: true,
@@ -894,30 +1118,29 @@ class DoorVisualizer {
         side: THREE.DoubleSide,
       })
     );
-    glass.name = `glassPanel_${index}`;
+    glass.name = `glassPanel_${suffix}`;
     glass.position.set(0, 0, 0);
     glass.renderOrder = 1;
     glass.userData.originalColor = glass.material.color.clone();
     glass.userData.partInfo = {
       name: 'Pannello Vetrato',
       code: 'GLASS',
-      dimensions: `Larghezza: ${formatMillimeters(Math.max(params.doorWidthMm - 50, 0))} mm · Altezza: ${formatMillimeters(Math.max(params.heightMm - 100, 0))} mm`,
-      pieces: params.numDoors,
+      dimensions: `Larghezza: ${formatMillimeters(Math.max(doorWidthMm - 50, 0))} mm · Altezza: ${formatMillimeters(Math.max(heightMm - 100, 0))} mm`,
+      pieces,
       images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-412.png',
     };
     this.partMeshes.push(glass);
     group.add(glass);
 
-    const openX = (index - (params.numDoors - 1) / 2) * params.doorWidthM;
-    group.userData.closedX = 0;
-    group.userData.openX = openX;
-    group.userData.isFixed = false;
+    group.userData.closedX = segment.closedX ?? 0;
+    group.userData.openX = segment.openX ?? segment.closedX ?? 0;
+    group.userData.isFixed = Boolean(segment.isFixed);
 
     return {
       group,
-      openX,
-      closedX: 0,
-      isFixed: false,
+      openX: group.userData.openX,
+      closedX: group.userData.closedX,
+      isFixed: Boolean(segment.isFixed),
     };
   }
 
@@ -930,7 +1153,7 @@ class DoorVisualizer {
         name: 'Binario',
         code: 'GS1',
         dimensions: `Lunghezza: ${formatMillimeters(params.totalWidthMm)} mm`,
-        pieces: params.numDoors,
+        pieces: Math.max(params.slidingLeavesCount || 1, 1),
         images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-312.png',
       }
     );
@@ -949,13 +1172,19 @@ class DoorVisualizer {
   }
 
   updateDimensionsInfo(params) {
-    if (!this.dimensionsInfo) return;
-    const parts = [
-      `Ante: ${params.numDoors}`,
-      `Larghezza anta: ${formatMillimeters(params.doorWidthMm)} mm`,
-      `Altezza: ${formatMillimeters(params.heightMm)} mm`,
-      `Larghezza totale: ${formatMillimeters(params.totalWidthMm)} mm`,
-    ];
+    if (!this.dimensionsInfo || !params) return;
+    const parts = [];
+    if (typeof params.slidingLeavesCount === 'number') {
+      parts.push(`Ante scorrevoli: ${params.slidingLeavesCount}`);
+    }
+    if (params.fixedPanelsCount) {
+      parts.push(`Pannelli fissi: ${params.fixedPanelsCount}`);
+    }
+    if (params.slidingLeavesCount) {
+      parts.push(`Larghezza anta: ${formatMillimeters(params.primaryLeafWidthMm)} mm`);
+    }
+    parts.push(`Altezza: ${formatMillimeters(params.heightMm)} mm`);
+    parts.push(`Larghezza totale: ${formatMillimeters(params.totalWidthMm)} mm`);
     this.dimensionsInfo.textContent = parts.join(' · ');
   }
 
@@ -1059,7 +1288,9 @@ class DoorVisualizer {
 
   moveDoors(delta) {
     if (!this.isClosed || !this.movableLeafData.length || !this.lastParams) return;
-    const maxMove = Math.max(this.lastParams.totalWidthM / 2 - this.lastParams.doorWidthM / 2, 0);
+    const areaWidth = this.lastParams.slidingAreaWidth ?? this.lastParams.totalWidthM ?? 0;
+    const leafWidth = this.lastParams.primaryLeafWidthM ?? 0;
+    const maxMove = Math.max(areaWidth / 2 - leafWidth / 2, 0);
     const newOffset = THREE.MathUtils.clamp(this.closedOffset + delta, -maxMove, maxMove);
     const actual = newOffset - this.closedOffset;
     if (Math.abs(actual) < 1e-6) return;
@@ -1131,17 +1362,27 @@ const initialWidth = Number(document.getElementById('width')?.value) || 1200;
 const initialHeight = Number(document.getElementById('height')?.value) || 2200;
 const initialLeaves = Math.max(Number(document.getElementById('numero-ante-select')?.value) || 2, 1);
 const initialLeafWidth = Math.max(Math.floor(initialWidth / Math.max(initialLeaves, 1)), 1);
+const initialSlidingLeaves = Array.from({ length: initialLeaves }, () => ({ widthMm: initialLeafWidth }));
+const initialRemainder = initialWidth - initialLeafWidth * initialLeaves;
+if (initialRemainder !== 0 && initialSlidingLeaves.length > 0) {
+  initialSlidingLeaves[initialSlidingLeaves.length - 1].widthMm = Math.max(
+    initialSlidingLeaves[initialSlidingLeaves.length - 1].widthMm + initialRemainder,
+    1
+  );
+}
 
 const initialEnvironment = document.getElementById('environment-select')?.value || 'soloporta';
 
 const initialDoorConfig = {
   heightMm: initialHeight,
-  leafWidthMm: initialLeafWidth,
-  numDoors: initialLeaves,
+  totalWidthMm: initialWidth,
+  slidingLeaves: initialSlidingLeaves,
+  fixedPanels: [],
   profileColor: DEFAULT_PROFILE_COLOR,
   glassColor: DEFAULT_GLASS_COLOR,
   trackVisibility: 'visible',
   showCover: true,
+  openingMode: 'single-right',
   environment: initialEnvironment,
 };
 
@@ -2454,7 +2695,7 @@ function updateVisualizerPreview(config, derived) {
   }
 
   const isSoloPannello = config.model === 'SOLO_PANNELLO';
-  const slidingLeaves = isSoloPannello ? 0 : Math.max(derived?.numeroAnte || config.leaves || 1, 1);
+  const slidingLeavesCount = isSoloPannello ? 0 : Math.max(derived?.numeroAnte || config.leaves || 1, 1);
   const soloPanelCount = isSoloPannello ? Math.max(config.soloPannelloCount || config.leaves || 1, 1) : 0;
   const fixedPanelsCount =
     !isSoloPannello && config.pannelloFisso === 'Si' ? Math.max(config.numeroPannelliFissi || 1, 1) : 0;
@@ -2511,7 +2752,7 @@ function updateVisualizerPreview(config, derived) {
     shareTrack: !isSoloPannello && config.pannelliSuBinari === 'Si',
   };
 
-  const realLeaves = Math.max(derived?.realNumeroAnte || slidingLeaves || 1, 1);
+  const realLeaves = Math.max(derived?.realNumeroAnte || slidingLeavesCount || 1, 1);
   const computedLeafWidth = (() => {
     if (derived?.larghezzaAnta) {
       return derived.larghezzaAnta;
@@ -2523,14 +2764,112 @@ function updateVisualizerPreview(config, derived) {
     return Math.floor(baseWidth / realLeaves);
   })();
 
+  let effectiveTotalWidthMm = Number(config.width) || 0;
+  if (!effectiveTotalWidthMm) {
+    effectiveTotalWidthMm = Number(derived?.lunghezzaBinarioMm || config.lunghezzaBinario || 0);
+  }
+  if (!effectiveTotalWidthMm && computedLeafWidth > 0 && slidingLeavesCount > 0) {
+    effectiveTotalWidthMm = computedLeafWidth * slidingLeavesCount;
+  }
+  if (
+    !effectiveTotalWidthMm &&
+    fixedPanelDetails.mode === 'manuale' &&
+    fixedPanelDetails.manualWidth &&
+    (soloPanelCount || fixedPanelsCount)
+  ) {
+    effectiveTotalWidthMm = fixedPanelDetails.manualWidth * Math.max(soloPanelCount || fixedPanelsCount, 1);
+  }
+
+  const slidingCount = isSoloPannello ? 0 : Math.max(realLeaves, 0);
+  const totalFixedCount = isSoloPannello ? soloPanelCount : fixedPanelsCount;
+
+  const slidingLeavesSpecs = [];
+  const fixedPanelsSpecs = [];
+
+  if (effectiveTotalWidthMm > 0 && (slidingCount > 0 || totalFixedCount > 0)) {
+    let slidingWidthMm = slidingCount > 0 ? effectiveTotalWidthMm / Math.max(slidingCount, 1) : 0;
+    let fixedWidthMm = totalFixedCount > 0 ? effectiveTotalWidthMm / Math.max(slidingCount + totalFixedCount, 1) : 0;
+
+    const manualWidthMm =
+      fixedPanelDetails.mode === 'manuale' && fixedPanelDetails.manualWidth
+        ? Number(fixedPanelDetails.manualWidth)
+        : null;
+
+    if (totalFixedCount > 0) {
+      if (manualWidthMm && manualWidthMm * totalFixedCount < effectiveTotalWidthMm) {
+        fixedWidthMm = manualWidthMm;
+        const remaining = Math.max(effectiveTotalWidthMm - fixedWidthMm * totalFixedCount, 0);
+        slidingWidthMm = slidingCount > 0 ? remaining / Math.max(slidingCount, 1) : 0;
+      } else if (slidingCount > 0) {
+        const divisor = Math.max(slidingCount + totalFixedCount, 1);
+        const base = divisor > 0 ? effectiveTotalWidthMm / divisor : 0;
+        slidingWidthMm = base;
+        fixedWidthMm = base;
+      } else {
+        fixedWidthMm = totalFixedCount > 0 ? effectiveTotalWidthMm / totalFixedCount : effectiveTotalWidthMm;
+      }
+    }
+
+    if (slidingCount > 0 && (!Number.isFinite(slidingWidthMm) || slidingWidthMm <= 0) && computedLeafWidth > 0) {
+      slidingWidthMm = computedLeafWidth;
+    }
+    if (!Number.isFinite(slidingWidthMm)) slidingWidthMm = 0;
+    if (!Number.isFinite(fixedWidthMm)) fixedWidthMm = 0;
+
+    for (let i = 0; i < slidingCount; i += 1) {
+      slidingLeavesSpecs.push({ widthMm: Math.max(slidingWidthMm, 0) });
+    }
+
+    for (let i = 0; i < totalFixedCount; i += 1) {
+      const side = isSoloPannello
+        ? 'left'
+        : totalFixedCount === 1
+        ? 'right'
+        : totalFixedCount === 2
+        ? i === 0
+          ? 'left'
+          : 'right'
+        : i === 0
+        ? 'left'
+        : i === 1
+        ? 'right'
+        : i % 2 === 0
+        ? 'left'
+        : 'right';
+      fixedPanelsSpecs.push({ widthMm: Math.max(fixedWidthMm, 0), side });
+    }
+
+    const widthSum =
+      slidingLeavesSpecs.reduce((sum, leaf) => sum + leaf.widthMm, 0) +
+      fixedPanelsSpecs.reduce((sum, panel) => sum + panel.widthMm, 0);
+    const remainder = effectiveTotalWidthMm - widthSum;
+    if (Math.abs(remainder) > 0.001) {
+      if (slidingLeavesSpecs.length > 0) {
+        const lastLeaf = slidingLeavesSpecs[slidingLeavesSpecs.length - 1];
+        lastLeaf.widthMm = Math.max(lastLeaf.widthMm + remainder, 0);
+      } else if (fixedPanelsSpecs.length > 0) {
+        const lastPanel = fixedPanelsSpecs[fixedPanelsSpecs.length - 1];
+        lastPanel.widthMm = Math.max(lastPanel.widthMm + remainder, 0);
+      }
+    }
+  }
+
+  const openingMode = (() => {
+    if (config.aperturaAnte === 'Destra Sinistra') return 'biparting';
+    if (config.aperturaAnte === 'Sinistra') return 'single-left';
+    return 'single-right';
+  })();
+
   visualizer.updateDoor({
     heightMm: config.height,
-    leafWidthMm: computedLeafWidth,
-    numDoors: realLeaves,
+    totalWidthMm: effectiveTotalWidthMm,
+    slidingLeaves: slidingLeavesSpecs,
+    fixedPanels: fixedPanelsSpecs,
     profileColor: DEFAULT_PROFILE_COLOR,
     glassColor: DEFAULT_GLASS_COLOR,
     trackVisibility: trackType === 'incasso' ? 'hidden' : 'visible',
     showCover: !isSoloPannello && config.binario === 'A vista',
+    openingMode,
     environment: config.environment || 'soloporta',
   });
 }
