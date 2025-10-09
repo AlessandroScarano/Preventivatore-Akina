@@ -792,7 +792,9 @@ class DoorVisualizer {
     let zIndex = 0;
 
     const pushSegment = (segment) => {
-      layout.push({ ...segment, zIndex });
+      const enriched = segment;
+      enriched.zIndex = zIndex;
+      layout.push(enriched);
       zIndex += 1;
     };
 
@@ -847,10 +849,33 @@ class DoorVisualizer {
       segment.openX = openPositions[index];
     });
 
+    const trackCount = Math.max(params.trackCount || slidingSegments.length || 0, 0);
+    const safeTrackCount = trackCount > 0 ? trackCount : Math.max(slidingSegments.length, 1);
+
+    if (slidingSegments.length) {
+      if (params.openingMode === 'biparting' && safeTrackCount < slidingSegments.length) {
+        const leftCount = Math.floor(slidingSegments.length / 2);
+        slidingSegments.forEach((segment, index) => {
+          const localIndex = index < leftCount ? index : index - leftCount;
+          const trackIndex = Math.min(localIndex, safeTrackCount - 1);
+          segment.trackIndex = Math.max(trackIndex, 0);
+        });
+      } else {
+        slidingSegments.forEach((segment, index) => {
+          const trackIndex = Math.min(index, safeTrackCount - 1);
+          segment.trackIndex = Math.max(trackIndex, 0);
+        });
+      }
+    }
+
     layout.forEach((segment) => {
       if (segment.isFixed) {
         segment.openX = segment.closedX;
+        segment.trackIndex = Math.max(safeTrackCount - 1, 0);
       }
+      segment.depthIndex = Number.isFinite(segment.trackIndex)
+        ? segment.trackIndex
+        : segment.zIndex || 0;
     });
 
     return {
@@ -998,7 +1023,10 @@ class DoorVisualizer {
       if (leaf) {
         leaf.openX = segment.openX ?? segment.closedX ?? 0;
         leaf.closedX = segment.closedX ?? 0;
-        leaf.group.position.set(leaf.openX, 0, segment.zIndex * this.zOffset);
+        const depthIndex = Number.isFinite(segment.depthIndex)
+          ? segment.depthIndex
+          : segment.zIndex || 0;
+        leaf.group.position.set(leaf.openX, 0, depthIndex * this.zOffset);
         this.doorFrames.add(leaf.group);
         this.leafData.push(leaf);
         if (!leaf.isFixed) {
