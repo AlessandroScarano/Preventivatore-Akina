@@ -414,7 +414,15 @@ class DoorVisualizer {
       return Promise.resolve();
     }
     this.showOverlay(0);
-    return Promise.all(urls.map((url) => this.loadAsset(url)));
+    return Promise.all(urls.map((url) => this.loadAsset(url)))
+      .catch((error) => {
+        console.error('Errore durante il preload dei modelli 3D:', error);
+      })
+      .finally(() => {
+        if (!this.assetsReady) {
+          this.onAssetsReady();
+        }
+      });
   }
 
   loadAsset(url) {
@@ -430,7 +438,7 @@ class DoorVisualizer {
         },
         undefined,
         (error) => {
-          console.error('Impossibile caricare l'asset 3D:', url, error);
+          console.error("Impossibile caricare l'asset 3D:", url, error);
           resolve(null);
         }
       );
