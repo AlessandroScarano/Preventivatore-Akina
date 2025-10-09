@@ -479,225 +479,342 @@
                 </div>
               </div>
 
-              <div class="configurator-section" id="magnetica-optional-section" style="display: none;">
+            <div class="configurator-section" id="magnetica-optional-section" style="display: none;">
                 <h2>Seleziona Optional per Modello Magnetica</h2>
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-ELB" data-name="Elettroblocco" data-price="230" />
-                  MAG-AC-ELB - Elettroblocco (€ 230)
-                </label><br />
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-TC1" data-name="Telecomando" data-price="130" />
-                  MAG-AC-TC1 - Telecomando (€ 130)
-                </label><br />
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-TC2" data-name="Telecomando Smart" data-price="250" />
-                  MAG-AC-TC2 - Telecomando Smart (€ 250)
-                </label><br />
-                <label>
-                  <input
-                    type="checkbox"
-                    name="optional_magnetica[]"
-                    value="MAG-AC-TC3"
-                    data-name="Telecomando Smart con Supporto Magnetico di Montaggio"
-                    data-price="270"
-                  />
-                  MAG-AC-TC3 - Telecomando Smart con Supporto Magnetico di Montaggio (€ 270)
-                </label>
-                <br />
-                <label>
-                  <input
-                    type="checkbox"
-                    name="optional_magnetica[]"
-                    value="MAG-AC-TNT"
-                    data-name="Tastierino Numerico"
-                    data-price="630"
-                  />
-                  MAG-AC-TNT - Tastierino Numerico con Lettore di Impronte Digitali e Badge (€ 630)
-                </label><br />
-
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CAV" data-name="Cavo di Connessione 4 Fili" data-price="100" />
-                  MAG-AC-CAV - Cavo di Connessione 4 Fili (€ 100)
-                </label><br />
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-MTS" data-name="Mini Sensore Superiore" data-price="280" />
-                  MAG-AC-MTS - Mini Sensore Superiore (€ 280)
-                </label><br />
-
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CSB" data-name="Clean Switch Nero" data-price="350" />
-                  MAG-AC-CSB - Clean Switch Nero (€ 350)
-                </label><br />
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CSW" data-name="Clean Switch Bianco" data-price="350" />
-                  MAG-AC-CSW - Clean Switch Bianco (€ 350)
-                </label><br />
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SBH" data-name="Supporto per Clean Switch Quadrato" data-price="50" />
-                  MAG-AC-SBH - Supporto per Clean Switch Quadrato (€ 50)
-                </label><br />
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SBW" data-name="Supporto per Clean Switch Rettangolare" data-price="60" />
-                  MAG-AC-SBW - Supporto per Clean Switch Rettangolare (€ 60)
-                </label><br />
-                <label>
-                  <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SYN" data-name="Cavo di Connessione Ante Sincronizzate" data-price="100" />
-                  MAG-AC-SYN - Cavo di Connessione Ante Sincronizzate (€ 100)
-                </label>
+                <div class="accessory-grid">
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-ELB" data-name="Elettroblocco" data-price="230" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Elettroblocco</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-ELB</p>
+                      <p class="accessory-card__price">Prezzo: € 230,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-TC1" data-name="Telecomando" data-price="130" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Telecomando</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-TC1</p>
+                      <p class="accessory-card__price">Prezzo: € 130,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-TC2" data-name="Telecomando Smart" data-price="250" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Telecomando Smart</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-TC2</p>
+                      <p class="accessory-card__price">Prezzo: € 250,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-TC3"
+                      data-name="Telecomando Smart con Supporto Magnetico di Montaggio"
+                      data-price="270"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Telecomando Smart con Supporto Magnetico</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-TC3</p>
+                      <p class="accessory-card__price">Prezzo: € 270,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-TNT"
+                      data-name="Tastierino Numerico"
+                      data-price="630"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Tastierino Numerico con Lettore di Impronte</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-TNT</p>
+                      <p class="accessory-card__price">Prezzo: € 630,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CAV" data-name="Cavo di Connessione 4 Fili" data-price="100" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Cavo di Connessione 4 Fili</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-CAV</p>
+                      <p class="accessory-card__price">Prezzo: € 100,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-MTS" data-name="Mini Sensore Superiore" data-price="280" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Mini Sensore Superiore</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-MTS</p>
+                      <p class="accessory-card__price">Prezzo: € 280,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CSB" data-name="Clean Switch Nero" data-price="350" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Clean Switch Nero</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-CSB</p>
+                      <p class="accessory-card__price">Prezzo: € 350,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-CSW" data-name="Clean Switch Bianco" data-price="350" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Clean Switch Bianco</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-CSW</p>
+                      <p class="accessory-card__price">Prezzo: € 350,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SBH" data-name="Supporto per Clean Switch Quadrato" data-price="50" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Supporto per Clean Switch Quadrato</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-SBH</p>
+                      <p class="accessory-card__price">Prezzo: € 50,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SBW" data-name="Supporto per Clean Switch Rettangolare" data-price="60" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Supporto per Clean Switch Rettangolare</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-SBW</p>
+                      <p class="accessory-card__price">Prezzo: € 60,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional_magnetica[]" value="MAG-AC-SYN" data-name="Cavo di Connessione Ante Sincronizzate" data-price="100" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Cavo di Connessione Ante Sincronizzate</p>
+                      <p class="accessory-card__code">Codice: MAG-AC-SYN</p>
+                      <p class="accessory-card__price">Prezzo: € 100,00</p>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               <div class="configurator-section optional-section">
                 <h2>Seleziona Optional</h2>
-                <label>
-                  <input type="checkbox" name="optional[]" value="UNK-KIT1S-K1A" data-name="Kit Anta Ridotta" data-price="450" />
-                  UNK-KIT1S-K1A - Kit Anta Ridotta (+100 €  su Anta)
-                </label><br />
-
-                <label>
-                  <input type="checkbox" name="optional[]" value="UNK-PTO" data-name="Push to Open con Soft Close" data-price="100" />
-                  UNK-PTO - Push to Open con Soft Close (€ 100)
-                </label><br />
-
-                <label class="optional-trascinamento" style="display: none;">
-                  <input
-                    type="checkbox"
-                    name="optional[]"
-                    value="UNK-CAM-L1500"
-                    data-name="Cinta per la sincronizzazione delle ante Maggiorate"
-                    data-price="100"
-                  />
-                  UNK-CAM-L1500 - Cinta per la sincronizzazione delle ante Maggiorate (€ 100)
-                </label>
+                <div class="accessory-grid">
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional[]" value="UNK-KIT1S-K1A" data-name="Kit Anta Ridotta" data-price="450" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Kit Anta Ridotta (+100 € su anta)</p>
+                      <p class="accessory-card__code">Codice: UNK-KIT1S-K1A</p>
+                      <p class="accessory-card__price">Prezzo: € 450,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input type="checkbox" name="optional[]" value="UNK-PTO" data-name="Push to Open con Soft Close" data-price="100" />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Push to Open con Soft Close</p>
+                      <p class="accessory-card__code">Codice: UNK-PTO</p>
+                      <p class="accessory-card__price">Prezzo: € 100,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox optional-trascinamento" style="display: none;">
+                    <input
+                      type="checkbox"
+                      name="optional[]"
+                      value="UNK-CAM-L1500"
+                      data-name="Cinta per la sincronizzazione delle ante Maggiorate"
+                      data-price="100"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Cinta per la sincronizzazione delle ante Maggiorate</p>
+                      <p class="accessory-card__code">Codice: UNK-CAM-L1500</p>
+                      <p class="accessory-card__price">Prezzo: € 100,00</p>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               <div class="configurator-section">
                 <h2>Seleziona Maniglie e Nicchie</h2>
-
-                <label>
-                  <input
-                    type="number"
-                    name="maniglie_nicchie_quantity[MAQ1015]"
-                    data-name="Coppia di Maniglie Dritte Autoadesive 10 x 160 mm"
-                    data-price="47"
-                    min="0"
-                    value="0"
-                    style="width: 50px; margin-right: 10px;"
-                  />
-                  <strong>MAQ1015</strong> - Coppia di Maniglie Dritte Autoadesive 10 x 160 mm (€ 47)
-                </label>
-                <br />
-
-                <label>
-                  <input
-                    type="number"
-                    name="maniglie_nicchie_quantity[UNK-NTI NO]"
-                    data-name="Coppia di Nicchie Tonde Autoadesive Ø 110 mm"
-                    data-price="60"
-                    min="0"
-                    value="0"
-                    style="width: 50px; margin-right: 10px;"
-                  />
-                  <strong>UNK-NTI NO</strong> - Coppia di Nicchie Tonde Autoadesive Ø 110 mm (€ 60)
-                </label>
-                <br />
-
-                <label>
-                  <input
-                    type="number"
-                    name="maniglie_nicchie_quantity[UNK-MRC200.33 NO]"
-                    data-name="Coppia di Maniglie a C Angolo Retto, 200 x 33 mm"
-                    data-price="65"
-                    min="0"
-                    value="0"
-                    style="width: 50px; margin-right: 10px;"
-                  />
-                  <strong>UNK-MRC200.33 NO</strong> - Coppia di Maniglie a C Angolo Retto, 200 x 33 mm (€ 65)
-                </label>
-                <br />
-
-                <label>
-                  <input
-                    type="number"
-                    name="maniglie_nicchie_quantity[UNK-MRC206.33 NO]"
-                    data-name="Coppia di Maniglie a C 206 x 33 mm"
-                    data-price="70"
-                    min="0"
-                    value="0"
-                    style="width: 50px; margin-right: 10px;"
-                  />
-                  <strong>UNK-MRC206.33 NO</strong> - Coppia di Maniglie a C 206 x 33 mm (€ 70)
-                </label>
-                <br />
-
-                <label>
-                  <input
-                    type="number"
-                    name="maniglie_nicchie_quantity[UNK-KSM NO]"
-                    data-name="Kit Serratura Magnetica per Porta Scorrevole"
-                    data-price="70"
-                    min="0"
-                    value="0"
-                    style="width: 50px; margin-right: 10px;"
-                  />
-                  <strong>UNK-KSM NO</strong> - Kit Serratura Magnetica per Porta Scorrevole (€ 70)
-                </label>
-                <br />
-
-                <label>
-                  <input
-                    type="number"
-                    name="maniglie_nicchie_quantity[NRCI50.220]"
-                    data-name="Coppia di Nicchie Autoadesive 50 x 110 mm"
-                    data-price="70"
-                    min="0"
-                    value="0"
-                    style="width: 50px; margin-right: 10px;"
-                  />
-                  <strong>NRCI50.220</strong> - Coppia di Nicchie Autoadesive 50 x 110 mm (€ 70)
-                </label>
-                <br />
-
-                <label>
-                  <input
-                    type="number"
-                    name="maniglie_nicchie_quantity[NRCI45.220 NO]"
-                    data-name="Coppia di Nicchie Autoadesive 45 x 220 mm"
-                    data-price="76"
-                    min="0"
-                    value="0"
-                    style="width: 50px; margin-right: 10px;"
-                  />
-                  <strong>NRCI45.220 NO</strong> - Coppia di Nicchie Autoadesive 45 x 220 mm (€ 76)
-                </label>
-                <br />
+                <div class="accessory-grid accessory-grid--quantity">
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Coppia di Maniglie Dritte Autoadesive 10 × 160 mm</p>
+                      <p class="accessory-card__code">Codice: MAQ1015</p>
+                      <p class="accessory-card__price">Prezzo: € 47,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span>Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[MAQ1015]"
+                        data-name="Coppia di Maniglie Dritte Autoadesive 10 x 160 mm"
+                        data-price="47"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Coppia di Nicchie Tonde Autoadesive Ø 110 mm</p>
+                      <p class="accessory-card__code">Codice: UNK-NTI NO</p>
+                      <p class="accessory-card__price">Prezzo: € 60,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span>Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[UNK-NTI NO]"
+                        data-name="Coppia di Nicchie Tonde Autoadesive Ø 110 mm"
+                        data-price="60"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Coppia di Maniglie a C Angolo Retto 200 × 33 mm</p>
+                      <p class="accessory-card__code">Codice: UNK-MRC200.33 NO</p>
+                      <p class="accessory-card__price">Prezzo: € 65,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span>Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[UNK-MRC200.33 NO]"
+                        data-name="Coppia di Maniglie a C Angolo Retto, 200 x 33 mm"
+                        data-price="65"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Coppia di Maniglie a C 206 × 33 mm</p>
+                      <p class="accessory-card__code">Codice: UNK-MRC206.33 NO</p>
+                      <p class="accessory-card__price">Prezzo: € 70,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span>Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[UNK-MRC206.33 NO]"
+                        data-name="Coppia di Maniglie a C 206 x 33 mm"
+                        data-price="70"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Kit Serratura Magnetica per Porta Scorrevole</p>
+                      <p class="accessory-card__code">Codice: UNK-KSM NO</p>
+                      <p class="accessory-card__price">Prezzo: € 70,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span>Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[UNK-KSM NO]"
+                        data-name="Kit Serratura Magnetica per Porta Scorrevole"
+                        data-price="70"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Coppia di Nicchie Autoadesive 50 × 110 mm</p>
+                      <p class="accessory-card__code">Codice: NRCI50.220</p>
+                      <p class="accessory-card__price">Prezzo: € 70,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span>Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[NRCI50.220]"
+                        data-name="Coppia di Nicchie Autoadesive 50 x 110 mm"
+                        data-price="70"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name">Coppia di Nicchie Autoadesive 45 × 220 mm</p>
+                      <p class="accessory-card__code">Codice: NRCI45.220 NO</p>
+                      <p class="accessory-card__price">Prezzo: € 76,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span>Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[NRCI45.220 NO]"
+                        data-name="Coppia di Nicchie Autoadesive 45 x 220 mm"
+                        data-price="76"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div class="configurator-section">
                 <h2>Seleziona Kit di Lavorazione Profili</h2>
                 <div class="kit-lav-prof">
-                  <p><strong>Da acquistare solo al primo ordine</strong></p><br />
-                  <label style="display: block;">
-                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-PFT" data-name="Punta per Trapano Foratura Telaio Porta" data-price="16" />
-                    UNK-PFT - Punta per Trapano Foratura Telaio Porta (€ 16)
-                  </label>
-                  <label class="kit-trascinamento-only" style="display: block;">
-                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-PSC" data-name="Pinza per Serraggio su Cinghia" data-price="152.7" />
-                    UNK-PSC - Pinza per Serraggio su Cinghia (€ 152.70)
-                  </label>
-                  <label style="display: block;">
-                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-PVT" data-name="Prolunga per Fissaggio Viti su Telaio Porta" data-price="15" />
-                    UNK-PVT - Prolunga per Fissaggio Viti su Telaio Porta (€ 15)
-                  </label>
-                  <label class="kit-trascinamento-only" style="display: block;">
-                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-DDC" data-name="Dima per Localizzare la Dimensione della Cinghia" data-price="10" />
-                    UNK-DDC - Dima per Localizzare la Dimensione della Cinghia (€ 10)
-                  </label>
-                  <label style="display: block;">
-                    <input type="checkbox" name="kit_lavorazione[]" value="UNK-DFT" data-name="Dima per Foratura Profili Telaio Porta" data-price="126" />
-                    UNK-DFT - Dima per Foratura Profili Telaio Porta (€ 126)
-                  </label>
-                  <br />
-                  <a id="select-all-kits" style="text-decoration: underline; cursor: pointer; color: blue;">Seleziona Tutti</a>
+                  <p><strong>Da acquistare solo al primo ordine</strong></p>
+                  <div class="accessory-grid">
+                    <label class="accessory-card accessory-card--checkbox">
+                      <input type="checkbox" name="kit_lavorazione[]" value="UNK-PFT" data-name="Punta per Trapano Foratura Telaio Porta" data-price="16" />
+                      <div class="accessory-card__details">
+                        <p class="accessory-card__name">Punta per Trapano Foratura Telaio Porta</p>
+                        <p class="accessory-card__code">Codice: UNK-PFT</p>
+                        <p class="accessory-card__price">Prezzo: € 16,00</p>
+                      </div>
+                    </label>
+                    <label class="accessory-card accessory-card--checkbox kit-trascinamento-only" style="display: none;">
+                      <input type="checkbox" name="kit_lavorazione[]" value="UNK-PSC" data-name="Pinza per Serraggio su Cinghia" data-price="152.7" />
+                      <div class="accessory-card__details">
+                        <p class="accessory-card__name">Pinza per Serraggio su Cinghia</p>
+                        <p class="accessory-card__code">Codice: UNK-PSC</p>
+                        <p class="accessory-card__price">Prezzo: € 152,70</p>
+                      </div>
+                    </label>
+                    <label class="accessory-card accessory-card--checkbox">
+                      <input type="checkbox" name="kit_lavorazione[]" value="UNK-PVT" data-name="Prolunga per Fissaggio Viti su Telaio Porta" data-price="15" />
+                      <div class="accessory-card__details">
+                        <p class="accessory-card__name">Prolunga per Fissaggio Viti su Telaio Porta</p>
+                        <p class="accessory-card__code">Codice: UNK-PVT</p>
+                        <p class="accessory-card__price">Prezzo: € 15,00</p>
+                      </div>
+                    </label>
+                    <label class="accessory-card accessory-card--checkbox kit-trascinamento-only" style="display: none;">
+                      <input type="checkbox" name="kit_lavorazione[]" value="UNK-DDC" data-name="Dima per Localizzare la Dimensione della Cinghia" data-price="10" />
+                      <div class="accessory-card__details">
+                        <p class="accessory-card__name">Dima per Localizzare la Dimensione della Cinghia</p>
+                        <p class="accessory-card__code">Codice: UNK-DDC</p>
+                        <p class="accessory-card__price">Prezzo: € 10,00</p>
+                      </div>
+                    </label>
+                    <label class="accessory-card accessory-card--checkbox">
+                      <input type="checkbox" name="kit_lavorazione[]" value="UNK-DFT" data-name="Dima per Foratura Profili Telaio Porta" data-price="126" />
+                      <div class="accessory-card__details">
+                        <p class="accessory-card__name">Dima per Foratura Profili Telaio Porta</p>
+                        <p class="accessory-card__code">Codice: UNK-DFT</p>
+                        <p class="accessory-card__price">Prezzo: € 126,00</p>
+                      </div>
+                    </label>
+                  </div>
+                  <a id="select-all-kits" class="accessory-select-all">Seleziona Tutti</a>
                 </div>
               </div>
 
@@ -706,8 +823,8 @@
             <div class="form-step" data-step="5">
               <div class="configurator-section configurator-section--summary">
                 <h2>Riepilogo finale</h2>
-                <p>Conferma le tue scelte e genera il preventivo dettagliato comprensivo di lavorazioni e accessori.</p>
-                <button type="button" id="generate-summary" class="wizard-button wizard-button--cta">Genera riepilogo</button>
+                <p>Conferma le tue scelte e salva il preventivo dettagliato in PDF comprensivo di lavorazioni e accessori.</p>
+                <button type="button" id="save-pdf-button" class="wizard-button wizard-button--cta">Salva in PDF</button>
                 <p class="configurator-note"><strong>* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell'utilizzo del Tool.</strong></p>
                 <p class="configurator-note">Vi preghiamo di utilizzare i cataloghi, i listini e le schede tecniche a disposizione.</p>
               </div>
@@ -756,6 +873,7 @@
       </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

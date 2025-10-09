@@ -375,7 +375,11 @@ class DoorVisualizer {
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 50);
     this.camera.position.set(2.4, 2.1, 3.6);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      preserveDrawingBuffer: true,
+    });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(width, height);
     this.renderer.setClearAlpha(0);
@@ -776,8 +780,10 @@ class DoorVisualizer {
       }
     }
 
-    this.closeDoors(true);
-    this.toggleMoveControls(this.movableLeafData.length > 0);
+    if (!this.movableLeafData.length) {
+      this.toggleMoveControls(false);
+    }
+    this.openDoors(true);
     this.updateCamera(params);
   }
 
@@ -1030,11 +1036,20 @@ class DoorVisualizer {
     this.partInfoBox.removeAttribute('hidden');
   }
 
-  openDoors() {
-    if (!this.movableLeafData.length) return;
+  openDoors(immediate = false) {
     this.isClosed = false;
+    this.closedOffset = 0;
     this.stopContinuousMove();
     this.toggleMoveControls(false);
+    if (!this.movableLeafData.length) return;
+
+    if (immediate) {
+      this.movableLeafData.forEach((leaf) => {
+        leaf.group.position.x = leaf.openX;
+      });
+      return;
+    }
+
     this.movableLeafData.forEach((leaf) => {
       gsap.to(leaf.group.position, {
         x: leaf.openX,
@@ -1112,6 +1127,15 @@ class DoorVisualizer {
     } else {
       this.moveControls.classList.add('is-hidden');
       this.moveControls.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  captureSnapshot() {
+    try {
+      return this.renderer?.domElement?.toDataURL?.('image/png') || null;
+    } catch (error) {
+      console.warn('Impossibile generare l\'anteprima del 3D per il PDF.', error);
+      return null;
     }
   }
 
@@ -1233,7 +1257,7 @@ const selectors = {
   optionalMagneticaCheckboxes: document.querySelectorAll('input[name="optional_magnetica[]"]'),
   selectAllKits: document.getElementById('select-all-kits'),
   resultsPanel: document.querySelector('.summary-panel'),
-  summaryButton: document.getElementById('generate-summary'),
+  savePdfButton: document.getElementById('save-pdf-button'),
   quoteTotal: document.getElementById('quote-total'),
   quoteBreakdown: document.getElementById('quote-breakdown'),
   summaryList: document.getElementById('selection-summary'),
@@ -2345,9 +2369,7 @@ function renderQuoteBreakdown(categories) {
   });
 }
 
-function renderSelectionSummary(config, derived) {
-  if (!selectors.summaryList) return;
-
+function buildSelectionSummaryItems(config, derived) {
   const items = [];
 
   items.push({
@@ -2417,6 +2439,14 @@ function renderSelectionSummary(config, derived) {
   if (config.width && config.height) {
     items.push({ label: 'Dimensioni vano', value: `${config.width} × ${config.height} mm` });
   }
+
+  return items;
+}
+
+function renderSelectionSummary(config, derived) {
+  if (!selectors.summaryList) return;
+
+  const items = buildSelectionSummaryItems(config, derived);
 
   selectors.summaryList.innerHTML = '';
   items.forEach((item) => {
@@ -2567,6 +2597,144 @@ function refreshOutputs({ force = false } = {}) {
 
 }
 
+async function handleSavePdf() {
+  if (!selectors.form) return;
+
+  showStepFeedback('');
+  const isValid = selectors.form.reportValidity();
+  if (!isValid) {
+    return;
+  }
+
+  refreshOutputs({ force: true });
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  const config = collectConfiguration();
+  if (!config) return;
+
+  const quote = calculateQuote(config);
+  if (quote.error) {
+    alert(quote.error);
+    return;
+  }
+
+  const derived = quote.derived || deriveConfiguration(config) || {};
+  const summaryItems = buildSelectionSummaryItems(config, derived);
+  const categories = Array.isArray(quote.categories) ? quote.categories : [];
+  const total = Number(quote.total || 0);
+
+  const snapshot = visualizer.captureSnapshot();
+  const jsPdfNamespace = window.jspdf || window.jsPDF;
+  const JsPdfConstructor = jsPdfNamespace?.jsPDF || jsPdfNamespace;
+
+  if (!JsPdfConstructor) {
+    alert('Impossibile generare il PDF in questo ambiente.');
+    return;
+  }
+
+  const pdf = new JsPdfConstructor('p', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 15;
+  let cursorY = margin;
+
+  const ensureSpace = (space) => {
+    if (cursorY + space > pageHeight - margin) {
+      pdf.addPage();
+      cursorY = margin;
+    }
+  };
+
+  pdf.setFontSize(18);
+  pdf.text('Preventivo Porta Akina', pageWidth / 2, cursorY, { align: 'center' });
+  cursorY += 10;
+
+  if (snapshot) {
+    try {
+      const imageProps = pdf.getImageProperties(snapshot);
+      const imageWidth = pageWidth - margin * 2;
+      const imageHeight = (imageProps.height * imageWidth) / imageProps.width;
+      ensureSpace(imageHeight + 8);
+      pdf.addImage(snapshot, 'PNG', margin, cursorY, imageWidth, imageHeight);
+      cursorY += imageHeight + 8;
+    } catch (error) {
+      console.warn('Impossibile aggiungere l\'immagine al PDF.', error);
+    }
+  }
+
+  pdf.setFontSize(14);
+  pdf.text('Riepilogo configurazione', margin, cursorY);
+  cursorY += 6;
+  pdf.setFontSize(11);
+
+  summaryItems.forEach((item) => {
+    const line = `${item.label}: ${item.value}`;
+    const wrapped = pdf.splitTextToSize(line, pageWidth - margin * 2);
+    wrapped.forEach((segment) => {
+      ensureSpace(6);
+      pdf.text(segment, margin, cursorY);
+      cursorY += 6;
+    });
+  });
+
+  if (categories.length > 0) {
+    cursorY += 2;
+  }
+
+  categories.forEach((category) => {
+    if (!Array.isArray(category.items) || !category.items.length) return;
+    ensureSpace(8);
+    pdf.setFontSize(13);
+    pdf.text(category.label, margin, cursorY);
+    cursorY += 5;
+    pdf.setFontSize(11);
+
+    category.items.forEach((item) => {
+      const unitPrice = Number(item.prezzo || 0);
+      const quantity = Number(item.quantita || 0);
+      const line = `${item.descrizione} (Codice: ${item.codice}, Quantità: ${quantity}, Prezzo: ${formatCurrency(unitPrice)}, Totale: ${formatCurrency(unitPrice * quantity)})`;
+      const wrapped = pdf.splitTextToSize(line, pageWidth - margin * 2);
+      wrapped.forEach((segment) => {
+        ensureSpace(5);
+        pdf.text(segment, margin, cursorY);
+        cursorY += 5;
+      });
+    });
+
+    cursorY += 3;
+  });
+
+  ensureSpace(10);
+  pdf.setFontSize(14);
+  pdf.text(`Totale: ${formatCurrency(total)} + IVA e Spese di Trasporto`, margin, cursorY);
+  cursorY += 8;
+
+  const disclaimerLines = pdf.splitTextToSize(
+    '* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell\'utilizzo del Tool.',
+    pageWidth - margin * 2
+  );
+  const noteLines = pdf.splitTextToSize(
+    'Vi preghiamo di utilizzare i cataloghi, i listini e le schede tecniche a disposizione.',
+    pageWidth - margin * 2
+  );
+
+  pdf.setFontSize(9);
+  disclaimerLines.forEach((segment) => {
+    ensureSpace(4);
+    pdf.text(segment, margin, cursorY);
+    cursorY += 4;
+  });
+  noteLines.forEach((segment) => {
+    ensureSpace(4);
+    pdf.text(segment, margin, cursorY);
+    cursorY += 4;
+  });
+
+  const timestamp = new Date().toISOString().slice(0, 10);
+  const filename = `preventivo-akina-${timestamp}.pdf`;
+  pdf.save(filename);
+}
+
 function setupSelectionGroup(container, optionSelector, hiddenInput, { onChange } = {}) {
   if (!container || !hiddenInput) {
     return {
@@ -2677,13 +2845,13 @@ modelGroup = setupSelectionGroup(selectors.modelContainer, '.model-option', docu
     setFlexVisibility(selectors.montaggioSection, showMontaggio);
 
     selectors.optionalTrascinamento.forEach((label) => {
-      label.style.display = value === 'TRASCINAMENTO' ? 'block' : 'none';
+      label.style.display = value === 'TRASCINAMENTO' ? 'flex' : 'none';
       const input = label.querySelector('input');
       if (value !== 'TRASCINAMENTO' && input) input.checked = false;
     });
 
     selectors.kitTrascinamento.forEach((label) => {
-      label.style.display = value === 'TRASCINAMENTO' ? 'block' : 'none';
+      label.style.display = value === 'TRASCINAMENTO' ? 'flex' : 'none';
       const input = label.querySelector('input');
       if (value !== 'TRASCINAMENTO' && input) input.checked = false;
     });
@@ -2832,9 +3000,8 @@ selectors.selectAllKits?.addEventListener('click', (event) => {
   refreshOutputs();
 });
 
-selectors.summaryButton?.addEventListener('click', () => {
-  showStepFeedback('');
-  refreshOutputs({ force: true });
+selectors.savePdfButton?.addEventListener('click', () => {
+  handleSavePdf();
 });
 
 selectors.nextButton?.addEventListener('click', () => {
