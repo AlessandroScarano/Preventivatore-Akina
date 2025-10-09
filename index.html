@@ -77,14 +77,6 @@
             <div id="dimensions-info" class="viewer-dimensions-info">Ante: 2 · Larghezza anta: 600 mm · Altezza: 2200 mm · Larghezza totale: 1200 mm</div>
             <div id="part-info" class="viewer-part-info" hidden></div>
             <div class="viewer-controls" aria-label="Controlli visualizzatore 3D">
-              <label class="viewer-controls__environment" for="viewer-environment-select">
-                <span>Ambientazione</span>
-                <select id="viewer-environment-select" aria-label="Seleziona ambientazione 3D">
-                  <option value="soloporta">Solo porta</option>
-                  <option value="classico">Villa classica</option>
-                  <option value="moderno">Villa moderna</option>
-                </select>
-              </label>
               <div id="part-buttons" class="viewer-controls__row is-hidden">
                 <button type="button" data-part="topProfile">Profilo superiore</button>
                 <button type="button" data-part="bottomProfile">Profilo inferiore</button>
@@ -171,30 +163,7 @@
                 />
               </div>
 
-              <div class="configurator-section configurator-section--environment">
-                <h2>Ambientazione 3D</h2>
-                <p class="configurator-hint">
-                  Personalizza lo scenario in cui visualizzare la porta Akina.
-                </p>
-                <div class="environment-selection">
-                  <div class="environment-option" data-value="soloporta">
-                    <div class="environment-option__preview environment-option__preview--soloporta" aria-hidden="true"></div>
-                    <span>Solo porta</span>
-                    <p>Focus totale sul serramento</p>
-                  </div>
-                  <div class="environment-option" data-value="classico">
-                    <div class="environment-option__preview environment-option__preview--classico" aria-hidden="true"></div>
-                    <span>Villa classica</span>
-                    <p>Ambientazione elegante e luminosa</p>
-                  </div>
-                  <div class="environment-option" data-value="moderno">
-                    <div class="environment-option__preview environment-option__preview--moderno" aria-hidden="true"></div>
-                    <span>Villa moderna</span>
-                    <p>Spazio minimale d'impatto</p>
-                  </div>
-                </div>
-                <input type="hidden" name="environment" id="environment-select" value="soloporta" />
-              </div>
+              <input type="hidden" name="environment" id="environment-select" value="soloporta" />
 
               <div class="configurator-section" id="solo-pannello-section" style="display: none;">
                 <h2>Configurazione Solo Pannello</h2>

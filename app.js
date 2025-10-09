@@ -14,8 +14,6 @@ const MODEL_CONFIG = {
 
 const ENVIRONMENT_CONFIG = {
   soloporta: { label: 'Solo porta' },
-  classico: { label: 'Villa classica' },
-  moderno: { label: 'Villa moderna' },
 };
 
 const MODEL_ANTE_OPTIONS = {
@@ -186,10 +184,7 @@ const ASSET_BASE_ACTIVE = Boolean(GLASSCOM_ASSET_BASE);
 
 const ASSET_PATHS = ASSET_BASE_ACTIVE
   ? {
-      environments: {
-        classico: `${GLASSCOM_ASSET_BASE}villaclassica.glb`,
-        moderno: `${GLASSCOM_ASSET_BASE}conf3dvillaGL5.glb`,
-      },
+      environments: {},
       parts: {
         leftProfile: `${GLASSCOM_ASSET_BASE}profiloVertSx.glb`,
         rightProfile: `${GLASSCOM_ASSET_BASE}profiloVertDx.glb`,
@@ -243,23 +238,6 @@ function createFallbackPart(key) {
   mesh.castShadow = false;
   mesh.receiveShadow = false;
   group.add(mesh);
-  return group;
-}
-
-function createFallbackEnvironment(params) {
-  const radius = Math.max((params?.totalWidthM ?? 2.4) * 0.65, 1.2);
-  const group = new THREE.Group();
-  const floor = new THREE.Mesh(
-    new THREE.CircleGeometry(radius, 48),
-    new THREE.MeshStandardMaterial({
-      color: 0xf4f7fb,
-      transparent: true,
-      opacity: 0.5,
-    })
-  );
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = 0;
-  group.add(floor);
   return group;
 }
 
@@ -795,37 +773,6 @@ class DoorVisualizer {
 
   applyEnvironment(params) {
     this.environmentMode = params.environment || 'soloporta';
-    if (this.environmentMode === 'soloporta') {
-      return;
-    }
-    const url = ASSET_PATHS.environments?.[this.environmentMode];
-    let villa = null;
-    if (url && this.availableAssetUrls.has(url)) {
-      const cached = this.gltfCache.get(url);
-      if (cached) {
-        villa = cloneGltfScene(cached);
-      }
-    }
-    if (!villa) {
-      villa = createFallbackEnvironment(params);
-    }
-    const totalWidthMm = params.totalWidthMm || 2700;
-    const scaleX = totalWidthMm / 2700;
-    const scaleY = (params.heightMm || 2700) / 2700;
-
-    villa.position.set(0, 0, 0);
-    villa.scale.set(scaleX, scaleY, 1);
-    villa.updateMatrixWorld(true);
-
-    const bounds = new THREE.Box3().setFromObject(villa);
-    const desiredFloorY = 0;
-    const offsetY = bounds.isEmpty()
-      ? 0
-      : desiredFloorY - (Number.isFinite(bounds.min.y) ? bounds.min.y : 0);
-
-    villa.position.set(0.045, offsetY, 0);
-    this.scene.add(villa);
-    this.villaGroup = villa;
   }
 
   buildLeaf(index, params) {
@@ -1221,7 +1168,6 @@ const selectors = {
   widthInput: document.getElementById('width'),
   heightInput: document.getElementById('height'),
   modelContainer: document.querySelector('.model-selection'),
-  environmentContainer: document.querySelector('.environment-selection'),
   soloPannelloSection: document.getElementById('solo-pannello-section'),
   numPanelsPannelloInput: document.getElementById('num-panels-pannello'),
   panelDimensionsPannello: document.getElementById('panel-dimensions-container-pannello'),
@@ -1287,7 +1233,6 @@ const selectors = {
   viewerHeightLabel: document.getElementById('viewer-height-label'),
   viewerWidthLabel: document.getElementById('viewer-width-label'),
   viewerTrackLabel: document.getElementById('viewer-track-label'),
-  viewerEnvironmentSelect: document.getElementById('viewer-environment-select'),
 };
 
 const manigliaInputs = Array.from(selectors.maniglieInputs ?? []);
@@ -2401,12 +2346,8 @@ function buildSelectionSummaryItems(config, derived) {
     value: MODEL_CONFIG[config.model]?.label ?? config.model ?? '—',
   });
 
-  const environmentLabel = getCardLabel(
-    selectors.environmentContainer,
-    '.environment-option',
-    config.environment,
-    ENVIRONMENT_CONFIG[config.environment]?.label ?? '—'
-  );
+  const environmentLabel =
+    ENVIRONMENT_CONFIG[config.environment]?.label ?? 'Solo porta';
   items.push({ label: 'Ambientazione 3D', value: environmentLabel });
 
   if (config.model === 'SINGOLA') {
@@ -2990,7 +2931,6 @@ function setupSelectionGroup(container, optionSelector, hiddenInput, { onChange 
   return { select, clear };
 }
 
-let environmentGroup;
 let modelGroup;
 let aperturaGroup;
 let tipologiaGroup;
@@ -3003,20 +2943,6 @@ let doorBoxGroup;
 let doorBoxMountingGroup;
 let binarioGroup;
 let traversinoGroup;
-
-environmentGroup = setupSelectionGroup(
-  selectors.environmentContainer,
-  '.environment-option',
-  selectors.environmentInput,
-  {
-    onChange: (value) => {
-      if (selectors.viewerEnvironmentSelect) {
-        selectors.viewerEnvironmentSelect.value = value || 'soloporta';
-      }
-      refreshOutputs();
-    },
-  }
-);
 
 modelGroup = setupSelectionGroup(selectors.modelContainer, '.model-option', document.getElementById('model-select'), {
   onChange: (value) => {
@@ -3229,22 +3155,6 @@ selectors.savePdfButton?.addEventListener('click', () => {
   handleSavePdf();
 });
 
-selectors.viewerEnvironmentSelect?.addEventListener('change', (event) => {
-  const value = event.target.value || 'soloporta';
-  if (selectors.environmentInput && selectors.environmentInput.value === value) {
-    selectors.environmentInput.dispatchEvent(new Event('change', { bubbles: true }));
-    refreshOutputs();
-    return;
-  }
-  if (environmentGroup) {
-    environmentGroup.select(value);
-  } else if (selectors.environmentInput) {
-    selectors.environmentInput.value = value;
-    selectors.environmentInput.dispatchEvent(new Event('change', { bubbles: true }));
-    refreshOutputs();
-  }
-});
-
 selectors.nextButton?.addEventListener('click', () => {
   goToStep(currentStepIndex + 1, { validateCurrent: true });
 });
@@ -3262,8 +3172,8 @@ Array.from(selectors.progressSteps ?? []).forEach((node, index) => {
 });
 
 // Default selections
-if (environmentGroup) {
-  environmentGroup.select(selectors.environmentInput?.value || 'soloporta');
+if (selectors.environmentInput) {
+  selectors.environmentInput.value = selectors.environmentInput.value || 'soloporta';
 }
 modelGroup.select('TRASCINAMENTO');
 pannelloFissoGroup.select('No');
