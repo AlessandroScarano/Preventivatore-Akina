@@ -810,8 +810,20 @@ class DoorVisualizer {
       villa = createFallbackEnvironment(params);
     }
     const totalWidthMm = params.totalWidthMm || 2700;
-    villa.position.set(0.045, 0.1, 0);
-    villa.scale.set(totalWidthMm / 2700, params.heightMm / 2700, 1);
+    const scaleX = totalWidthMm / 2700;
+    const scaleY = (params.heightMm || 2700) / 2700;
+
+    villa.position.set(0, 0, 0);
+    villa.scale.set(scaleX, scaleY, 1);
+    villa.updateMatrixWorld(true);
+
+    const bounds = new THREE.Box3().setFromObject(villa);
+    const desiredFloorY = 0;
+    const offsetY = bounds.isEmpty()
+      ? 0
+      : desiredFloorY - (Number.isFinite(bounds.min.y) ? bounds.min.y : 0);
+
+    villa.position.set(0.045, offsetY, 0);
     this.scene.add(villa);
     this.villaGroup = villa;
   }
