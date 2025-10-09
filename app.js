@@ -1297,10 +1297,10 @@ function deriveConfiguration(config) {
     larghezzaAnta = Math.floor(availableMm / divisor);
   }
 
-  const withinRange =
-    model === 'MAGNETICA' || model === 'SINGOLA' || larghezzaAnta === 0
-      ? true
-      : larghezzaAnta >= LARGHEZZA_MIN && larghezzaAnta <= LARGHEZZA_MAX;
+  let withinRange = true;
+  if (!['MAGNETICA', 'SINGOLA', 'SOLO_PANNELLO', 'SOLO_ANTA'].includes(model) && larghezzaAnta !== 0) {
+    withinRange = larghezzaAnta >= LARGHEZZA_MIN && larghezzaAnta <= LARGHEZZA_MAX;
+  }
 
   return {
     ...config,
