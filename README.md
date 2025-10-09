@@ -23,6 +23,28 @@ Applicazione web responsive per configurare e preventivare la porta Akina con un
 
 3. In alternativa apri direttamente `index.html` in un browser moderno (Chrome, Edge, Firefox o Safari).
 
+## Asset 3D
+
+Il visualizzatore Three.js utilizza modelli GLB per profili, cover e ambienti. Per evitare errori di CORS, gli asset devono essere
+serviti dalla **stessa origine** del configuratore.
+
+1. Crea la cartella `profili3dakina/` nella radice del progetto (già inclusa).
+2. Copia all'interno i file GLB forniti da Glasscom (es. `villaclassica.glb`, `profiloVertSx.glb`, ecc.).
+3. Avviando `node preview.js` gli asset verranno serviti correttamente su `http://localhost:4173/profili3dakina/...`.
+
+Se devi caricare i file da un dominio esterno che espone le intestazioni CORS adeguate, definisci le variabili globali prima di
+`app.js`:
+
+```html
+<script>
+  window.AKINA_ASSET_BASE = 'https://cdn.tuo-dominio.it/profili3dakina/';
+  window.AKINA_ALLOW_REMOTE_ASSETS = true;
+</script>
+```
+
+Se gli asset non sono disponibili, il visualizzatore userà automaticamente geometrie procedurali di fallback senza interrompere la
+configurazione.
+
 ## Tecnologie
 
 - HTML5, CSS3, JavaScript ES Modules

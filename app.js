@@ -155,23 +155,107 @@ const LARGHEZZA_MAX = 1500;
 const DEFAULT_PROFILE_COLOR = '#23283a';
 const DEFAULT_GLASS_COLOR = '#d6e9ff';
 
-const GLASSCOM_ASSET_BASE = 'https://www.glasscom.it/profili3dakina/';
+const isBrowserContext = typeof window !== 'undefined';
+const DEFAULT_LOCAL_ASSET_BASE = '/profili3dakina/';
 
-const ASSET_PATHS = {
-  environments: {
-    classico: `${GLASSCOM_ASSET_BASE}villaclassica.glb`,
-    moderno: `${GLASSCOM_ASSET_BASE}conf3dvillaGL5.glb`,
-  },
-  parts: {
-    leftProfile: `${GLASSCOM_ASSET_BASE}profiloVertSx.glb`,
-    rightProfile: `${GLASSCOM_ASSET_BASE}profiloVertDx.glb`,
-    topProfile: `${GLASSCOM_ASSET_BASE}profiloOrizzSup.glb`,
-    bottomProfile: `${GLASSCOM_ASSET_BASE}profiloOrizzInf.glb`,
-    track: `${GLASSCOM_ASSET_BASE}binario.glb`,
-    coverLeft: `${GLASSCOM_ASSET_BASE}coverSx.glb`,
-    coverRight: `${GLASSCOM_ASSET_BASE}coverDx.glb`,
-  },
+const rawCustomAssetBase =
+  isBrowserContext && typeof window.AKINA_ASSET_BASE === 'string'
+    ? window.AKINA_ASSET_BASE.trim()
+    : null;
+
+const ALLOW_REMOTE_ASSETS =
+  isBrowserContext && window.AKINA_ALLOW_REMOTE_ASSETS === true;
+
+function normalizeAssetBase(base) {
+  if (!base) return '';
+  return base.endsWith('/') ? base : `${base}/`;
+}
+
+const normalizedAssetBase = normalizeAssetBase(
+  rawCustomAssetBase === null ? DEFAULT_LOCAL_ASSET_BASE : rawCustomAssetBase
+);
+
+const GLASSCOM_ASSET_BASE = normalizedAssetBase;
+const ASSET_BASE_ACTIVE = Boolean(GLASSCOM_ASSET_BASE);
+
+const ASSET_PATHS = ASSET_BASE_ACTIVE
+  ? {
+      environments: {
+        classico: `${GLASSCOM_ASSET_BASE}villaclassica.glb`,
+        moderno: `${GLASSCOM_ASSET_BASE}conf3dvillaGL5.glb`,
+      },
+      parts: {
+        leftProfile: `${GLASSCOM_ASSET_BASE}profiloVertSx.glb`,
+        rightProfile: `${GLASSCOM_ASSET_BASE}profiloVertDx.glb`,
+        topProfile: `${GLASSCOM_ASSET_BASE}profiloOrizzSup.glb`,
+        bottomProfile: `${GLASSCOM_ASSET_BASE}profiloOrizzInf.glb`,
+        track: `${GLASSCOM_ASSET_BASE}binario.glb`,
+        coverLeft: `${GLASSCOM_ASSET_BASE}coverSx.glb`,
+        coverRight: `${GLASSCOM_ASSET_BASE}coverDx.glb`,
+      },
+    }
+  : { environments: {}, parts: {} };
+
+const FALLBACK_GEOMETRIES = {
+  verticalProfile: new THREE.BoxGeometry(0.05, 1, 0.05),
+  horizontalProfile: new THREE.BoxGeometry(1, 0.05, 0.05),
+  track: new THREE.BoxGeometry(1, 0.05, 0.08),
+  cover: new THREE.BoxGeometry(0.03, 1, 0.04),
 };
+
+function createFallbackPart(key) {
+  let geometry = null;
+  switch (key) {
+    case 'leftProfile':
+    case 'rightProfile':
+      geometry = FALLBACK_GEOMETRIES.verticalProfile;
+      break;
+    case 'topProfile':
+    case 'bottomProfile':
+      geometry = FALLBACK_GEOMETRIES.horizontalProfile;
+      break;
+    case 'track':
+      geometry = FALLBACK_GEOMETRIES.track;
+      break;
+    case 'coverLeft':
+    case 'coverRight':
+      geometry = FALLBACK_GEOMETRIES.cover;
+      break;
+    default:
+      geometry = null;
+  }
+
+  if (!geometry) {
+    return null;
+  }
+
+  const group = new THREE.Group();
+  const mesh = new THREE.Mesh(
+    geometry.clone(),
+    new THREE.MeshStandardMaterial({ color: DEFAULT_PROFILE_COLOR })
+  );
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  group.add(mesh);
+  return group;
+}
+
+function createFallbackEnvironment(params) {
+  const radius = Math.max((params?.totalWidthM ?? 2.4) * 0.65, 1.2);
+  const group = new THREE.Group();
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(radius, 48),
+    new THREE.MeshStandardMaterial({
+      color: 0xf4f7fb,
+      transparent: true,
+      opacity: 0.5,
+    })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = 0;
+  group.add(floor);
+  return group;
+}
 
 const formatter = new Intl.NumberFormat('it-IT', {
   style: 'currency',
@@ -328,6 +412,8 @@ class DoorVisualizer {
 
     this.loader = new GLTFLoader(this.loadingManager);
     this.gltfCache = new Map();
+    this.availableAssetUrls = new Set();
+    this.allowRemoteAssets = ALLOW_REMOTE_ASSETS;
 
     this.assetsReady = false;
     this.pendingUpdate = null;
@@ -407,27 +493,74 @@ class DoorVisualizer {
     }
   }
 
-  preloadAssets() {
+  async preloadAssets() {
     const environmentUrls = Object.values(ASSET_PATHS.environments || {});
     const partUrls = Object.values(ASSET_PATHS.parts || {});
-    const urls = [...environmentUrls, ...partUrls];
+    const urls = [...environmentUrls, ...partUrls].filter(Boolean);
+
     if (!urls.length) {
+      this.showOverlay(100);
       this.onAssetsReady();
-      return Promise.resolve();
+      return;
     }
+
     this.showOverlay(0);
-    return Promise.all(urls.map((url) => this.loadAsset(url)))
-      .catch((error) => {
-        console.error('Errore durante il preload dei modelli 3D:', error);
-      })
-      .finally(() => {
-        if (!this.assetsReady) {
-          this.onAssetsReady();
-        }
-      });
+
+    const availability = await Promise.all(
+      urls.map((url) => this.checkAssetAvailability(url))
+    );
+
+    const availableUrls = urls.filter((_, index) => availability[index]);
+    this.availableAssetUrls = new Set(availableUrls);
+
+    if (!availableUrls.length) {
+      this.showOverlay(100);
+      this.onAssetsReady();
+      return;
+    }
+
+    try {
+      await Promise.all(availableUrls.map((url) => this.loadAsset(url)));
+    } catch (error) {
+      console.warn('Errore durante il preload dei modelli 3D:', error);
+    } finally {
+      if (!this.assetsReady) {
+        this.onAssetsReady();
+      }
+    }
+  }
+
+  async checkAssetAvailability(url) {
+    if (!url) {
+      return false;
+    }
+
+    try {
+      const resolvedUrl = new URL(url, window.location.href);
+      if (!this.allowRemoteAssets && resolvedUrl.origin !== window.location.origin) {
+        console.warn(
+          'Asset 3D remoto ignorato: abilita AKINA_ALLOW_REMOTE_ASSETS per consentire il caricamento cross-origin.',
+          resolvedUrl.href
+        );
+        return false;
+      }
+
+      const response = await fetch(resolvedUrl.href, { method: 'HEAD' });
+      if (!response.ok) {
+        console.warn('Asset 3D non trovato o non raggiungibile:', resolvedUrl.href);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.warn('Impossibile verificare la disponibilità dell\'asset 3D:', url, error);
+      return false;
+    }
   }
 
   loadAsset(url) {
+    if (!url || (this.availableAssetUrls.size && !this.availableAssetUrls.has(url))) {
+      return Promise.resolve(null);
+    }
     if (this.gltfCache.has(url)) {
       return Promise.resolve(this.gltfCache.get(url));
     }
@@ -440,7 +573,7 @@ class DoorVisualizer {
         },
         undefined,
         (error) => {
-          console.error("Impossibile caricare l'asset 3D:", url, error);
+          console.warn("Impossibile caricare l'asset 3D:", url, error);
           resolve(null);
         }
       );
@@ -490,10 +623,13 @@ class DoorVisualizer {
 
   clonePart(key) {
     const url = ASSET_PATHS.parts?.[key];
-    if (!url) return null;
-    const cached = this.gltfCache.get(url);
-    if (!cached) return null;
-    return cloneGltfScene(cached);
+    if (url && this.availableAssetUrls.has(url)) {
+      const cached = this.gltfCache.get(url);
+      if (cached) {
+        return cloneGltfScene(cached);
+      }
+    }
+    return createFallbackPart(key);
   }
 
   decoratePart(root, name, color, info) {
@@ -606,13 +742,15 @@ class DoorVisualizer {
       return;
     }
     const url = ASSET_PATHS.environments?.[this.environmentMode];
-    const cached = url ? this.gltfCache.get(url) : null;
-    if (!cached) {
-      return;
+    let villa = null;
+    if (url && this.availableAssetUrls.has(url)) {
+      const cached = this.gltfCache.get(url);
+      if (cached) {
+        villa = cloneGltfScene(cached);
+      }
     }
-    const villa = cloneGltfScene(cached);
     if (!villa) {
-      return;
+      villa = createFallbackEnvironment(params);
     }
     const totalWidthMm = params.totalWidthMm || 2700;
     villa.position.set(0.045, 0.1, 0);

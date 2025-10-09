@@ -15,10 +15,11 @@ const mimeTypes = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.gif': 'image/gif',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.glb': 'model/gltf-binary'
 };
 
-function sendFile(res, filePath) {
+function sendFile(req, res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeTypes[ext] || 'application/octet-stream';
 
@@ -30,6 +31,11 @@ function sendFile(res, filePath) {
     }
 
     res.writeHead(200, { 'Content-Type': contentType });
+    if (req.method === 'HEAD') {
+      res.end();
+      return;
+    }
+
     res.end(data);
   });
 }
@@ -53,11 +59,11 @@ const server = http.createServer((req, res) => {
     }
 
     if (stats.isDirectory()) {
-      sendFile(res, path.join(resolvedPath, 'index.html'));
+      sendFile(req, res, path.join(resolvedPath, 'index.html'));
       return;
     }
 
-    sendFile(res, resolvedPath);
+    sendFile(req, res, resolvedPath);
   });
 });
 
