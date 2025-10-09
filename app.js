@@ -155,19 +155,21 @@ const LARGHEZZA_MAX = 1500;
 const DEFAULT_PROFILE_COLOR = '#23283a';
 const DEFAULT_GLASS_COLOR = '#d6e9ff';
 
+const GLASSCOM_ASSET_BASE = 'https://www.glasscom.it/profili3dakina/';
+
 const ASSET_PATHS = {
   environments: {
-    classico: '/profili3dakina/villaclassica.glb',
-    moderno: '/profili3dakina/conf3dvillaGL5.glb',
+    classico: `${GLASSCOM_ASSET_BASE}villaclassica.glb`,
+    moderno: `${GLASSCOM_ASSET_BASE}conf3dvillaGL5.glb`,
   },
   parts: {
-    leftProfile: '/profili3dakina/profiloVertSx.glb',
-    rightProfile: '/profili3dakina/profiloVertDx.glb',
-    topProfile: '/profili3dakina/profiloOrizzSup.glb',
-    bottomProfile: '/profili3dakina/profiloOrizzInf.glb',
-    track: '/profili3dakina/binario.glb',
-    coverLeft: '/profili3dakina/coverSx.glb',
-    coverRight: '/profili3dakina/coverDx.glb',
+    leftProfile: `${GLASSCOM_ASSET_BASE}profiloVertSx.glb`,
+    rightProfile: `${GLASSCOM_ASSET_BASE}profiloVertDx.glb`,
+    topProfile: `${GLASSCOM_ASSET_BASE}profiloOrizzSup.glb`,
+    bottomProfile: `${GLASSCOM_ASSET_BASE}profiloOrizzInf.glb`,
+    track: `${GLASSCOM_ASSET_BASE}binario.glb`,
+    coverLeft: `${GLASSCOM_ASSET_BASE}coverSx.glb`,
+    coverRight: `${GLASSCOM_ASSET_BASE}coverDx.glb`,
   },
 };
 
