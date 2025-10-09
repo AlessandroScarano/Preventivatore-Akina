@@ -1838,7 +1838,7 @@ function updateNumeroAnteOptions(model) {
 
 function isBipartingAllowed(model, count) {
   if (!model || !Number.isFinite(count)) return false;
-  if (count <= 0 || count % 2 !== 0) return false;
+  if (count < 4 || count % 2 !== 0) return false;
   return model === 'TRASCINAMENTO' || model === 'INDIPENDENTE';
 }
 
@@ -2490,7 +2490,8 @@ function buildScorrimentoItems(list, config, derived, optionalGeneral, optionalM
 
 function buildFixedPanelItems(list, config, derived) {
   if (config.pannelloFisso !== 'Si') return;
-  const pannelliCount = Math.max(config.numeroPannelliFissi || 1, 1);
+  const pannelliCount = Math.max(Number(config.numeroPannelliFissi) || 0, 0);
+  if (pannelliCount <= 0) return;
   const profili = PRICE_TABLE.FISSI.PROFILI;
 
   if (config.pannelliSuBinari === 'No') {
@@ -2685,14 +2686,17 @@ function calculateCuts(config, derived) {
   ];
 
   if (config.pannelloFisso === 'Si') {
-    cuts.push({
-      element: 'Pannelli fissi',
-      quantity: config.numeroPannelliFissi || 1,
-      length:
-        config.sceltaPannelloFisso === 'manuale' && config.larghezzaPannelloFisso
-          ? `${Math.round(config.larghezzaPannelloFisso)} × ${config.height}`
-          : `Uguali alle ante (${Math.round(effective?.larghezzaAnta || leafWidth)} mm)`
-    });
+    const pannelliCount = Math.max(Number(config.numeroPannelliFissi) || 0, 0);
+    if (pannelliCount > 0) {
+      cuts.push({
+        element: 'Pannelli fissi',
+        quantity: pannelliCount,
+        length:
+          config.sceltaPannelloFisso === 'manuale' && config.larghezzaPannelloFisso
+            ? `${Math.round(config.larghezzaPannelloFisso)} × ${config.height}`
+            : `Uguali alle ante (${Math.round(effective?.larghezzaAnta || leafWidth)} mm)`
+      });
+    }
   }
 
   if (config.doorBox === 'Si') {
@@ -2860,8 +2864,9 @@ function updateVisualizerPreview(config, derived) {
   const isSoloPannello = config.model === 'SOLO_PANNELLO';
   const slidingLeavesCount = isSoloPannello ? 0 : Math.max(derived?.numeroAnte || config.leaves || 1, 1);
   const soloPanelCount = isSoloPannello ? Math.max(config.soloPannelloCount || config.leaves || 1, 1) : 0;
+  const requestedFixedPanels = Number(config.numeroPannelliFissi) || 0;
   const fixedPanelsCount =
-    !isSoloPannello && config.pannelloFisso === 'Si' ? Math.max(config.numeroPannelliFissi || 1, 1) : 0;
+    !isSoloPannello && config.pannelloFisso === 'Si' ? Math.max(requestedFixedPanels, 0) : 0;
 
   const openingType = (() => {
     if (isSoloPannello) return 'fisso';
