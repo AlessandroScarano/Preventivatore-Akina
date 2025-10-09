@@ -436,9 +436,18 @@ class DoorVisualizer {
     window.addEventListener('resize', this.handleResize);
     document.addEventListener('fullscreenchange', this.handleResize);
 
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.handleResize());
+      this.resizeObserver.observe(this.container);
+    } else {
+      this.resizeObserver = null;
+    }
+
     this.preloadPromise = this.preloadAssets();
 
     this.animate();
+
+    requestAnimationFrame(() => this.handleResize());
   }
 
   bindUIControls() {
@@ -642,11 +651,15 @@ class DoorVisualizer {
   }
 
   handleResize() {
+    if (!this.container || !this.renderer || !this.camera) {
+      return;
+    }
+
     const width = Math.max(this.container.clientWidth, 1);
     const height = Math.max(this.container.clientHeight, 1);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(width, height, false);
   }
 
   clonePart(key) {
