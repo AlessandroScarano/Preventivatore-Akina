@@ -2720,9 +2720,264 @@ function calculateQuote(config) {
   return { categories, total, derived };
 }
 
+let latestSlidingCutSheet = null;
+
+function calculateSlidingModelCutSheet(input) {
+  if (!input) {
+    throw new Error('Input mancante per il calcolo dei tagli.');
+  }
+
+  const numeroAnte = Number(input.numeroAnte);
+  const larghezzaVano = Number(input.larghezzaVano);
+  const altezzaVano = Number(input.altezzaVano);
+
+  if (!Number.isFinite(numeroAnte) || numeroAnte <= 0) {
+    throw new Error('numeroAnte è obbligatorio e deve essere maggiore di zero.');
+  }
+
+  if (!Number.isFinite(larghezzaVano) || larghezzaVano <= 0) {
+    throw new Error('larghezzaVano è obbligatorio e deve essere maggiore di zero.');
+  }
+
+  if (!Number.isFinite(altezzaVano) || altezzaVano <= 0) {
+    throw new Error('altezzaVano è obbligatorio e deve essere maggiore di zero.');
+  }
+
+  const pannelloFisso = input.pannelloFisso === 'Si' ? 'Si' : 'No';
+  const sceltaPannelloFisso =
+    pannelloFisso === 'Si' && input.sceltaPannelloFisso === 'uguale_anta'
+      ? 'uguale_anta'
+      : 'manuale';
+  const numeroPannelliFissi = Math.max(Number(input.numeroPannelliFissi) || 0, 0);
+  let larghezzaPannelloFisso = Number(input.larghezzaPannelloFisso) || 0;
+
+  const tipoBinario = input.tipoBinario === 'a_vista' ? 'a_vista' : 'nascosto';
+  const anteNascoste = input.anteNascoste === 'Si' ? 'Si' : 'No';
+  const doorBox = input.doorBox === 'Si' ? 'Si' : 'No';
+  const traversino = input.traversino === 'Si' ? 'Si' : 'No';
+  const traversinoMeters = traversino === 'Si' ? Math.max(Number(input.traversinoMeters) || 0, 0) : 0;
+
+  const aperturaAnteRaw = typeof input.aperturaAnteRaw === 'string' ? input.aperturaAnteRaw.trim() : '';
+  let aperturaAnte = 'Normale';
+  if (aperturaAnteRaw === 'Destra Sinistra' && numeroAnte >= 4 && numeroAnte % 2 === 0) {
+    aperturaAnte = 'Destra Sinistra';
+  } else if (aperturaAnteRaw && aperturaAnteRaw !== 'Destra Sinistra') {
+    aperturaAnte = aperturaAnteRaw;
+  }
+
+  const numeroBinari = aperturaAnte === 'Destra Sinistra' ? Math.max(Math.floor(numeroAnte / 2), 1) : numeroAnte; // Regola: numero binari dimezzato con apertura Destra Sinistra
+  const numeroProfiloBinarioCentrali = Math.max(0, numeroBinari - 2); // Regola: centrali = max(0, numeroBinari - 2)
+
+  if (aperturaAnte === 'Destra Sinistra' && numeroAnte % 2 !== 0) {
+    throw new Error('Per apertura Destra Sinistra il numero di ante deve essere pari.');
+  }
+
+  if (pannelloFisso === 'Si' && sceltaPannelloFisso === 'uguale_anta') {
+    const sormonto = 17; // Regola: sormonto tra elementi scorrevoli = 17 mm
+    const totalePannelli = numeroAnte + numeroPannelliFissi;
+    const numeroSormonti = Math.max(0, totalePannelli - 1); // Regola: numero sormonti = totale elementi - 1
+    larghezzaPannelloFisso = Math.round((larghezzaVano + numeroSormonti * sormonto) / Math.max(totalePannelli, 1)); // Regola: larghezza pannello fisso uguale ante
+  }
+
+  const sormontoTotaleBase = 17 * Math.max(numeroAnte - 1, 0); // Regola: sormonto totale = 17 mm * (numeroAnte - 1)
+  let larghezzaAnta = 0;
+  if (pannelloFisso === 'No') {
+    larghezzaAnta = Math.floor((sormontoTotaleBase + larghezzaVano) / numeroAnte); // Regola: larghezza anta senza fissi
+  } else if (sceltaPannelloFisso === 'uguale_anta') {
+    larghezzaAnta = Math.floor(larghezzaPannelloFisso); // Regola: pannello fisso uguale alla larghezza anta
+  } else {
+    const sormontoTotale = sormontoTotaleBase + 17 * Math.max(numeroPannelliFissi, 0); // Regola: aggiunge sormonto per ogni pannello fisso
+    const sottrazioneFissi = Math.max(numeroPannelliFissi * Math.max(larghezzaPannelloFisso, 0), 0);
+    larghezzaAnta = Math.floor((sormontoTotale + larghezzaVano - sottrazioneFissi) / numeroAnte); // Regola: larghezza anta con pannelli fissi manuali
+  }
+  larghezzaAnta = Math.max(larghezzaAnta, 0);
+
+  const altezzaAnta =
+    tipoBinario === 'a_vista' ? Math.max(altezzaVano - 60, 0) : Math.max(altezzaVano - 12, 0); // Regola: delta altezza anta in base al tipo di binario
+
+  const altezzaProfiloVerticale = Math.max(Math.floor(altezzaAnta - 70), 0); // Regola: altezza profili verticali = altezza anta - 70 mm
+  const altezzaVetro = Math.max(Math.floor(altezzaAnta - 58), 0); // Regola: altezza vetro anta = altezza anta - 58 mm
+  const lunghezzaProfiloOrizzontale = Math.max(Math.floor(larghezzaAnta - 5), 0); // Regola: profilo orizzontale = larghezza anta - 5 mm
+  const larghezzaVetro = Math.max(Math.floor(larghezzaAnta - 18), 0); // Regola: larghezza vetro anta = larghezza anta - 18 mm
+
+  let larghezzaVetroFisso = 0;
+  let altezzaVetroFisso = 0;
+  if (pannelloFisso === 'Si') {
+    larghezzaVetroFisso = Math.max(Math.floor(larghezzaPannelloFisso - 18), 0); // Regola: larghezza vetro fisso = larghezza pannello fisso - 18 mm
+    altezzaVetroFisso = Math.max(Math.floor(altezzaAnta - 58), 0); // Regola: altezza vetro fisso = altezza anta - 58 mm
+  }
+
+  let baseLunghezzaBinario = larghezzaVano; // Regola: lunghezza binario base = larghezza vano
+  if (anteNascoste === 'Si') {
+    if (aperturaAnte === 'Destra Sinistra') {
+      baseLunghezzaBinario = larghezzaVano + 2 * Math.max(larghezzaAnta - 17, 0); // Regola: ante nascoste con apertura bipartita
+    } else {
+      baseLunghezzaBinario = larghezzaVano + Math.max(larghezzaAnta - 17, 0); // Regola: ante nascoste apertura normale
+    }
+  }
+
+  const lunghezzaBinario = Math.round(baseLunghezzaBinario + (doorBox === 'Si' ? 34 : 0)); // Regola: doorBox aggiunge 34 mm al binario
+
+  let lunghezzaProfiloSuperioreFissi = 0;
+  const profiloSuperioreFissiRaw = input.profiloSuperioreFissi ?? '';
+  if (pannelloFisso === 'Si') {
+    if (profiloSuperioreFissiRaw === 'Quanto i fissi') {
+      lunghezzaProfiloSuperioreFissi = Math.max(Math.floor(larghezzaPannelloFisso), 0); // Regola: profilo superiore = larghezza pannello fisso
+    } else if (profiloSuperioreFissiRaw === 'Quanto tutto il binario') {
+      lunghezzaProfiloSuperioreFissi = Math.max(lunghezzaBinario, 0); // Regola: profilo superiore = lunghezza binario
+    } else {
+      lunghezzaProfiloSuperioreFissi = Math.max(Math.floor(Number(profiloSuperioreFissiRaw) || 0), 0); // Regola: valore manuale profilo superiore fissi
+    }
+  }
+
+  const ingombroProfiliScorrimento = Math.max(Math.floor(44.8 * numeroAnte + 1.2 * Math.max(numeroAnte - 1, 0)), 0); // Regola: ingombro profili scorrimento
+  const ingombroTotaleProfiliCover = Math.max(Math.floor(12.4 + ingombroProfiliScorrimento), 0); // Regola: ingombro totale profili + cover
+
+  const altezzaCoverVerticale = Math.max(Math.floor(altezzaAnta), 0); // Regola: altezza cover verticale uguale all'altezza anta
+  const pezziCoverVerticaleSenzaSpazzolino = 4; // Regola: cover senza spazzolino sempre 4
+  const pezziCoverVerticaleConSpazzolino = Math.max((numeroAnte - 2) * 2, 0); // Regola: cover con spazzolino = max(0, (numeroAnte - 2) * 2)
+
+  const sceltaOutput = pannelloFisso === 'Si' ? sceltaPannelloFisso : '';
+  const larghezzaPannelloFissoOutput =
+    pannelloFisso === 'Si' ? Math.max(Math.floor(larghezzaPannelloFisso), 0) : 0;
+
+  return {
+    numeroAnte,
+    aperturaAnte,
+    tipoBinario,
+    anteNascoste,
+    doorBox,
+    larghezzaVano,
+    altezzaVano,
+    numeroBinari,
+    binariInizialiFinali: 2,
+    binariCentrali: numeroProfiloBinarioCentrali,
+    larghezzaAnta,
+    altezzaAnta,
+    lunghezzaBinario,
+    lunghezzaProfiloOrizzontale,
+    pezziProfiloOrizzontale: numeroAnte * 2,
+    altezzaProfiloVerticale,
+    pezziProfiloVerticale: numeroAnte * 2,
+    altezzaCoverVerticale,
+    pezziCoverVerticaleSenzaSpazzolino,
+    pezziCoverVerticaleConSpazzolino,
+    larghezzaVetro,
+    altezzaVetro,
+    pannelloFisso,
+    sceltaPannelloFisso: sceltaOutput,
+    numeroPannelliFissi,
+    larghezzaPannelloFisso: larghezzaPannelloFissoOutput,
+    larghezzaVetroFisso,
+    altezzaVetroFisso,
+    profiloSuperioreFissi: String(profiloSuperioreFissiRaw || ''),
+    lunghezzaProfiloSuperioreFissi,
+    traversino,
+    traversinoMeters,
+    ingombroProfiliScorrimento,
+    ingombroTotaleProfiliCover,
+  };
+}
+
 function calculateCuts(config, derived) {
   if (!config || !config.width || !config.height) return [];
   const effective = derived || deriveConfiguration(config);
+  if (!effective) return [];
+
+  if (config.model === 'TRASCINAMENTO' || config.model === 'INDIPENDENTE') {
+    try {
+      const sheet = calculateSlidingModelCutSheet({
+        numeroAnte: effective.numeroAnte,
+        pannelloFisso: config.pannelloFisso,
+        sceltaPannelloFisso: config.sceltaPannelloFisso,
+        numeroPannelliFissi: config.numeroPannelliFissi,
+        larghezzaPannelloFisso: config.larghezzaPannelloFisso,
+        larghezzaVano: config.width,
+        altezzaVano: config.height,
+        tipoBinario: config.binario === 'A vista' ? 'a_vista' : 'nascosto',
+        anteNascoste: config.anteNascoste,
+        aperturaAnteRaw: config.aperturaAnte,
+        doorBox: config.doorBox,
+        profiloSuperioreFissi: config.profiloSuperioreFissi,
+        traversino: config.traversino,
+        traversinoMeters: config.traversinoMeters,
+      });
+
+      latestSlidingCutSheet = sheet;
+      if (typeof window !== 'undefined') {
+        window.akinaSlidingCutSheet = sheet;
+      }
+
+      const formatMm = (value) => `${Math.max(0, Math.round(Number(value) || 0))} mm`;
+      const rows = [];
+
+      rows.push({ element: 'Binari iniziali e finali', quantity: sheet.binariInizialiFinali, length: formatMm(sheet.lunghezzaBinario) });
+      if (sheet.binariCentrali > 0) {
+        rows.push({ element: 'Binari centrali', quantity: sheet.binariCentrali, length: formatMm(sheet.lunghezzaBinario) });
+      }
+
+      rows.push({ element: 'Ante scorrevoli - larghezza', quantity: sheet.numeroAnte, length: formatMm(sheet.larghezzaAnta) });
+      rows.push({ element: 'Ante scorrevoli - altezza', quantity: sheet.numeroAnte, length: formatMm(sheet.altezzaAnta) });
+
+      rows.push({ element: 'Profili orizzontali anta', quantity: sheet.pezziProfiloOrizzontale, length: formatMm(sheet.lunghezzaProfiloOrizzontale) });
+      rows.push({ element: 'Profili verticali anta', quantity: sheet.pezziProfiloVerticale, length: formatMm(sheet.altezzaProfiloVerticale) });
+
+      rows.push({ element: 'Cover verticali senza spazzolino', quantity: sheet.pezziCoverVerticaleSenzaSpazzolino, length: formatMm(sheet.altezzaCoverVerticale) });
+      if (sheet.pezziCoverVerticaleConSpazzolino > 0) {
+        rows.push({ element: 'Cover verticali con spazzolino', quantity: sheet.pezziCoverVerticaleConSpazzolino, length: formatMm(sheet.altezzaCoverVerticale) });
+      }
+
+      rows.push({
+        element: 'Vetri ante scorrevoli',
+        quantity: sheet.numeroAnte,
+        length: `${formatMm(sheet.larghezzaVetro)} × ${formatMm(sheet.altezzaVetro)}`,
+      });
+
+      if (sheet.pannelloFisso === 'Si' && sheet.numeroPannelliFissi > 0) {
+        rows.push({
+          element: 'Pannelli fissi',
+          quantity: sheet.numeroPannelliFissi,
+          length: `${formatMm(sheet.larghezzaPannelloFisso)} × ${formatMm(sheet.altezzaAnta)}`,
+        });
+        rows.push({
+          element: 'Vetri pannello fisso',
+          quantity: sheet.numeroPannelliFissi,
+          length: `${formatMm(sheet.larghezzaVetroFisso)} × ${formatMm(sheet.altezzaVetroFisso)}`,
+        });
+        if (sheet.lunghezzaProfiloSuperioreFissi > 0) {
+          rows.push({
+            element: 'Profilo superiore pannelli fissi',
+            quantity: 1,
+            length: formatMm(sheet.lunghezzaProfiloSuperioreFissi),
+          });
+        }
+      }
+
+      rows.push({
+        element: 'Ingombro profili di scorrimento',
+        quantity: 1,
+        length: formatMm(sheet.ingombroProfiliScorrimento),
+      });
+      rows.push({
+        element: 'Ingombro totale profili + cover',
+        quantity: 1,
+        length: formatMm(sheet.ingombroTotaleProfiliCover),
+      });
+
+      if (sheet.traversino === 'Si' && sheet.traversinoMeters > 0) {
+        rows.push({
+          element: 'Traversino decorativo adesivo',
+          quantity: 1,
+          length: `${Number(sheet.traversinoMeters).toFixed(2)} m`,
+        });
+      }
+
+      return rows;
+    } catch (error) {
+      console.error('Errore nel calcolo dei tagli per modelli scorrevoli:', error);
+    }
+  }
+
   const leaves = Math.max(effective?.numeroAnte || config.leaves || 1, 1);
   const stileLength = Math.max(Math.round(config.height - 90), 0);
   const leafWidth = Math.max(Math.round((config.lunghezzaBinario || config.width) / leaves), 0);
@@ -2748,7 +3003,7 @@ function calculateCuts(config, derived) {
         length:
           config.sceltaPannelloFisso === 'manuale' && config.larghezzaPannelloFisso
             ? `${Math.round(config.larghezzaPannelloFisso)} × ${config.height}`
-            : `Uguali alle ante (${Math.round(effective?.larghezzaAnta || leafWidth)} mm)`
+            : `Uguali alle ante (${Math.round(effective?.larghezzaAnta || leafWidth)} mm)`,
       });
     }
   }
