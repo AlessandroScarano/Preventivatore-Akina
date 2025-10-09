@@ -854,43 +854,44 @@ class DoorVisualizer {
   computeOpenPositions(mode, segments, areaStart, areaEnd) {
     const count = segments.length;
     if (count === 0) return [];
+
     const start = Math.min(areaStart, areaEnd);
     const end = Math.max(areaStart, areaEnd);
     const positions = new Array(count);
 
+    if (mode === 'none') {
+      return segments.map((segment) => segment.closedX ?? segment.center ?? 0);
+    }
+
     if (mode === 'single-left') {
-      let cursor = start;
       for (let i = 0; i < count; i += 1) {
         const width = segments[i].widthM;
-        positions[i] = cursor + width / 2;
-        cursor += width;
+        positions[i] = start + width / 2;
       }
       return positions;
     }
 
-    if (mode === 'biparting') {
-      const half = Math.ceil(count / 2);
-      let leftCursor = start;
-      for (let i = 0; i < half; i += 1) {
+    if (mode === 'single-right') {
+      for (let i = 0; i < count; i += 1) {
         const width = segments[i].widthM;
-        positions[i] = leftCursor + width / 2;
-        leftCursor += width;
-      }
-      let rightCursor = end;
-      for (let i = count - 1; i >= half; i -= 1) {
-        const width = segments[i].widthM;
-        positions[i] = rightCursor - width / 2;
-        rightCursor -= width;
+        positions[i] = end - width / 2;
       }
       return positions;
     }
 
-    let cursor = end;
-    for (let i = count - 1; i >= 0; i -= 1) {
+    const leftCount = Math.floor(count / 2);
+    const rightStart = leftCount;
+
+    for (let i = 0; i < leftCount; i += 1) {
       const width = segments[i].widthM;
-      positions[i] = cursor - width / 2;
-      cursor -= width;
+      positions[i] = start + width / 2;
     }
+
+    for (let i = rightStart; i < count; i += 1) {
+      const width = segments[i].widthM;
+      positions[i] = end - width / 2;
+    }
+
     return positions;
   }
 
