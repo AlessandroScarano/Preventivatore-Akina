@@ -1275,6 +1275,7 @@ const selectors = {
   viewerHeightLabel: document.getElementById('viewer-height-label'),
   viewerWidthLabel: document.getElementById('viewer-width-label'),
   viewerTrackLabel: document.getElementById('viewer-track-label'),
+  viewerEnvironmentSelect: document.getElementById('viewer-environment-select'),
 };
 
 const manigliaInputs = Array.from(selectors.maniglieInputs ?? []);
@@ -2996,7 +2997,10 @@ environmentGroup = setupSelectionGroup(
   '.environment-option',
   selectors.environmentInput,
   {
-    onChange: () => {
+    onChange: (value) => {
+      if (selectors.viewerEnvironmentSelect) {
+        selectors.viewerEnvironmentSelect.value = value || 'soloporta';
+      }
       refreshOutputs();
     },
   }
@@ -3211,6 +3215,22 @@ selectors.selectAllKits?.addEventListener('click', (event) => {
 
 selectors.savePdfButton?.addEventListener('click', () => {
   handleSavePdf();
+});
+
+selectors.viewerEnvironmentSelect?.addEventListener('change', (event) => {
+  const value = event.target.value || 'soloporta';
+  if (selectors.environmentInput && selectors.environmentInput.value === value) {
+    selectors.environmentInput.dispatchEvent(new Event('change', { bubbles: true }));
+    refreshOutputs();
+    return;
+  }
+  if (environmentGroup) {
+    environmentGroup.select(value);
+  } else if (selectors.environmentInput) {
+    selectors.environmentInput.value = value;
+    selectors.environmentInput.dispatchEvent(new Event('change', { bubbles: true }));
+    refreshOutputs();
+  }
 });
 
 selectors.nextButton?.addEventListener('click', () => {

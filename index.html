@@ -77,6 +77,14 @@
             <div id="dimensions-info" class="viewer-dimensions-info">Ante: 2 · Larghezza anta: 600 mm · Altezza: 2200 mm · Larghezza totale: 1200 mm</div>
             <div id="part-info" class="viewer-part-info" hidden></div>
             <div class="viewer-controls" aria-label="Controlli visualizzatore 3D">
+              <label class="viewer-controls__environment" for="viewer-environment-select">
+                <span>Ambientazione</span>
+                <select id="viewer-environment-select" aria-label="Seleziona ambientazione 3D">
+                  <option value="soloporta">Solo porta</option>
+                  <option value="classico">Villa classica</option>
+                  <option value="moderno">Villa moderna</option>
+                </select>
+              </label>
               <div id="part-buttons" class="viewer-controls__row is-hidden">
                 <button type="button" data-part="topProfile">Profilo superiore</button>
                 <button type="button" data-part="bottomProfile">Profilo inferiore</button>
