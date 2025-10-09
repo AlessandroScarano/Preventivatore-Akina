@@ -62,6 +62,35 @@ Se devi caricare i file da un dominio esterno che espone le intestazioni CORS ad
 Se gli asset non sono disponibili, il visualizzatore userà automaticamente geometrie procedurali di fallback senza interrompere la
 configurazione.
 
+### Guida passo passo per GitHub Codespaces
+
+Se stai lavorando dal tuo Codespace, segui questi passaggi per preparare gli asset e avviare l'anteprima:
+
+1. **Apri il pannello Explorer** (icona della cartella nella barra laterale sinistra).
+2. **Crea la cartella**:
+   - Fai clic con il tasto destro sul nome della cartella del progetto (es. `Preventivatore-Akina`).
+   - Seleziona `New Folder` e chiamala `profili3dakina`.
+3. **Carica i file GLB**:
+   - Fai clic con il tasto destro sulla nuova cartella `profili3dakina`.
+   - Seleziona `Upload...` e scegli dal tuo computer tutti i file `.glb` forniti (puoi selezionarli in blocco).
+   - Verifica che i file compaiano nella cartella (puoi espanderla nell'Explorer per controllare).
+4. **Installa le dipendenze** (se non lo hai già fatto in questo Codespace):
+   ```bash
+   npm install
+   ```
+   > Questo comando prepara l'ambiente locale installando le dipendenze del server di anteprima.
+5. **Avvia il server di anteprima**:
+   ```bash
+   node preview.js
+   ```
+   - Codespaces aprirà automaticamente una porta in ascolto (di default `4173`).
+   - Nel toast che compare in basso a destra, scegli **Open in Browser** per visualizzare l'app.
+6. **Testa il caricamento**:
+   - Se gli asset sono raggiungibili, l'overlay di caricamento arriverà al 100% e vedrai la porta 3D.
+   - Se vedi l'avviso di asset mancanti, ricontrolla che i file `.glb` siano nella cartella `profili3dakina/` e che il server sia ancora in esecuzione.
+
+> 💡 Suggerimento: quando hai finito, interrompi il server con `Ctrl + C` nel terminale. Ricorda di **committare** i file `.glb` solo se il repository deve contenerli; in caso contrario mantienili locali.
+
 ## Tecnologie
 
 - HTML5, CSS3, JavaScript ES Modules
