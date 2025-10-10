@@ -1114,6 +1114,10 @@ class DoorVisualizer {
     const heightM = params.heightM || 0;
     const heightMm = params.heightMm || 0;
 
+    const glassWidth = Math.max(doorWidthM - 0.05, 0.05);
+    const profileInset = Math.max((doorWidthM - glassWidth) / 2, 0);
+    const profileOffset = Math.max(doorWidthM / 2 - profileInset, 0);
+
     const commonInfo = {
       dimensions: `Altezza: ${formatMillimeters(heightMm)} mm`,
       pieces,
@@ -1131,7 +1135,7 @@ class DoorVisualizer {
       }
     );
     if (leftProfile) {
-      leftProfile.position.x = -doorWidthM / 2;
+      leftProfile.position.x = -profileOffset;
       leftProfile.scale.set(1, heightM, 1);
       group.add(leftProfile);
     }
@@ -1148,7 +1152,7 @@ class DoorVisualizer {
       }
     );
     if (rightProfile) {
-      rightProfile.position.x = doorWidthM / 2;
+      rightProfile.position.x = profileOffset;
       rightProfile.scale.set(1, heightM, 1);
       group.add(rightProfile);
     }
@@ -1202,7 +1206,7 @@ class DoorVisualizer {
         coverInfo
       );
       if (coverLeft) {
-        coverLeft.position.x = -doorWidthM / 2;
+        coverLeft.position.x = -profileOffset;
         coverLeft.scale.set(1, heightM, 1);
         group.add(coverLeft);
       }
@@ -1213,13 +1217,12 @@ class DoorVisualizer {
         coverInfo
       );
       if (coverRight) {
-        coverRight.position.x = doorWidthM / 2;
+        coverRight.position.x = profileOffset;
         coverRight.scale.set(1, heightM, 1);
         group.add(coverRight);
       }
     }
 
-    const glassWidth = Math.max(doorWidthM - 0.05, 0.05);
     const glassHeight = Math.max((params.glassHeight ?? heightM - 0.1), 0.05);
 
     const glass = new THREE.Mesh(
@@ -1643,7 +1646,8 @@ const selectors = {
   optionalCheckboxes: document.querySelectorAll('input[name="optional[]"]'),
   optionalMagneticaCheckboxes: document.querySelectorAll('input[name="optional_magnetica[]"]'),
   selectAllKits: document.getElementById('select-all-kits'),
-  resultsPanel: document.querySelector('.summary-panel'),
+  resultsPanel: document.querySelector('.summary-panel--quote'),
+  cutsPanel: document.querySelector('.summary-panel--cuts'),
   savePdfButton: document.getElementById('save-pdf-button'),
   quoteTotal: document.getElementById('quote-total'),
   quoteBreakdown: document.getElementById('quote-breakdown'),
@@ -1686,6 +1690,9 @@ function showStepFeedback(message = '') {
 function toggleSummaryCards(visible) {
   if (selectors.resultsPanel) {
     selectors.resultsPanel.classList.toggle('is-collapsed', !visible);
+  }
+  if (selectors.cutsPanel) {
+    selectors.cutsPanel.classList.toggle('is-collapsed', !visible);
   }
   if (visible) {
     requestAnimationFrame(() => visualizer.handleResize());
@@ -3019,6 +3026,20 @@ function calculateCuts(config, derived) {
 function renderCutsTable(cuts) {
   if (!selectors.cutsBody) return;
   selectors.cutsBody.innerHTML = '';
+  const hasCuts = Array.isArray(cuts) && cuts.length > 0;
+  if (selectors.cutsPanel) {
+    selectors.cutsPanel.classList.toggle('summary-panel--empty', !hasCuts);
+  }
+  if (!hasCuts) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.className = 'cuts-table__empty';
+    emptyRow.innerHTML = `
+      <td colspan="3">Nessun taglio disponibile per questa configurazione.</td>
+    `;
+    selectors.cutsBody.appendChild(emptyRow);
+    return;
+  }
+
   cuts.forEach((cut) => {
     const row = document.createElement('tr');
     row.innerHTML = `

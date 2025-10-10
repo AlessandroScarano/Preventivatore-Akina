@@ -820,6 +820,47 @@
 
             </div>
 
+            <section class="summary-panel summary-panel--quote card--results is-collapsed" aria-labelledby="preventivo-titolo">
+              <header class="summary-panel__header">
+                <div>
+                  <p class="summary-eyebrow">Riepilogo preventivo</p>
+                  <h2 id="preventivo-titolo">Totale configurazione</h2>
+                </div>
+                <div class="summary-total" id="quote-total">€ 0,00 + IVA e Spese di Trasporto</div>
+              </header>
+              <div id="quote-results" class="summary-panel__body">
+                <div class="summary-section">
+                  <h3>Dati configurazione</h3>
+                  <ul id="selection-summary" class="selection-summary"></ul>
+                </div>
+                <div class="summary-section">
+                  <h3>Dettaglio voci</h3>
+                  <div class="summary-breakdown" id="quote-breakdown" aria-live="polite"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="summary-panel summary-panel--cuts card--results is-collapsed" aria-labelledby="tagli-titolo">
+              <header class="summary-panel__header">
+                <div>
+                  <p class="summary-eyebrow">Tagli profili</p>
+                  <h2 id="tagli-titolo">Calcolo tagli</h2>
+                </div>
+              </header>
+              <div class="summary-panel__body">
+                <table class="cuts-table">
+                  <thead>
+                    <tr>
+                      <th>Elemento</th>
+                      <th>Quantità</th>
+                      <th>Lunghezza (mm)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cuts-body"></tbody>
+                </table>
+              </div>
+            </section>
+
             <div class="form-step" data-step="5">
               <div class="configurator-section configurator-section--summary">
                 <h2>Riepilogo finale</h2>
@@ -836,39 +877,6 @@
               <button type="button" class="wizard-button" id="step-next">Avanti</button>
             </div>
           </form>
-
-          <section class="summary-panel card--results is-collapsed" aria-labelledby="preventivo-titolo">
-            <header class="summary-panel__header">
-              <div>
-                <p class="summary-eyebrow">Riepilogo preventivo</p>
-                <h2 id="preventivo-titolo">Totale configurazione</h2>
-              </div>
-              <div class="summary-total" id="quote-total">€ 0,00 + IVA e Spese di Trasporto</div>
-            </header>
-            <div id="quote-results" class="summary-panel__body">
-              <div class="summary-section">
-                <h3>Dati configurazione</h3>
-                <ul id="selection-summary" class="selection-summary"></ul>
-              </div>
-              <div class="summary-section">
-                <h3>Dettaglio voci</h3>
-                <div class="summary-breakdown" id="quote-breakdown" aria-live="polite"></div>
-              </div>
-              <div class="summary-section">
-                <h3>Tagli profili</h3>
-                <table class="cuts-table">
-                  <thead>
-                    <tr>
-                      <th>Elemento</th>
-                      <th>Quantità</th>
-                      <th>Lunghezza (mm)</th>
-                    </tr>
-                  </thead>
-                  <tbody id="cuts-body"></tbody>
-                </table>
-              </div>
-            </div>
-          </section>
         </aside>
       </div>
     </div>
