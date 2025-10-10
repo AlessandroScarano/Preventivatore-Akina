@@ -923,9 +923,23 @@ class DoorVisualizer {
       slidingAreaStart,
       slidingAreaEnd
     );
+    const stackLeftPositions = this.computeStackPositions(
+      'left',
+      slidingSegments,
+      slidingAreaStart,
+      slidingAreaEnd
+    );
+    const stackRightPositions = this.computeStackPositions(
+      'right',
+      slidingSegments,
+      slidingAreaStart,
+      slidingAreaEnd
+    );
 
     slidingSegments.forEach((segment, index) => {
       segment.openX = openPositions[index];
+      segment.stackLeftX = stackLeftPositions[index];
+      segment.stackRightX = stackRightPositions[index];
     });
 
     const extraFixedTrack =
@@ -1074,6 +1088,39 @@ class DoorVisualizer {
     return positions;
   }
 
+  computeStackPositions(direction, segments, areaStart, areaEnd) {
+    const count = segments.length;
+    if (count === 0) return [];
+
+    const start = Math.min(areaStart, areaEnd);
+    const end = Math.max(areaStart, areaEnd);
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+    if (direction === 'left') {
+      const referenceWidth = segments[0]?.widthM ?? 0;
+      const base = start + referenceWidth / 2;
+      return segments.map((segment) => {
+        const width = segment.widthM ?? referenceWidth;
+        const min = start + width / 2;
+        const max = end - width / 2;
+        return clamp(base, min, max);
+      });
+    }
+
+    if (direction === 'right') {
+      const referenceWidth = segments[segments.length - 1]?.widthM ?? 0;
+      const base = end - referenceWidth / 2;
+      return segments.map((segment) => {
+        const width = segment.widthM ?? referenceWidth;
+        const min = start + width / 2;
+        const max = end - width / 2;
+        return clamp(base, min, max);
+      });
+    }
+
+    return segments.map((segment) => segment.closedX ?? segment.center ?? 0);
+  }
+
   buildDoor(params) {
     this.stopAutoCycle();
     clearGroup(this.doorFrames);
@@ -1130,6 +1177,12 @@ class DoorVisualizer {
       if (leaf) {
         leaf.openX = segment.openX ?? segment.closedX ?? 0;
         leaf.closedX = segment.closedX ?? 0;
+        leaf.stackLeftX = Number.isFinite(segment.stackLeftX)
+          ? segment.stackLeftX
+          : leaf.closedX;
+        leaf.stackRightX = Number.isFinite(segment.stackRightX)
+          ? segment.stackRightX
+          : leaf.closedX;
         const depthIndex = Number.isFinite(segment.depthIndex)
           ? segment.depthIndex
           : segment.zIndex || 0;
@@ -1419,44 +1472,72 @@ class DoorVisualizer {
     this.closedOffset = 0;
     this.toggleMoveControls(false);
 
+    const openTargets = this.movableLeafData.map((leaf) =>
+      Number.isFinite(leaf.openX) ? leaf.openX : leaf.closedX ?? 0
+    );
+    const stackRightTargets = this.movableLeafData.map((leaf) =>
+      Number.isFinite(leaf.stackRightX)
+        ? leaf.stackRightX
+        : Number.isFinite(leaf.closedX)
+        ? leaf.closedX
+        : leaf.openX ?? 0
+    );
+    const stackLeftTargets = this.movableLeafData.map((leaf) =>
+      Number.isFinite(leaf.stackLeftX)
+        ? leaf.stackLeftX
+        : Number.isFinite(leaf.closedX)
+        ? leaf.closedX
+        : leaf.openX ?? 0
+    );
+
     const timeline = gsap.timeline({ repeat: -1, repeatDelay: 0.6 });
 
-    timeline.to({}, { duration: 1.2 });
+    const addPause = (duration) => {
+      timeline.to({}, { duration });
+    };
 
+    const animateLeaves = (targets, duration = 1.1) => {
+      this.movableLeafData.forEach((leaf, index) => {
+        const target = targets[index] ?? leaf.openX ?? 0;
+        timeline.to(
+          leaf.group.position,
+          {
+            x: target,
+            duration,
+            ease: 'power2.inOut',
+          },
+          '<'
+        );
+      });
+    };
+
+    addPause(0.8);
     timeline.add(() => {
       this.isClosed = true;
-    });
-    this.movableLeafData.forEach((leaf) => {
-      timeline.to(
-        leaf.group.position,
-        {
-          x: leaf.closedX,
-          duration: 1.1,
-          ease: 'power2.inOut',
-        },
-        '<'
-      );
-    });
-
-    timeline.to({}, { duration: 0.9 });
-
-    timeline.add(() => {
-      this.isClosed = false;
       this.closedOffset = 0;
     });
-    this.movableLeafData.forEach((leaf) => {
-      timeline.to(
-        leaf.group.position,
-        {
-          x: leaf.openX,
-          duration: 1.1,
-          ease: 'power2.inOut',
-        },
-        '<'
-      );
-    });
+    animateLeaves(stackRightTargets);
 
-    timeline.to({}, { duration: 1 });
+    addPause(0.6);
+    timeline.add(() => {
+      this.isClosed = false;
+    });
+    animateLeaves(openTargets);
+
+    addPause(0.8);
+    timeline.add(() => {
+      this.isClosed = true;
+      this.closedOffset = 0;
+    });
+    animateLeaves(stackLeftTargets);
+
+    addPause(0.6);
+    timeline.add(() => {
+      this.isClosed = false;
+    });
+    animateLeaves(openTargets);
+
+    addPause(0.8);
 
     this.autoTimeline = timeline;
     this.autoTimeline.play(0);
@@ -2885,11 +2966,7 @@ function calculateSlidingModelCutSheet(input) {
 
   let baseLunghezzaBinario = larghezzaVano; // Regola: lunghezza binario base = larghezza vano
   if (anteNascoste === 'Si') {
-    if (aperturaAnte === 'Destra Sinistra') {
-      baseLunghezzaBinario = larghezzaVano + 2 * Math.max(larghezzaAnta - 17, 0); // Regola: ante nascoste con apertura bipartita
-    } else {
-      baseLunghezzaBinario = larghezzaVano + Math.max(larghezzaAnta - 17, 0); // Regola: ante nascoste apertura normale
-    }
+    baseLunghezzaBinario = larghezzaVano + Math.max(larghezzaAnta, 0); // Regola aggiornata: ante nascoste allungano il binario della larghezza di un'anta
   }
 
   const lunghezzaBinario = Math.round(baseLunghezzaBinario + (doorBox === 'Si' ? 34 : 0)); // Regola: doorBox aggiunge 34 mm al binario
