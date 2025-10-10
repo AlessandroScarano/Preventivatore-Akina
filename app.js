@@ -846,6 +846,7 @@ class DoorVisualizer {
     params.primaryLeafWidthMm = averageLeafWidthMm;
     params.primaryLeafWidthM = params.primaryLeafWidthMm / 1000;
     params.glassWidth = Math.max(params.primaryLeafWidthM - 0.05, 0.05);
+    params.overlapM = Math.max(Number(options.overlapMm) || 0, 0) / 1000;
 
     this.lastParams = params;
 
@@ -863,6 +864,7 @@ class DoorVisualizer {
     const totalWidthM = params.totalWidthM;
     const leftFixedWidthM = leftFixed.reduce((sum, panel) => sum + panel.widthM, 0);
     const rightFixedWidthM = rightFixed.reduce((sum, panel) => sum + panel.widthM, 0);
+    const overlapM = Math.max(Number(params.overlapM) || 0, 0);
 
     const slidingAreaStart = -totalWidthM / 2 + leftFixedWidthM;
     const slidingAreaEnd = totalWidthM / 2 - rightFixedWidthM;
@@ -890,7 +892,7 @@ class DoorVisualizer {
       cursor += panel.widthM;
     });
 
-    params.slidingLeaves.forEach((leaf) => {
+    params.slidingLeaves.forEach((leaf, index) => {
       const center = cursor + leaf.widthM / 2;
       const segment = {
         ...leaf,
@@ -901,7 +903,8 @@ class DoorVisualizer {
       };
       slidingSegments.push(segment);
       pushSegment(segment);
-      cursor += leaf.widthM;
+      const stepOverlap = index < params.slidingLeaves.length - 1 ? overlapM : 0;
+      cursor += Math.max(leaf.widthM - stepOverlap, 0);
     });
 
     rightFixed.forEach((panel) => {
@@ -2399,8 +2402,43 @@ function deriveConfiguration(config) {
 
   const pannelliCount = Math.max(config.numeroPannelliFissi || 0, 0);
 
+  let slidingSheet = null;
+  if (
+    (model === 'TRASCINAMENTO' || model === 'INDIPENDENTE') &&
+    numeroAnte > 0 &&
+    Number(config.width) > 0 &&
+    Number(config.height) > 0
+  ) {
+    try {
+      slidingSheet = calculateSlidingModelCutSheet({
+        numeroAnte,
+        pannelloFisso: config.pannelloFisso,
+        sceltaPannelloFisso: config.sceltaPannelloFisso,
+        numeroPannelliFissi: config.numeroPannelliFissi,
+        larghezzaPannelloFisso: config.larghezzaPannelloFisso,
+        larghezzaVano: config.width,
+        altezzaVano: config.height,
+        tipoBinario: config.binario === 'A vista' ? 'a_vista' : 'nascosto',
+        anteNascoste: config.anteNascoste,
+        aperturaAnteRaw: config.aperturaAnte,
+        doorBox: config.doorBox,
+        profiloSuperioreFissi: config.profiloSuperioreFissi,
+        traversino: config.traversino,
+        traversinoMeters: config.traversinoMeters,
+      });
+      if (slidingSheet && Number.isFinite(slidingSheet.numeroBinari)) {
+        numeroBinari = slidingSheet.numeroBinari;
+      }
+    } catch (error) {
+      console.warn('Impossibile calcolare la larghezza anta con il foglio tagli.', error);
+      slidingSheet = null;
+    }
+  }
+
   let larghezzaAnta = 0;
-  if (model === 'SINGOLA' || model === 'MAGNETICA') {
+  if (slidingSheet) {
+    larghezzaAnta = Math.max(Number(slidingSheet.larghezzaAnta) || 0, 0);
+  } else if (model === 'SINGOLA' || model === 'MAGNETICA') {
     const base = (trackCode * 100) / 2;
     const divisor = Math.max(realNumeroAnte || 1, 1);
     larghezzaAnta = Math.floor(base / divisor);
@@ -2424,6 +2462,8 @@ function deriveConfiguration(config) {
     withinRange = larghezzaAnta >= LARGHEZZA_MIN && larghezzaAnta <= LARGHEZZA_MAX;
   }
 
+  const sheetOverlapMm = slidingSheet ? Math.max(Number(slidingSheet.sormontoMm) || 0, 0) : 0;
+
   return {
     ...config,
     numeroAnte,
@@ -2435,6 +2475,10 @@ function deriveConfiguration(config) {
     lunghezzaBinarioMetri: trackMeters,
     lunghezzaBinarioMm: trackMm,
     aperturaEffettiva: apertura,
+    sormontoMm: sheetOverlapMm,
+    larghezzaPannelloFissoCalcolata: slidingSheet
+      ? Math.max(Number(slidingSheet.larghezzaPannelloFisso) || 0, 0)
+      : config.larghezzaPannelloFisso,
   };
 }
 
@@ -3058,6 +3102,7 @@ function calculateSlidingModelCutSheet(input) {
     traversinoMeters,
     ingombroProfiliScorrimento,
     ingombroTotaleProfiliCover,
+    sormontoMm: numeroAnte > 1 ? 17 : 0,
   };
 }
 
@@ -3456,41 +3501,55 @@ function updateVisualizerPreview(config, derived) {
   const slidingCount = isSoloPannello ? 0 : Math.max(realLeaves, 0);
   const totalFixedCount = isSoloPannello ? soloPanelCount : fixedPanelsCount;
 
+  let overlapMm = 0;
   const slidingLeavesSpecs = [];
   const fixedPanelsSpecs = [];
 
   if (effectiveTotalWidthMm > 0 && (slidingCount > 0 || totalFixedCount > 0)) {
-    let slidingWidthMm = slidingCount > 0 ? effectiveTotalWidthMm / Math.max(slidingCount, 1) : 0;
-    let fixedWidthMm = totalFixedCount > 0 ? effectiveTotalWidthMm / Math.max(slidingCount + totalFixedCount, 1) : 0;
+    overlapMm = slidingCount > 1 ? Math.max(Number(derived?.sormontoMm) || 0, 0) : 0;
 
-    const manualWidthMm =
+    const manualWidthMmRaw =
       fixedPanelDetails.mode === 'manuale' && fixedPanelDetails.manualWidth
         ? Number(fixedPanelDetails.manualWidth)
-        : null;
+        : 0;
+    const derivedFixedWidthMm = Math.max(Number(derived?.larghezzaPannelloFissoCalcolata) || 0, 0);
 
+    let fixedWidthMm = 0;
     if (totalFixedCount > 0) {
-      if (manualWidthMm && manualWidthMm * totalFixedCount < effectiveTotalWidthMm) {
-        fixedWidthMm = manualWidthMm;
-        const remaining = Math.max(effectiveTotalWidthMm - fixedWidthMm * totalFixedCount, 0);
-        slidingWidthMm = slidingCount > 0 ? remaining / Math.max(slidingCount, 1) : 0;
-      } else if (slidingCount > 0) {
-        const divisor = Math.max(slidingCount + totalFixedCount, 1);
-        const base = divisor > 0 ? effectiveTotalWidthMm / divisor : 0;
-        slidingWidthMm = base;
-        fixedWidthMm = base;
+      if (manualWidthMmRaw > 0) {
+        fixedWidthMm = manualWidthMmRaw;
+      } else if (fixedPanelDetails.mode === 'uguale_anta' && Number(derived?.larghezzaAnta) > 0) {
+        fixedWidthMm = Number(derived.larghezzaAnta);
+      } else if (derivedFixedWidthMm > 0) {
+        fixedWidthMm = derivedFixedWidthMm;
+      } else if (isSoloPannello && soloPanelCount > 0) {
+        fixedWidthMm = effectiveTotalWidthMm / Math.max(soloPanelCount, 1);
+      } else if (slidingCount > 0 && computedLeafWidth > 0) {
+        fixedWidthMm = computedLeafWidth;
       } else {
-        fixedWidthMm = totalFixedCount > 0 ? effectiveTotalWidthMm / totalFixedCount : effectiveTotalWidthMm;
+        fixedWidthMm = effectiveTotalWidthMm / Math.max(totalFixedCount, 1);
+      }
+    }
+    fixedWidthMm = Number.isFinite(fixedWidthMm) ? Math.max(fixedWidthMm, 0) : 0;
+
+    const fixedSpanMm = fixedWidthMm * totalFixedCount;
+    const availableSlidingSpanMm = Math.max(effectiveTotalWidthMm - fixedSpanMm, 0);
+
+    let leafWidthMm =
+      slidingCount > 0 ? Math.max(Number(derived?.larghezzaAnta) || computedLeafWidth || 0, 0) : 0;
+    if (slidingCount > 0) {
+      if (!Number.isFinite(leafWidthMm) || leafWidthMm <= 0) {
+        leafWidthMm = Math.max(effectiveTotalWidthMm / Math.max(slidingCount, 1), 0);
+      }
+      const overlapTotal = overlapMm * Math.max(slidingCount - 1, 0);
+      const maxLeafWidth = Math.max((availableSlidingSpanMm + overlapTotal) / Math.max(slidingCount, 1), 0);
+      if (maxLeafWidth > 0 && leafWidthMm > maxLeafWidth) {
+        leafWidthMm = maxLeafWidth;
       }
     }
 
-    if (slidingCount > 0 && (!Number.isFinite(slidingWidthMm) || slidingWidthMm <= 0) && computedLeafWidth > 0) {
-      slidingWidthMm = computedLeafWidth;
-    }
-    if (!Number.isFinite(slidingWidthMm)) slidingWidthMm = 0;
-    if (!Number.isFinite(fixedWidthMm)) fixedWidthMm = 0;
-
     for (let i = 0; i < slidingCount; i += 1) {
-      slidingLeavesSpecs.push({ widthMm: Math.max(slidingWidthMm, 0) });
+      slidingLeavesSpecs.push({ widthMm: Math.max(leafWidthMm, 0) });
     }
 
     const singleSharedFixedLeft =
@@ -3517,11 +3576,13 @@ function updateVisualizerPreview(config, derived) {
       fixedPanelsSpecs.push({ widthMm: Math.max(fixedWidthMm, 0), side });
     }
 
-    const widthSum =
-      slidingLeavesSpecs.reduce((sum, leaf) => sum + leaf.widthMm, 0) +
-      fixedPanelsSpecs.reduce((sum, panel) => sum + panel.widthMm, 0);
-    const remainder = effectiveTotalWidthMm - widthSum;
-    if (Math.abs(remainder) > 0.001) {
+    const overlapTotal = overlapMm * Math.max(slidingLeavesSpecs.length - 1, 0);
+    const slidingSpanOccupied =
+      slidingLeavesSpecs.reduce((sum, leaf) => sum + leaf.widthMm, 0) - overlapTotal;
+    const fixedSpanOccupied = fixedPanelsSpecs.reduce((sum, panel) => sum + panel.widthMm, 0);
+    const totalOccupied = slidingSpanOccupied + fixedSpanOccupied;
+    const remainder = effectiveTotalWidthMm - totalOccupied;
+    if (Math.abs(remainder) > 0.1) {
       if (slidingLeavesSpecs.length > 0) {
         const lastLeaf = slidingLeavesSpecs[slidingLeavesSpecs.length - 1];
         lastLeaf.widthMm = Math.max(lastLeaf.widthMm + remainder, 0);
@@ -3579,6 +3640,7 @@ function updateVisualizerPreview(config, derived) {
     trackCount: viewerTrackCount,
     slidingTrackCount: slidingTrackCountForViewer,
     fixedPanelsShareTrack: shareTrack,
+    overlapMm,
   });
 }
 
