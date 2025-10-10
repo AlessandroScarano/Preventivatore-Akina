@@ -453,8 +453,10 @@ class DoorVisualizer {
     this.scene.add(ambient, directional);
 
     this.doorRoot = new THREE.Group();
+    this.vanoGroup = new THREE.Group();
     this.doorFrames = new THREE.Group();
     this.tracksGroup = new THREE.Group();
+    this.doorRoot.add(this.vanoGroup);
     this.doorRoot.add(this.doorFrames);
     this.doorRoot.add(this.tracksGroup);
     this.scene.add(this.doorRoot);
@@ -1151,6 +1153,7 @@ class DoorVisualizer {
     this.stopAutoCycle();
     clearGroup(this.doorFrames);
     clearGroup(this.tracksGroup);
+    clearGroup(this.vanoGroup);
     if (this.villaGroup) {
       this.scene.remove(this.villaGroup);
       disposeObject3D(this.villaGroup);
@@ -1164,7 +1167,7 @@ class DoorVisualizer {
     this.isClosed = true;
 
     this.applyEnvironment(params);
-
+    this.buildVano(params);
     this.doorFrames.position.set(0, params.heightM / 2, 0);
 
     const {
@@ -1244,6 +1247,67 @@ class DoorVisualizer {
 
   applyEnvironment(params) {
     this.environmentMode = params.environment || 'soloporta';
+  }
+
+  buildVano(params) {
+    if (!this.vanoGroup) return;
+    this.vanoGroup.position.set(0, 0, 0);
+
+    const heightM = Math.max(Number(params?.heightM) || 0, 0);
+    const totalWidthM = Math.max(Number(params?.totalWidthM) || 0, 0);
+    if (!heightM || !totalWidthM) {
+      return;
+    }
+
+    const wallThickness = Math.max(Number(params?.wallThicknessM) || 0.08, 0.02);
+    const lintelThickness = Math.min(Math.max(wallThickness, 0.05), 0.12);
+    const wallDepth = Math.max(Number(params?.wallDepthM) || 0.25, 0.05);
+
+    const extraLeft = Math.max(Number(params?.extraTrackLeftM) || 0, 0);
+    const extraRight = Math.max(Number(params?.extraTrackRightM) || 0, 0);
+    const lintelWidth = Math.max(
+      totalWidthM + extraLeft + extraRight + wallThickness * 2,
+      wallThickness * 2
+    );
+    const lintelCenterOffset = (extraRight - extraLeft) / 2;
+
+    const baseMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#dbe3f8'),
+      transparent: true,
+      opacity: 0.22,
+      roughness: 0.35,
+      metalness: 0,
+      depthWrite: false,
+    });
+
+    const leftWall = new THREE.Mesh(
+      new THREE.BoxGeometry(wallThickness, heightM, wallDepth),
+      baseMaterial.clone()
+    );
+    leftWall.position.set(-totalWidthM / 2 - wallThickness / 2, heightM / 2, 0);
+    leftWall.name = 'vanoWall_left';
+    leftWall.renderOrder = -5;
+    this.vanoGroup.add(leftWall);
+
+    const rightWall = new THREE.Mesh(
+      new THREE.BoxGeometry(wallThickness, heightM, wallDepth),
+      baseMaterial.clone()
+    );
+    rightWall.position.set(totalWidthM / 2 + wallThickness / 2, heightM / 2, 0);
+    rightWall.name = 'vanoWall_right';
+    rightWall.renderOrder = -5;
+    this.vanoGroup.add(rightWall);
+
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(lintelWidth, lintelThickness, wallDepth),
+      baseMaterial.clone()
+    );
+    lintel.position.set(lintelCenterOffset, heightM + lintelThickness / 2, 0);
+    lintel.name = 'vanoLintel_top';
+    lintel.renderOrder = -5;
+    this.vanoGroup.add(lintel);
+
+    baseMaterial.dispose();
   }
 
   buildLeaf(segment, params) {
