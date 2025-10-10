@@ -153,6 +153,20 @@ const MAGNETICA_DEPENDENCIES = new Map([
   ['MAG-AC-CSW', 'MAG-AC-CAV'],
 ]);
 
+const QUOTE_ITEM_IMAGE_PATTERNS = [
+  { pattern: /^UNK-GS[12]-/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/Tavola-disegno-1-copia-312.png' },
+  { pattern: /^M100-/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/Tavola-disegno-1-copia-312.png' },
+  { pattern: /^UNK-CCS/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/Tavola-disegno-1-copia12.png' },
+  { pattern: /^UNK-TK/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/Tavola-disegno-112.png' },
+  { pattern: /^UNK-PF/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/fisso.jpg' },
+  { pattern: /^UNK-DB/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/DoorBoxSi.svg' },
+  { pattern: /^UNK-BD/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/DoorBoxSi.svg' },
+  { pattern: /^DEP01$/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/traversinoSi.svg' },
+  { pattern: /^MAG-AC/i, url: 'https://glasscom.it/wp-content/uploads/2024/10/magnetica.jpg' },
+];
+
+const QUOTE_ITEM_IMAGE_CACHE = {};
+
 const LARGHEZZA_MIN = 400;
 const LARGHEZZA_MAX = 1500;
 
@@ -265,6 +279,60 @@ function formatMillimeters(value) {
 
 function mmFromCode(code) {
   return Math.round(Number(code || 0) * 100);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function resolveQuoteItemImage(code) {
+  if (!code) return null;
+  const normalized = String(code).trim();
+  for (const entry of QUOTE_ITEM_IMAGE_PATTERNS) {
+    if (entry.pattern.test(normalized)) {
+      return entry.url;
+    }
+  }
+  return null;
+}
+
+function generateQuoteItemImage(code, description) {
+  const displayCode = (code || 'N/D').toString().slice(0, 18);
+  const descriptor = (description || '').toString().split(' ').slice(0, 3).join(' ');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+    <defs>
+      <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#4c5bff" />
+        <stop offset="100%" stop-color="#8ba6ff" />
+      </linearGradient>
+    </defs>
+    <rect width="320" height="200" rx="24" fill="url(#grad)"/>
+    <text x="24" y="110" font-family="'Poppins', 'Helvetica', 'Arial', sans-serif" font-size="44" fill="#ffffff" font-weight="600">${escapeHtml(displayCode)}</text>
+    <text x="24" y="150" font-family="'Poppins', 'Helvetica', 'Arial', sans-serif" font-size="24" fill="rgba(255,255,255,0.85)">${escapeHtml(descriptor)}</text>
+  </svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function getQuoteItemImage(item) {
+  const code = item?.codice ? String(item.codice).trim() : '';
+  if (code && QUOTE_ITEM_IMAGE_CACHE[code]) {
+    return QUOTE_ITEM_IMAGE_CACHE[code];
+  }
+  const resolved = resolveQuoteItemImage(code);
+  if (resolved) {
+    QUOTE_ITEM_IMAGE_CACHE[code] = resolved;
+    return resolved;
+  }
+  const generated = generateQuoteItemImage(code || 'Articolo', item?.descrizione || '');
+  if (code) {
+    QUOTE_ITEM_IMAGE_CACHE[code] = generated;
+  }
+  return generated;
 }
 
 function disposeObject3D(object) {
@@ -1648,6 +1716,7 @@ const selectors = {
   selectAllKits: document.getElementById('select-all-kits'),
   resultsPanel: document.querySelector('.summary-panel--quote'),
   cutsPanel: document.querySelector('.summary-panel--cuts'),
+  fullSummaryButton: document.getElementById('open-full-summary'),
   savePdfButton: document.getElementById('save-pdf-button'),
   quoteTotal: document.getElementById('quote-total'),
   quoteBreakdown: document.getElementById('quote-breakdown'),
@@ -3318,8 +3387,13 @@ function updateVisualizerPreview(config, derived) {
       slidingLeavesSpecs.push({ widthMm: Math.max(slidingWidthMm, 0) });
     }
 
+    const singleSharedFixedLeft =
+      !isSoloPannello && totalFixedCount === 1 && fixedPanelDetails.shareTrack;
+
     for (let i = 0; i < totalFixedCount; i += 1) {
       const side = isSoloPannello
+        ? 'left'
+        : singleSharedFixedLeft
         ? 'left'
         : totalFixedCount === 1
         ? 'right'
@@ -3753,6 +3827,504 @@ async function handleSavePdf() {
   pdf.save(`preventivo-akina-${timestamp}.pdf`);
 }
 
+async function handleOpenFullSummary() {
+  if (!selectors.form) return;
+
+  showStepFeedback('');
+  const isValid = selectors.form.reportValidity();
+  if (!isValid) {
+    return;
+  }
+
+  refreshOutputs({ force: true });
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  const config = collectConfiguration();
+  if (!config) return;
+
+  const quote = calculateQuote(config);
+  if (quote.error) {
+    alert(quote.error);
+    return;
+  }
+
+  const derived = quote.derived || deriveConfiguration(config) || {};
+  const summaryItems = buildSelectionSummaryItems(config, derived);
+  const categories = Array.isArray(quote.categories) ? quote.categories : [];
+  const cuts = calculateCuts(config, derived) || [];
+  const snapshot = visualizer.captureSnapshot();
+  const total = Number(quote.total || 0);
+
+  const summaryWindow = window.open('', '_blank');
+  if (!summaryWindow) {
+    alert('Impossibile aprire il riepilogo completo. Abilita i pop-up del browser per proseguire.');
+    return;
+  }
+
+  const html = buildFullSummaryHTML({
+    snapshot,
+    summaryItems,
+    categories,
+    cuts: Array.isArray(cuts) ? cuts : [],
+    total,
+  });
+
+  summaryWindow.document.open();
+  summaryWindow.document.write(html);
+  summaryWindow.document.close();
+}
+
+function buildFullSummaryHTML({ snapshot, summaryItems, categories, cuts, total }) {
+  const now = new Date().toLocaleString('it-IT');
+  const summaryCards = Array.isArray(summaryItems)
+    ? summaryItems
+        .map((item) => {
+          const label = escapeHtml(item.label || '');
+          const value = escapeHtml(item.value || '—');
+          return `
+            <article class="full-summary__fact">
+              <p class="full-summary__fact-label">${label}</p>
+              <p class="full-summary__fact-value">${value}</p>
+            </article>
+          `;
+        })
+        .join('')
+    : '';
+
+  const numberFormatter = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 });
+
+  const categorySections = Array.isArray(categories)
+    ? categories
+        .map((category) => {
+          if (!Array.isArray(category.items) || category.items.length === 0) {
+            return '';
+          }
+          const itemsMarkup = category.items
+            .map((item) => {
+              const quantityValue = Number(item.quantita);
+              const unitPriceValue = Number(item.prezzo);
+              const safeQuantity = Number.isFinite(quantityValue) ? quantityValue : 0;
+              const totalLine = Number.isFinite(unitPriceValue) ? unitPriceValue * safeQuantity : 0;
+              const quantityDisplay = escapeHtml(
+                Number.isFinite(quantityValue)
+                  ? numberFormatter.format(quantityValue)
+                  : String(item.quantita ?? '—')
+              );
+              const unitPriceDisplay = escapeHtml(
+                Number.isFinite(unitPriceValue) ? formatCurrency(unitPriceValue) : formatCurrency(0)
+              );
+              const totalDisplay = escapeHtml(
+                Number.isFinite(totalLine) ? formatCurrency(totalLine) : formatCurrency(0)
+              );
+              const imageSrc = escapeHtml(getQuoteItemImage(item));
+              const description = escapeHtml(item.descrizione || 'Articolo');
+              const code = escapeHtml(item.codice || '—');
+
+              return `
+                <li class="full-summary__item">
+                  <div class="full-summary__item-media">
+                    <img src="${imageSrc}" alt="${description}" loading="lazy" />
+                  </div>
+                  <div class="full-summary__item-body">
+                    <h4>${description}</h4>
+                    <p class="full-summary__item-code">Codice articolo: <strong>${code}</strong></p>
+                    <div class="full-summary__item-meta">
+                      <span>Quantità: <strong>${quantityDisplay}</strong></span>
+                      <span>Prezzo unitario: <strong>${unitPriceDisplay}</strong></span>
+                      <span>Totale: <strong>${totalDisplay}</strong></span>
+                    </div>
+                  </div>
+                </li>
+              `;
+            })
+            .join('');
+
+          if (!itemsMarkup) {
+            return '';
+          }
+
+          return `
+            <section class="full-summary__category">
+              <h3>${escapeHtml(category.label || '')}</h3>
+              <ul class="full-summary__items">
+                ${itemsMarkup}
+              </ul>
+            </section>
+          `;
+        })
+        .join('')
+    : '';
+
+  const cutsMarkup = Array.isArray(cuts) && cuts.length > 0
+    ? `
+        <table class="full-summary__cuts-table">
+          <thead>
+            <tr>
+              <th>Elemento</th>
+              <th>Quantità</th>
+              <th>Dimensione</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${cuts
+              .map((row) => {
+                const element = escapeHtml(row.element || '—');
+                const quantity = escapeHtml(String(row.quantity ?? '—'));
+                const length = escapeHtml(String(row.length ?? '—'));
+                return `<tr><td>${element}</td><td>${quantity}</td><td>${length}</td></tr>`;
+              })
+              .join('')}
+          </tbody>
+        </table>
+      `
+    : '<p class="full-summary__empty">Nessun taglio disponibile per questa configurazione.</p>';
+
+  const snapshotMarkup = snapshot
+    ? `
+        <section class="full-summary__panel full-summary__panel--snapshot">
+          <h2>Anteprima configurazione</h2>
+          <div class="full-summary__snapshot">
+            <img src="${escapeHtml(snapshot)}" alt="Anteprima 3D della porta configurata" />
+          </div>
+        </section>
+      `
+    : '';
+
+  const totalDisplay = escapeHtml(formatCurrency(total));
+
+  return `<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Riepilogo completo Porta Akina</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f6ff;
+        --surface: #ffffff;
+        --surface-alt: #f9fafe;
+        --text: #1f2559;
+        --text-soft: #4f5c8a;
+        --accent: #5468ff;
+        --accent-soft: rgba(84, 104, 255, 0.08);
+        --border: rgba(92, 111, 190, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Poppins', 'Helvetica', 'Arial', sans-serif;
+        background: radial-gradient(circle at 20% 20%, rgba(84, 104, 255, 0.12), transparent 55%),
+          radial-gradient(circle at 80% 0%, rgba(84, 104, 255, 0.08), transparent 45%),
+          var(--bg);
+        color: var(--text);
+        padding: 3rem 1.5rem 4rem;
+      }
+
+      .full-summary {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+      }
+
+      .full-summary__hero {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        background: linear-gradient(135deg, rgba(30, 44, 104, 0.95), rgba(84, 104, 255, 0.9));
+        color: #ffffff;
+        padding: 2.2rem;
+        border-radius: 28px;
+        box-shadow: 0 30px 80px rgba(34, 48, 120, 0.35);
+      }
+
+      .full-summary__hero h1 {
+        margin: 0.3rem 0 0;
+        font-size: clamp(1.8rem, 3vw, 2.35rem);
+        font-weight: 600;
+      }
+
+      .full-summary__eyebrow {
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.75rem;
+        opacity: 0.75;
+      }
+
+      .full-summary__meta {
+        margin: 0.6rem 0 0;
+        font-size: 0.9rem;
+        opacity: 0.8;
+      }
+
+      .full-summary__total {
+        align-self: flex-start;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 20px;
+        padding: 1.6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        backdrop-filter: blur(8px);
+      }
+
+      .full-summary__total span {
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.8;
+      }
+
+      .full-summary__total strong {
+        font-size: 2rem;
+        font-weight: 600;
+      }
+
+      .full-summary__total p {
+        margin: 0;
+        font-size: 0.85rem;
+        opacity: 0.9;
+      }
+
+      .full-summary__total button {
+        margin-top: 0.5rem;
+        align-self: flex-start;
+        padding: 0.55rem 1.3rem;
+        background: #ffffff;
+        color: var(--accent);
+        border: none;
+        border-radius: 999px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .full-summary__total button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 28px rgba(17, 24, 64, 0.25);
+      }
+
+      .full-summary__panel {
+        background: var(--surface);
+        border-radius: 26px;
+        padding: 2rem;
+        box-shadow: 0 24px 60px rgba(33, 44, 111, 0.12);
+      }
+
+      .full-summary__panel h2 {
+        margin: 0 0 1.5rem;
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+
+      .full-summary__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+
+      .full-summary__fact {
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 1.1rem 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .full-summary__fact-label {
+        margin: 0;
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-soft);
+      }
+
+      .full-summary__fact-value {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 600;
+      }
+
+      .full-summary__category + .full-summary__category {
+        margin-top: 2rem;
+      }
+
+      .full-summary__category h3 {
+        margin: 0 0 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .full-summary__items {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .full-summary__item {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 1.4rem;
+        align-items: center;
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 1.1rem;
+      }
+
+      .full-summary__item-media img {
+        width: 100%;
+        max-width: 120px;
+        border-radius: 18px;
+        background: var(--accent-soft);
+        object-fit: cover;
+        display: block;
+      }
+
+      .full-summary__item-body h4 {
+        margin: 0 0 0.35rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+      }
+
+      .full-summary__item-code {
+        margin: 0 0 0.75rem;
+        font-size: 0.85rem;
+        color: var(--text-soft);
+      }
+
+      .full-summary__item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem 1.2rem;
+        font-size: 0.9rem;
+        color: var(--text-soft);
+      }
+
+      .full-summary__item-meta strong {
+        color: var(--text);
+      }
+
+      .full-summary__cuts-table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 10px 26px rgba(29, 40, 92, 0.12);
+      }
+
+      .full-summary__cuts-table thead {
+        background: var(--accent);
+        color: #ffffff;
+      }
+
+      .full-summary__cuts-table th,
+      .full-summary__cuts-table td {
+        padding: 0.85rem 1rem;
+        text-align: left;
+        font-size: 0.92rem;
+      }
+
+      .full-summary__cuts-table tbody tr:nth-child(odd) {
+        background: var(--surface-alt);
+      }
+
+      .full-summary__cuts-table tbody tr:nth-child(even) {
+        background: var(--surface);
+      }
+
+      .full-summary__snapshot {
+        border-radius: 22px;
+        overflow: hidden;
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+      }
+
+      .full-summary__snapshot img {
+        width: 100%;
+        display: block;
+      }
+
+      .full-summary__empty {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--text-soft);
+      }
+
+      @media (max-width: 720px) {
+        body {
+          padding: 2rem 1rem 3rem;
+        }
+
+        .full-summary__item {
+          grid-template-columns: 1fr;
+          text-align: left;
+        }
+
+        .full-summary__item-media img {
+          max-width: 100%;
+          margin: 0 auto;
+        }
+
+        .full-summary__item-meta {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="full-summary">
+      <header class="full-summary__hero">
+        <div>
+          <p class="full-summary__eyebrow">Preventivatore Akina</p>
+          <h1>Riepilogo completo</h1>
+          <p class="full-summary__meta">Generato il ${escapeHtml(now)}</p>
+        </div>
+        <div class="full-summary__total">
+          <span>Totale configurazione</span>
+          <strong>${totalDisplay}</strong>
+          <p>+ IVA e Spese di Trasporto</p>
+          <button type="button" onclick="window.print()">Stampa</button>
+        </div>
+      </header>
+      ${snapshotMarkup}
+      <section class="full-summary__panel">
+        <h2>Scelte del configuratore</h2>
+        <div class="full-summary__grid">
+          ${summaryCards || '<p class="full-summary__empty">Nessuna informazione disponibile.</p>'}
+        </div>
+      </section>
+      <section class="full-summary__panel">
+        <h2>Dettaglio preventivo</h2>
+        ${categorySections || '<p class="full-summary__empty">Nessuna voce di preventivo disponibile.</p>'}
+      </section>
+      <section class="full-summary__panel">
+        <h2>Calcolo tagli</h2>
+        ${cutsMarkup}
+      </section>
+    </div>
+  </body>
+</html>`;
+}
+
 function setupSelectionGroup(container, optionSelector, hiddenInput, { onChange } = {}) {
   if (!container || !hiddenInput) {
     return {
@@ -4029,6 +4601,10 @@ selectors.selectAllKits?.addEventListener('click', (event) => {
     checkbox.checked = true;
   });
   refreshOutputs();
+});
+
+selectors.fullSummaryButton?.addEventListener('click', () => {
+  handleOpenFullSummary();
 });
 
 selectors.savePdfButton?.addEventListener('click', () => {

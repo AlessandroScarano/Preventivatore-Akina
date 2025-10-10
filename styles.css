@@ -520,6 +520,16 @@ a {
   text-align: left;
 }
 
+.summary-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.summary-actions .wizard-button {
+  width: 100%;
+}
+
 .configurator-section h2 {
   margin: 0;
   font-size: 1.1rem;
