@@ -1473,20 +1473,39 @@ class DoorVisualizer {
     const closedTargets = this.movableLeafData.map((leaf) =>
       Number.isFinite(leaf.closedX) ? leaf.closedX : 0
     );
-    const stackRightTargets = this.movableLeafData.map((leaf) =>
-      Number.isFinite(leaf.stackRightX)
-        ? leaf.stackRightX
-        : Number.isFinite(leaf.closedX)
-        ? leaf.closedX
-        : leaf.openX ?? 0
-    );
-    const stackLeftTargets = this.movableLeafData.map((leaf) =>
-      Number.isFinite(leaf.stackLeftX)
-        ? leaf.stackLeftX
-        : Number.isFinite(leaf.closedX)
-        ? leaf.closedX
-        : leaf.openX ?? 0
-    );
+    const stackRightTargets = this.movableLeafData.map((leaf, index) => {
+      const fallback = Number.isFinite(closedTargets[index])
+        ? closedTargets[index]
+        : leaf.openX ?? 0;
+      if (Number.isFinite(leaf.stackRightX)) {
+        return leaf.stackRightX;
+      }
+      if (Number.isFinite(leaf.closedX)) {
+        return leaf.closedX;
+      }
+      return fallback;
+    });
+    const stackLeftTargets = this.movableLeafData.map((leaf, index) => {
+      const fallback = Number.isFinite(closedTargets[index])
+        ? closedTargets[index]
+        : leaf.openX ?? 0;
+      if (Number.isFinite(leaf.stackLeftX)) {
+        return leaf.stackLeftX;
+      }
+      if (Number.isFinite(leaf.closedX)) {
+        return leaf.closedX;
+      }
+      return fallback;
+    });
+    const splitTargets = this.movableLeafData.map((leaf, index) => {
+      const fallback = Number.isFinite(closedTargets[index])
+        ? closedTargets[index]
+        : leaf.openX ?? 0;
+      if (Number.isFinite(leaf.openX)) {
+        return leaf.openX;
+      }
+      return fallback;
+    });
 
     this.movableLeafData.forEach((leaf, index) => {
       const target = Number.isFinite(closedTargets[index])
@@ -1535,7 +1554,34 @@ class DoorVisualizer {
       }
     };
 
+    const mode = this.lastParams?.openingMode || 'single-right';
+    const hasDistinctSplit = splitTargets.some((target, index) =>
+      Math.abs(target - closedTargets[index]) > 1e-6
+    );
+
+    const queueClosed = () => {
+      addPause(0.8);
+      animateLeaves(closedTargets, {
+        duration: 1.1,
+        onComplete: () => {
+          this.isClosed = true;
+          this.closedOffset = 0;
+        },
+      });
+    };
+
     addPause(0.6);
+
+    if (mode === 'biparting' && hasDistinctSplit) {
+      animateLeaves(splitTargets, {
+        duration: 1.1,
+        onStart: () => {
+          this.isClosed = false;
+        },
+      });
+      queueClosed();
+    }
+
     animateLeaves(stackRightTargets, {
       duration: 1.1,
       onStart: () => {
@@ -1543,16 +1589,8 @@ class DoorVisualizer {
       },
     });
 
-    addPause(0.8);
-    animateLeaves(closedTargets, {
-      duration: 1.1,
-      onComplete: () => {
-        this.isClosed = true;
-        this.closedOffset = 0;
-      },
-    });
+    queueClosed();
 
-    addPause(0.8);
     animateLeaves(stackLeftTargets, {
       duration: 1.1,
       onStart: () => {
@@ -1560,16 +1598,7 @@ class DoorVisualizer {
       },
     });
 
-    addPause(0.8);
-    animateLeaves(closedTargets, {
-      duration: 1.1,
-      onComplete: () => {
-        this.isClosed = true;
-        this.closedOffset = 0;
-      },
-    });
-
-    addPause(0.8);
+    queueClosed();
 
     this.autoTimeline = timeline;
     this.autoTimeline.play(0);
