@@ -1467,13 +1467,8 @@ class DoorVisualizer {
       return;
     }
 
-    this.openDoors(true);
-    this.isClosed = false;
-    this.closedOffset = 0;
-    this.toggleMoveControls(false);
-
-    const openTargets = this.movableLeafData.map((leaf) =>
-      Number.isFinite(leaf.openX) ? leaf.openX : leaf.closedX ?? 0
+    const closedTargets = this.movableLeafData.map((leaf) =>
+      Number.isFinite(leaf.closedX) ? leaf.closedX : 0
     );
     const stackRightTargets = this.movableLeafData.map((leaf) =>
       Number.isFinite(leaf.stackRightX)
@@ -1490,15 +1485,35 @@ class DoorVisualizer {
         : leaf.openX ?? 0
     );
 
+    this.movableLeafData.forEach((leaf, index) => {
+      const target = Number.isFinite(closedTargets[index])
+        ? closedTargets[index]
+        : leaf.openX ?? 0;
+      leaf.group.position.x = target;
+    });
+
+    this.isClosed = true;
+    this.closedOffset = 0;
+    this.toggleMoveControls(false);
+
     const timeline = gsap.timeline({ repeat: -1, repeatDelay: 0.6 });
 
     const addPause = (duration) => {
       timeline.to({}, { duration });
     };
 
-    const animateLeaves = (targets, duration = 1.1) => {
+    const animateLeaves = (targets, { duration = 1.1, onStart, onComplete } = {}) => {
+      if (typeof onStart === 'function') {
+        timeline.add(() => {
+          onStart();
+        });
+      }
+
       this.movableLeafData.forEach((leaf, index) => {
-        const target = targets[index] ?? leaf.openX ?? 0;
+        const fallback = Number.isFinite(closedTargets[index])
+          ? closedTargets[index]
+          : leaf.openX ?? 0;
+        const target = Number.isFinite(targets[index]) ? targets[index] : fallback;
         timeline.to(
           leaf.group.position,
           {
@@ -1506,36 +1521,50 @@ class DoorVisualizer {
             duration,
             ease: 'power2.inOut',
           },
-          '<'
+          index === 0 ? '>' : '<'
         );
       });
+
+      if (typeof onComplete === 'function') {
+        timeline.add(() => {
+          onComplete();
+        });
+      }
     };
 
-    addPause(0.8);
-    timeline.add(() => {
-      this.isClosed = true;
-      this.closedOffset = 0;
-    });
-    animateLeaves(stackRightTargets);
-
     addPause(0.6);
-    timeline.add(() => {
-      this.isClosed = false;
+    animateLeaves(stackRightTargets, {
+      duration: 1.1,
+      onStart: () => {
+        this.isClosed = false;
+      },
     });
-    animateLeaves(openTargets);
 
     addPause(0.8);
-    timeline.add(() => {
-      this.isClosed = true;
-      this.closedOffset = 0;
+    animateLeaves(closedTargets, {
+      duration: 1.1,
+      onComplete: () => {
+        this.isClosed = true;
+        this.closedOffset = 0;
+      },
     });
-    animateLeaves(stackLeftTargets);
 
-    addPause(0.6);
-    timeline.add(() => {
-      this.isClosed = false;
+    addPause(0.8);
+    animateLeaves(stackLeftTargets, {
+      duration: 1.1,
+      onStart: () => {
+        this.isClosed = false;
+      },
     });
-    animateLeaves(openTargets);
+
+    addPause(0.8);
+    animateLeaves(closedTargets, {
+      duration: 1.1,
+      onComplete: () => {
+        this.isClosed = true;
+        this.closedOffset = 0;
+      },
+    });
 
     addPause(0.8);
 
