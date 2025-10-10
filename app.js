@@ -762,6 +762,18 @@ class DoorVisualizer {
     const slidingLeavesInput = Array.isArray(options.slidingLeaves) ? options.slidingLeaves : [];
     const fixedPanelsInput = Array.isArray(options.fixedPanels) ? options.fixedPanels : [];
 
+    const extraTrackLeftMm = Math.max(Number(options.extraTrackLeftMm) || 0, 0);
+    const extraTrackRightMm = Math.max(Number(options.extraTrackRightMm) || 0, 0);
+    const extraTrackLeftM = extraTrackLeftMm / 1000;
+    const extraTrackRightM = extraTrackRightMm / 1000;
+    const trackLengthMmRaw = Number(options.trackLengthMm) || 0;
+    const inferredTrackLengthMm =
+      trackLengthMmRaw > 0
+        ? trackLengthMmRaw
+        : totalWidthMm + extraTrackLeftMm + extraTrackRightMm;
+    const trackLengthMm = Math.max(inferredTrackLengthMm, 0);
+    const trackLengthM = trackLengthMm / 1000;
+
     const slidingLeaves = slidingLeavesInput
       .map((leaf, index) => {
         const widthMm = Number(leaf?.widthMm ?? leaf ?? 0);
@@ -811,6 +823,12 @@ class DoorVisualizer {
       openingMode: options.openingMode || 'single-right',
       slidingLeaves,
       fixedPanels,
+      extraTrackLeftMm,
+      extraTrackRightMm,
+      extraTrackLeftM,
+      extraTrackRightM,
+      trackLengthMm,
+      trackLengthM,
     };
 
     params.glassHeight = Math.max(params.heightM - 0.1, 0.05);
@@ -865,9 +883,14 @@ class DoorVisualizer {
     const leftFixedWidthM = leftFixed.reduce((sum, panel) => sum + panel.widthM, 0);
     const rightFixedWidthM = rightFixed.reduce((sum, panel) => sum + panel.widthM, 0);
     const overlapM = Math.max(Number(params.overlapM) || 0, 0);
+    const extraLeft = Math.max(Number(params.extraTrackLeftM) || 0, 0);
+    const extraRight = Math.max(Number(params.extraTrackRightM) || 0, 0);
 
-    const slidingAreaStart = -totalWidthM / 2 + leftFixedWidthM;
-    const slidingAreaEnd = totalWidthM / 2 - rightFixedWidthM;
+    const doorLeftEdge = -totalWidthM / 2;
+    const doorRightEdge = totalWidthM / 2;
+
+    const slidingAreaStart = doorLeftEdge - extraLeft + leftFixedWidthM;
+    const slidingAreaEnd = doorRightEdge + extraRight - rightFixedWidthM;
 
     let cursor = -totalWidthM / 2;
     let zIndex = 0;
@@ -1385,6 +1408,7 @@ class DoorVisualizer {
   }
 
   buildTrack(index, params) {
+    const trackLengthMm = Math.max(Number(params.trackLengthMm) || Number(params.totalWidthMm) || 0, 0);
     const track = this.decoratePart(
       this.clonePart('track'),
       `track_${index}`,
@@ -1392,20 +1416,28 @@ class DoorVisualizer {
       {
         name: 'Binario',
         code: 'GS1',
-        dimensions: `Lunghezza: ${formatMillimeters(params.totalWidthMm)} mm`,
+        dimensions: `Lunghezza: ${formatMillimeters(trackLengthMm)} mm`,
         pieces: Math.max(params.trackCount || 1, 1),
         images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-312.png',
       }
     );
     if (!track) return null;
     const trackVerticalOffset = this.frameThickness - (params.trackMode === 'hidden' ? 0.02 : 0);
-    track.position.set(0, params.heightM + trackVerticalOffset, index * this.zOffset);
-    track.scale.set(params.totalWidthM, 1, 1);
+    const extraLeft = Math.max(Number(params.extraTrackLeftM) || 0, 0);
+    const extraRight = Math.max(Number(params.extraTrackRightM) || 0, 0);
+    const trackLengthM = Math.max(Number(params.trackLengthM) || Number(params.totalWidthM) || 0, 0);
+    const centerOffset = (extraRight - extraLeft) / 2;
+    track.position.set(centerOffset, params.heightM + trackVerticalOffset, index * this.zOffset);
+    track.scale.set(trackLengthM, 1, 1);
     return track;
   }
 
   updateCamera(params) {
-    const distance = Math.max(2.4, params.totalWidthM * 1.35, params.heightM * 1.2);
+    const horizontalSpan = Math.max(
+      Number(params.totalWidthM) || 0,
+      Number(params.trackLengthM) || Number(params.totalWidthM) || 0
+    );
+    const distance = Math.max(2.4, horizontalSpan * 1.35, params.heightM * 1.2);
     this.camera.position.set(distance, params.heightM * 0.75 + 0.4, distance);
     this.controls.target.set(0, params.heightM / 2, 0);
     this.controls.update();
@@ -1580,25 +1612,25 @@ class DoorVisualizer {
         },
       });
       queueClosed();
+    } else {
+      animateLeaves(stackRightTargets, {
+        duration: 1.1,
+        onStart: () => {
+          this.isClosed = false;
+        },
+      });
+
+      queueClosed();
+
+      animateLeaves(stackLeftTargets, {
+        duration: 1.1,
+        onStart: () => {
+          this.isClosed = false;
+        },
+      });
+
+      queueClosed();
     }
-
-    animateLeaves(stackRightTargets, {
-      duration: 1.1,
-      onStart: () => {
-        this.isClosed = false;
-      },
-    });
-
-    queueClosed();
-
-    animateLeaves(stackLeftTargets, {
-      duration: 1.1,
-      onStart: () => {
-        this.isClosed = false;
-      },
-    });
-
-    queueClosed();
 
     this.autoTimeline = timeline;
     this.autoTimeline.play(0);
@@ -2408,11 +2440,11 @@ function deriveConfiguration(config) {
     }
   }
 
-  const realNumeroAnte = numeroAnte + (config.anteNascoste === 'Si' || config.doorBox === 'Si' ? 1 : 0);
+  const realNumeroAnte = numeroAnte + (config.doorBox === 'Si' ? 1 : 0);
 
   const trackCode = config.lunghezzaBinarioCodice || 0;
-  const trackMm = config.lunghezzaBinario || mmFromCode(trackCode);
-  const trackMeters = config.lunghezzaBinarioMetri || trackMm / 1000;
+  let trackMm = config.lunghezzaBinario || mmFromCode(trackCode);
+  let trackMeters = config.lunghezzaBinarioMetri || trackMm / 1000;
 
   let montaggio = config.montaggio || 'A soffitto';
   if (model === 'TRASCINAMENTO' || model === 'INDIPENDENTE') {
@@ -2457,6 +2489,13 @@ function deriveConfiguration(config) {
       });
       if (slidingSheet && Number.isFinite(slidingSheet.numeroBinari)) {
         numeroBinari = slidingSheet.numeroBinari;
+      }
+      if (slidingSheet && Number.isFinite(slidingSheet.lunghezzaBinario)) {
+        const sheetTrackMm = Math.max(Number(slidingSheet.lunghezzaBinario) || 0, 0);
+        if (sheetTrackMm > trackMm) {
+          trackMm = sheetTrackMm;
+          trackMeters = trackMm / 1000;
+        }
       }
     } catch (error) {
       console.warn('Impossibile calcolare la larghezza anta con il foglio tagli.', error);
@@ -3655,6 +3694,31 @@ function updateVisualizerPreview(config, derived) {
         slidingLeafTotal > 0 ? 1 : 0
       );
 
+  const supportsHiddenExtension =
+    config.model === 'TRASCINAMENTO' || config.model === 'INDIPENDENTE';
+  const baseTrackLengthMm = Math.max(
+    Number(derived?.lunghezzaBinarioMm) || 0,
+    Number(config.lunghezzaBinario) || 0,
+    effectiveTotalWidthMm
+  );
+  let targetTrackLengthMm = baseTrackLengthMm;
+  if (supportsHiddenExtension && config.anteNascoste === 'Si' && slidingLeafTotal > 0) {
+    const referenceLeafWidth = Math.max(
+      Number(derived?.larghezzaAnta) || computedLeafWidth || 0,
+      0
+    );
+    if (referenceLeafWidth > 0) {
+      targetTrackLengthMm = Math.max(
+        targetTrackLengthMm,
+        effectiveTotalWidthMm + referenceLeafWidth
+      );
+    }
+  }
+
+  const totalTrackExtraMm = Math.max(targetTrackLengthMm - effectiveTotalWidthMm, 0);
+  const extraTrackLeftMm = totalTrackExtraMm > 0 ? totalTrackExtraMm / 2 : 0;
+  const extraTrackRightMm = totalTrackExtraMm - extraTrackLeftMm;
+
   visualizer.updateDoor({
     heightMm: config.height,
     totalWidthMm: effectiveTotalWidthMm,
@@ -3670,6 +3734,9 @@ function updateVisualizerPreview(config, derived) {
     slidingTrackCount: slidingTrackCountForViewer,
     fixedPanelsShareTrack: shareTrack,
     overlapMm,
+    trackLengthMm: targetTrackLengthMm,
+    extraTrackLeftMm,
+    extraTrackRightMm,
   });
 }
 
