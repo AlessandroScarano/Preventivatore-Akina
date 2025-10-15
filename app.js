@@ -179,7 +179,7 @@ const TRANSLATIONS = {
       },
       montaggio: {
         title: 'Scegli il montaggio',
-        placeholder: '-- Seleziona un'opzione --',
+        placeholder: "-- Seleziona un'opzione --",
         options: {
           'A soffitto': 'A soffitto',
           Parete: 'Parete',
@@ -219,7 +219,7 @@ const TRANSLATIONS = {
         description:
           'Conferma le tue scelte e salva il preventivo dettagliato in PDF comprensivo di lavorazioni e accessori.',
         disclaimerBold:
-          '* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell'utilizzo del tool.',
+          "* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell'utilizzo del tool.",
         disclaimer: 'Vi preghiamo di utilizzare i cataloghi, i listini e le schede tecniche a disposizione.',
       },
     },
@@ -402,7 +402,7 @@ const TRANSLATIONS = {
         'UNK-MRC200.33 NO': { name: 'Coppia maniglie a C 200 × 33 mm' },
         'UNK-MRC206.33 NO': { name: 'Coppia maniglie a C 206 × 33 mm' },
         'UNK-KSM NO': { name: 'Kit serratura magnetica per porta scorrevole' },
-        NRCI50.220: { name: 'Coppia nicchie autoadesive 50 × 110 mm' },
+        'NRCI50.220': { name: 'Coppia nicchie autoadesive 50 × 110 mm' },
         'NRCI45.220 NO': { name: 'Coppia nicchie autoadesive 45 × 220 mm' },
         'UNK-PFT': { name: 'Punta per trapano foratura telaio' },
         'UNK-PSC': { name: 'Pinza per serraggio su cinghia' },
@@ -829,7 +829,7 @@ const TRANSLATIONS = {
         'UNK-MRC200.33 NO': { name: 'C-handle pair 200 × 33 mm' },
         'UNK-MRC206.33 NO': { name: 'C-handle pair 206 × 33 mm' },
         'UNK-KSM NO': { name: 'Magnetic lock kit for sliding door' },
-        NRCI50.220: { name: 'Adhesive recessed pull pair 50 × 110 mm' },
+        'NRCI50.220': { name: 'Adhesive recessed pull pair 50 × 110 mm' },
         'NRCI45.220 NO': { name: 'Adhesive recessed pull pair 45 × 220 mm' },
         'UNK-PFT': { name: 'Frame drilling bit' },
         'UNK-PSC': { name: 'Belt clamping pliers' },
@@ -1255,7 +1255,7 @@ const TRANSLATIONS = {
         'UNK-MRC200.33 NO': { name: 'C-Griffpaar 200 × 33 mm' },
         'UNK-MRC206.33 NO': { name: 'C-Griffpaar 206 × 33 mm' },
         'UNK-KSM NO': { name: 'Magnetisches Schlosskit für Schiebetür' },
-        NRCI50.220: { name: 'Selbstklebende Griffmulden 50 × 110 mm (Paar)' },
+        'NRCI50.220': { name: 'Selbstklebende Griffmulden 50 × 110 mm (Paar)' },
         'NRCI45.220 NO': { name: 'Selbstklebende Griffmulden 45 × 220 mm (Paar)' },
         'UNK-PFT': { name: 'Bohrer für Türrahmen' },
         'UNK-PSC': { name: 'Zange zum Gurtspannen' },
@@ -1681,7 +1681,7 @@ const TRANSLATIONS = {
         'UNK-MRC200.33 NO': { name: 'C 型拉手对 200 × 33 mm' },
         'UNK-MRC206.33 NO': { name: 'C 型拉手对 206 × 33 mm' },
         'UNK-KSM NO': { name: '滑门磁力锁套件' },
-        NRCI50.220: { name: '自粘内拉手对 50 × 110 mm' },
+        'NRCI50.220': { name: '自粘内拉手对 50 × 110 mm' },
         'NRCI45.220 NO': { name: '自粘内拉手对 45 × 220 mm' },
         'UNK-PFT': { name: '门框钻孔钻头' },
         'UNK-PSC': { name: '皮带夹钳' },
