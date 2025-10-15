@@ -3,17 +3,1963 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.12.4/index.js';
 
+
+const SUPPORTED_LANGUAGES = ['it', 'en', 'de', 'zh'];
+
+const LANGUAGE_NAMES = {
+  it: 'Italiano',
+  en: 'English',
+  de: 'Deutsch',
+  zh: '中文',
+};
+
+const TRANSLATIONS = {
+  it: {
+    language: {
+      switchAria: 'Lingua',
+      names: {
+        it: 'Italiano',
+        en: 'Inglese',
+        de: 'Tedesco',
+        zh: 'Cinese',
+      },
+    },
+    header: {
+      eyebrow: 'Preventivatore Porta Akina',
+      title: 'Configura, visualizza e ottieni il preventivo',
+      progressAria: 'Avanzamento configuratore',
+    },
+    steps: ['Dimensioni e modello', 'Struttura', 'Pannelli e profili', 'Scorrimento', 'Accessori', 'Riepilogo'],
+    viewer: {
+      loadingTitle: 'Caricamento modelli 3D…',
+      controlsAria: 'Controlli visualizzatore 3D',
+      ariaLabel: 'Anteprima 3D parametrica',
+      partButtons: {
+        top: 'Profilo superiore',
+        bottom: 'Profilo inferiore',
+        left: 'Profilo sinistro',
+        right: 'Profilo destro',
+        track: 'Binario',
+        cover: 'Cover',
+      },
+      buttons: {
+        resetHighlight: 'Reset evidenziazione',
+        resetCamera: 'Reset camera',
+        fullscreen: 'Schermo intero',
+      },
+      moveLabel: 'Sposta ante',
+      moveLeftAria: 'Sposta ante a sinistra',
+      moveRightAria: 'Sposta ante a destra',
+      assetWarning: {
+        title: 'Avviso caricamento asset',
+        localMissing:
+          'Non è stato possibile caricare i modelli 3D locali. Carica i file nella cartella <code>profili3dakina</code> per ottenere la resa completa.',
+        remoteMissing:
+          'Non è stato possibile raggiungere gli asset remoti. Controlla la connessione o abilita il caricamento remoto.',
+      },
+      dimensionsTemplate:
+        'Ante: {leaves} · Larghezza anta: {leafWidth} mm · Altezza: {height} mm · Larghezza totale: {total} mm',
+      trackLabel: 'Binario: {value}',
+      partInfo: {
+        code: 'Codice: {code}',
+        dimensions: '{text}',
+        pieces: 'Numero di pezzi: {value}',
+      },
+    },
+    form: {
+      validation: {
+        selectModel: 'Seleziona un modello',
+        selectOpening: "Seleziona l'apertura delle ante",
+        selectTipologia: 'Seleziona la tipologia',
+        selectFixed: 'Indica se vuoi un pannello fisso',
+        selectFixedPlacement: 'Indica la posizione dei pannelli fissi',
+        default: 'Completa il campo obbligatorio.',
+        selectFixedProfile: 'Seleziona la lunghezza del profilo superiore.',
+        selectHidden: 'Indica se vuoi le ante nascoste.',
+        selectDoorBox: 'Indica se vuoi il Door Box.',
+        selectDoorBoxSide: 'Seleziona il lato di montaggio del Door Box.',
+        selectTrack: 'Scegli il tipo di binario.',
+        selectDecorative: 'Indica se vuoi il traversino decorativo.',
+      },
+      dimensions: {
+        title: 'Dimensioni del vano',
+        width: 'Larghezza vano (mm)',
+        height: 'Altezza vano (mm)',
+      },
+      placeholders: {
+        widthExample: 'Es. 800 mm',
+      },
+      model: {
+        title: 'Scegli il modello',
+        options: {
+          TRASCINAMENTO: 'TRASCINAMENTO',
+          INDIPENDENTE: 'INDIPENDENTE',
+          MAGNETICA: 'MAGNETICA',
+          SINGOLA: 'SINGOLA',
+          SOLO_PANNELLO: 'SOLO PANNELLO FISSO',
+          SOLO_ANTA: 'SOLO ANTA',
+        },
+      },
+      soloPanel: {
+        title: 'Configurazione Solo Pannello',
+        count: 'Numero di pannelli',
+        widthLabel: 'Larghezza pannello {index} (mm)',
+        heightLabel: 'Altezza pannello {index} (mm)',
+      },
+      soloLeaf: {
+        title: 'Configurazione Solo Anta',
+        count: 'Numero di ante',
+        widthLabel: 'Larghezza anta {index} (mm)',
+        heightLabel: 'Altezza anta {index} (mm)',
+      },
+      numeroAnte: {
+        title: 'Scegli il numero di ante',
+        label: 'Numero di ante',
+        singular: 'anta',
+        plural: 'ante',
+        optionLabel: '{value} {label}',
+      },
+      aperturaAnte: {
+        title: "Scegli l'apertura delle ante",
+        options: {
+          Normale: 'Normale',
+          'Destra Sinistra': 'Destra · Sinistra',
+        },
+      },
+      tipologia: {
+        title: 'Scegli la tipologia',
+        options: {
+          '1': '1',
+          '1+1': '1 + 1',
+        },
+      },
+      pannelloFisso: {
+        title: 'Vuoi un pannello fisso?',
+        quantity: 'Numero dei pannelli fissi',
+        sameTracks: 'I pannelli fissi sono sugli stessi binari delle ante scorrevoli?',
+        widthQuestion: 'Come vuoi definire la larghezza del pannello fisso?',
+        widthOptions: {
+          manuale: 'Inserisco io la larghezza',
+          uguale_anta: 'Uguale alle ante scorrevoli',
+        },
+        widthInput: 'Inserisci la larghezza del pannello fisso (in mm)',
+      },
+      profiloSuperioreFissi: {
+        title: 'Scegli la lunghezza del profilo superiore per i fissi',
+        options: {
+          'Quanto i fissi': 'Quanto i fissi',
+          'Quanto tutto il binario': 'Quanto tutto il binario',
+        },
+      },
+      anteNascoste: {
+        title: 'Vuoi che le ante siano nascoste dietro il muro?',
+        options: {
+          Si: 'Si',
+          No: 'No',
+        },
+      },
+      doorBox: {
+        title: 'Vuoi aggiungere il Door Box?',
+        mount: 'Montaggio Door Box',
+        options: {
+          Si: 'Si',
+          No: 'No',
+        },
+        sides: {
+          Destra: 'Destra',
+          Sinistra: 'Sinistra',
+        },
+      },
+      binario: {
+        title: 'Scegli il binario',
+        options: {
+          'A vista': 'A vista',
+          Nascosto: 'Nascosto nel cartongesso',
+        },
+      },
+      montaggio: {
+        title: 'Scegli il montaggio',
+        placeholder: '-- Seleziona un'opzione --',
+        options: {
+          'A soffitto': 'A soffitto',
+          Parete: 'Parete',
+        },
+      },
+      lunghezzaBinario: {
+        title: 'Scegli la lunghezza del binario',
+        helper: 'Compila i campi precedenti per mostrare le lunghezze disponibili.',
+        optionLabel: '{value} Metri',
+        label: 'Lunghezza del binario:',
+      },
+      traversino: {
+        title: 'Vuoi aggiungere il Traversino Decorativo Adesivo?',
+        quantity: 'Quantità in metri',
+        options: {
+          Si: 'Si',
+          No: 'No',
+        },
+      },
+      optionalMagnetica: {
+        title: 'Seleziona optional per modello Magnetica',
+      },
+      optionalGenerali: {
+        title: 'Seleziona optional',
+        selectAll: 'Seleziona tutti',
+      },
+      maniglie: {
+        title: 'Seleziona maniglie e nicchie',
+        quantityLabel: 'Quantità',
+      },
+      kit: {
+        title: 'Seleziona kit di lavorazione profili',
+        note: 'Da acquistare solo al primo ordine',
+      },
+      summaryStep: {
+        title: 'Riepilogo finale',
+        description:
+          'Conferma le tue scelte e salva il preventivo dettagliato in PDF comprensivo di lavorazioni e accessori.',
+        disclaimerBold:
+          '* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell'utilizzo del tool.',
+        disclaimer: 'Vi preghiamo di utilizzare i cataloghi, i listini e le schede tecniche a disposizione.',
+      },
+    },
+    summary: {
+      quoteEyebrow: 'Riepilogo preventivo',
+      quoteTitle: 'Totale configurazione',
+      configTitle: 'Dati configurazione',
+      itemsTitle: 'Dettaglio voci',
+      cutsEyebrow: 'Tagli profili',
+      cutsTitle: 'Calcolo tagli',
+      emptyCuts: 'Nessun taglio disponibile per questa configurazione.',
+      tableHeaders: {
+        element: 'Elemento',
+        quantity: 'Quantità',
+        length: 'Lunghezza (mm)',
+      },
+      totalSuffix: '+ IVA e Spese di Trasporto',
+      labels: {
+        modello: 'Modello',
+        ambientazione: 'Ambientazione 3D',
+        tipologia: 'Tipologia',
+        numeroAnte: 'Numero ante',
+        numeroBinari: 'Numero binari',
+        apertura: 'Apertura',
+        montaggio: 'Montaggio',
+        doorBox: 'Door Box',
+        binario: 'Binario',
+        lunghezzaBinario: 'Lunghezza binario',
+        traversino: 'Traversino decorativo',
+        finitura: 'Finitura',
+        spessoreVetro: 'Spessore vetro consigliato',
+        dimensioniVano: 'Dimensioni vano',
+      },
+      defaults: {
+        finitura: 'Nera',
+        spessoreVetro: '4+4 mm',
+        doorBoxNo: 'No',
+        doorBoxYes: 'Si',
+      },
+    },
+    totals: {
+      totalLabel: 'Totale',
+      totalFormatted: '{value} + IVA e Spese di Trasporto',
+    },
+    buttons: {
+      prev: 'Indietro',
+      next: 'Avanti',
+      openSummary: 'Mostra riepilogo completo',
+      savePdf: 'Salva in PDF',
+    },
+    pdf: {
+      title: 'Preventivo Porta Akina',
+      summaryTitle: 'Riepilogo configurazione',
+      quoteTitle: 'Dettaglio economico',
+      cutsTitle: 'Calcolo tagli',
+      tableHeaders: {
+        description: 'Descrizione',
+        code: 'Codice',
+        quantity: 'Qtà',
+        unit: 'Prezzo',
+        total: 'Totale',
+      },
+      disclaimer:
+        'La Glass Com non si assume responsabilità per errori nei calcoli e nell’utilizzo del tool. Utilizzare sempre cataloghi, listini e schede tecniche aggiornati.',
+      totalLabel: 'Totale',
+      summaryLabels: {
+        label: '{label}',
+        value: '{value}',
+      },
+    },
+    alerts: {
+      popupBlocked: 'Impossibile aprire il riepilogo completo. Abilita i pop-up del browser per proseguire.',
+      modelMissing: 'Seleziona un modello per continuare.',
+      pdfUnavailable: 'Impossibile generare il PDF in questo ambiente.',
+    },
+    quote: {
+      itemText: '{description} (Codice: {code}, Quantità: {quantity}, Prezzo unitario: {unit}, Totale: {total})',
+      noSummary: 'Nessun dato disponibile',
+    },
+    cuts: {
+      panelEqual: 'Uguali alle ante ({value} mm)',
+      rows: {
+        binariInizialiFinali: 'Binari iniziali e finali',
+        binariCentrali: 'Binari centrali',
+        anteLarghezza: 'Ante scorrevoli - larghezza',
+        anteAltezza: 'Ante scorrevoli - altezza',
+        profiliOrizzontali: 'Profili orizzontali anta',
+        profiliVerticali: 'Profili verticali anta',
+        coverSenzaSpazzolino: 'Cover verticali senza spazzolino',
+        coverConSpazzolino: 'Cover verticali con spazzolino',
+        vetriAnte: 'Vetri ante scorrevoli',
+        pannelliFissi: 'Pannelli fissi',
+        vetriPannelliFissi: 'Vetri pannello fisso',
+        profiloSuperioreFissi: 'Profilo superiore pannelli fissi',
+        ingombroProfili: 'Ingombro profili di scorrimento',
+        ingombroTotale: 'Ingombro totale profili + cover',
+        traversino: 'Traversino decorativo adesivo',
+        montantiVerticali: 'Montanti verticali anta',
+        traversiOrizzontali: 'Traversi orizzontali',
+        vetriAnteGenerici: 'Vetri / pannelli anta',
+        binarioSuperiore: 'Binario superiore',
+        guidaInferiore: 'Guida inferiore',
+        doorBox: 'Door Box',
+      },
+    },
+    fullSummary: {
+      title: 'Riepilogo completo preventivo Akina',
+      eyebrow: 'Preventivatore Akina',
+      generatedAt: 'Generato il {value}',
+      configTitle: 'Scelte configuratore',
+      quoteTitle: 'Dettaglio economico',
+      cutsTitle: 'Calcolo tagli',
+      totalLabel: 'Totale',
+      totalSuffix: '+ IVA e Spese di Trasporto',
+      print: 'Stampa',
+      snapshotTitle: 'Anteprima configurazione',
+      snapshotAlt: 'Anteprima 3D della porta configurata',
+      emptySummary: 'Nessuna informazione disponibile.',
+      emptyQuote: 'Nessuna voce di preventivo disponibile.',
+      emptyCuts: 'Nessun taglio disponibile per questa configurazione.',
+      itemLabels: {
+        code: 'Codice articolo',
+        quantity: 'Quantità',
+        unitPrice: 'Prezzo unitario',
+        total: 'Totale',
+      },
+      cutsHeaders: {
+        element: 'Elemento',
+        quantity: 'Quantità',
+        length: 'Dimensione',
+      },
+    },
+    misc: {
+      documentTitle: 'Preventivatore Porta Akina',
+      meters: '{value} m',
+      mmPair: '{width} × {height} mm',
+      yes: 'Si',
+      no: 'No',
+      none: '—',
+      environment: { soloporta: 'Solo porta' },
+      doorBoxSides: { Destra: 'Destra', Sinistra: 'Sinistra' },
+      mountings: { 'A soffitto': 'A soffitto', Parete: 'Parete' },
+    },
+    quoteCategories: {
+      binari: 'Binari con Cover',
+      cover: 'Cover di Montaggio',
+      scorrimento: 'Carrelli e Meccaniche di Scorrimento',
+      fissi: 'Binari, Accessori e Telai per Pannello fisso',
+      doorBox: 'Door Box',
+      maniglie: 'Maniglie e Nicchie',
+      kit: 'Kit di Lavorazione Profili',
+      traversino: 'Traversino Decorativo Adesivo',
+    },
+    accessories: {
+      labels: {
+        code: 'Codice: {code}',
+        price: 'Prezzo: {price}',
+      },
+      defaults: {
+        fallbackName: 'Articolo',
+      },
+      items: {
+        'MAG-AC-ELB': { name: 'Elettroblocco' },
+        'MAG-AC-TC1': { name: 'Telecomando' },
+        'MAG-AC-TC2': { name: 'Telecomando Smart' },
+        'MAG-AC-TC3': { name: 'Telecomando Smart con supporto magnetico' },
+        'MAG-AC-TNT': { name: 'Tastierino numerico con lettore' },
+        'MAG-AC-CAV': { name: 'Cavo di connessione 4 fili' },
+        'MAG-AC-MTS': { name: 'Mini sensore superiore' },
+        'MAG-AC-CSB': { name: 'Clean Switch nero' },
+        'MAG-AC-CSW': { name: 'Clean Switch bianco' },
+        'MAG-AC-SBH': { name: 'Supporto Clean Switch quadrato' },
+        'MAG-AC-SBW': { name: 'Supporto Clean Switch rettangolare' },
+        'MAG-AC-SYN': { name: 'Cavo ante sincronizzate' },
+        'UNK-KIT1S-K1A': { name: 'Kit anta ridotta (+100 € su anta)' },
+        'UNK-PTO': { name: 'Push to Open con Soft Close' },
+        'UNK-CAM-L1500': { name: 'Cinta per sincronizzazione ante maggiorate' },
+        MAQ1015: { name: 'Coppia maniglie dritte autoadesive 10 × 160 mm' },
+        'UNK-NTI NO': { name: 'Coppia nicchie tonde autoadesive Ø 110 mm' },
+        'UNK-MRC200.33 NO': { name: 'Coppia maniglie a C 200 × 33 mm' },
+        'UNK-MRC206.33 NO': { name: 'Coppia maniglie a C 206 × 33 mm' },
+        'UNK-KSM NO': { name: 'Kit serratura magnetica per porta scorrevole' },
+        NRCI50.220: { name: 'Coppia nicchie autoadesive 50 × 110 mm' },
+        'NRCI45.220 NO': { name: 'Coppia nicchie autoadesive 45 × 220 mm' },
+        'UNK-PFT': { name: 'Punta per trapano foratura telaio' },
+        'UNK-PSC': { name: 'Pinza per serraggio su cinghia' },
+        'UNK-PVT': { name: 'Prolunga per fissaggio viti su telaio' },
+        'UNK-DDC': { name: 'Dima per dimensione cinghia' },
+        'UNK-DFT': { name: 'Dima per foratura profili telaio porta' },
+        'UNK-GS1-L20': { name: 'Binario principale 2 m' },
+        'UNK-GS1-L30': { name: 'Binario principale 3 m' },
+        'UNK-GS1-L40': { name: 'Binario principale 4 m' },
+        'UNK-GS1-L60': { name: 'Binario principale 6 m' },
+        'UNK-GS2-L20': { name: 'Binario aggiuntivo 2 m' },
+        'UNK-GS2-L30': { name: 'Binario aggiuntivo 3 m' },
+        'UNK-GS2-L40': { name: 'Binario aggiuntivo 4 m' },
+        'UNK-GS2-L60': { name: 'Binario aggiuntivo 6 m' },
+        'UNK-GP1-L25': { name: 'Kit binario parete 2,5 m' },
+        'UNK-GP1-L40': { name: 'Kit binario parete 4 m' },
+        'M100-P40-L20': { name: 'Magnetica a vista 2 m (per anta)' },
+        'M100-P40-L27': { name: 'Magnetica a vista 2,7 m (per anta)' },
+        'M100-P40-L34': { name: 'Magnetica a vista 3,4 m (per anta)' },
+        'M100-CS55-L21': { name: 'Magnetica incassata 2,1 m (per anta)' },
+        'M100-CS55-L28': { name: 'Magnetica incassata 2,8 m (per anta)' },
+        'UNK-CCS-L30 NO': { name: 'Cover di montaggio' },
+        'M100-CF-L20': { name: 'Cover frontale 2 m' },
+        'M100-CS-L20': { name: 'Cover superiore 2 m' },
+        'M100-PM-L20': { name: 'Profilo montaggio 2 m' },
+        'M100-CF-L27': { name: 'Cover frontale 2,7 m' },
+        'M100-CS-L27': { name: 'Cover superiore 2,7 m' },
+        'M100-PM-L27': { name: 'Profilo montaggio 2,7 m' },
+        'UNK-PF-K1A': { name: 'Kit accessori pannello fisso' },
+        'UNK-TK3-L30 NO': { name: 'Telaio per pannello fisso' },
+        'UNK-TK1-L30': { name: 'Telaio anta scorrevole' },
+        'UNK-TK2-L30': { name: 'Telaio anta centrale' },
+        'UNK-TK3-L30': { name: 'Telaio anta singola' },
+        'UNK-DBDX-K1A': { name: 'Door Box Destra' },
+        'UNK-BDSX-K1A': { name: 'Door Box Sinistra' },
+        DEP01: { name: 'Traversino decorativo adesivo (m)' },
+      },
+    },
+  },
+
+  en: {
+    language: {
+      switchAria: 'Language',
+      names: {
+        it: 'Italian',
+        en: 'English',
+        de: 'German',
+        zh: 'Chinese',
+      },
+    },
+    header: {
+      eyebrow: 'Akina Door Quoter',
+      title: 'Configure, preview and get your quote',
+      progressAria: 'Configurator progress',
+    },
+    steps: ['Dimensions & model', 'Structure', 'Panels & profiles', 'Sliding', 'Accessories', 'Summary'],
+    viewer: {
+      loadingTitle: 'Loading 3D models…',
+      controlsAria: '3D viewer controls',
+      ariaLabel: 'Parametric 3D preview',
+      partButtons: {
+        top: 'Top profile',
+        bottom: 'Bottom profile',
+        left: 'Left profile',
+        right: 'Right profile',
+        track: 'Track',
+        cover: 'Cover',
+      },
+      buttons: {
+        resetHighlight: 'Reset highlight',
+        resetCamera: 'Reset camera',
+        fullscreen: 'Fullscreen',
+      },
+      moveLabel: 'Move leaves',
+      moveLeftAria: 'Move leaves to the left',
+      moveRightAria: 'Move leaves to the right',
+      assetWarning: {
+        title: 'Asset loading warning',
+        localMissing:
+          'The local 3D models could not be loaded. Place the files inside the <code>profili3dakina</code> folder to enjoy the full experience.',
+        remoteMissing:
+          'The remote assets are not reachable. Check your connection or enable remote loading.',
+      },
+      dimensionsTemplate:
+        'Leaves: {leaves} · Leaf width: {leafWidth} mm · Height: {height} mm · Total width: {total} mm',
+      trackLabel: 'Track: {value}',
+      partInfo: {
+        code: 'Code: {code}',
+        dimensions: 'Dimensions: {text}',
+        pieces: 'Pieces: {value}',
+      },
+    },
+    form: {
+      validation: {
+        selectModel: 'Select a model',
+        selectOpening: 'Select the leaf opening',
+        selectTipologia: 'Select the typology',
+        selectFixed: 'Tell us if you need a fixed panel',
+        selectFixedPlacement: 'Tell us where the fixed panels sit',
+        default: 'Please complete the required field.',
+        selectFixedProfile: 'Please choose the top profile length.',
+        selectHidden: 'Please specify if the leaves hide behind the wall.',
+        selectDoorBox: 'Please choose whether to add the Door Box.',
+        selectDoorBoxSide: 'Please choose the Door Box mounting side.',
+        selectTrack: 'Please choose the track type.',
+        selectDecorative: 'Please specify if you want the decorative bar.',
+      },
+      dimensions: {
+        title: 'Opening size',
+        width: 'Opening width (mm)',
+        height: 'Opening height (mm)',
+      },
+      placeholders: {
+        widthExample: 'e.g. 800 mm',
+      },
+      model: {
+        title: 'Choose the model',
+        options: {
+          TRASCINAMENTO: 'TRASCINAMENTO',
+          INDIPENDENTE: 'INDIPENDENTE',
+          MAGNETICA: 'MAGNETICA',
+          SINGOLA: 'SINGOLA',
+          SOLO_PANNELLO: 'SOLO PANNELLO FISSO',
+          SOLO_ANTA: 'SOLO ANTA',
+        },
+      },
+      soloPanel: {
+        title: 'Fixed panel configuration',
+        count: 'Number of panels',
+        widthLabel: 'Panel width {index} (mm)',
+        heightLabel: 'Panel height {index} (mm)',
+      },
+      soloLeaf: {
+        title: 'Single leaf configuration',
+        count: 'Number of leaves',
+        widthLabel: 'Leaf width {index} (mm)',
+        heightLabel: 'Leaf height {index} (mm)',
+      },
+      numeroAnte: {
+        title: 'Select the number of leaves',
+        label: 'Number of leaves',
+        singular: 'leaf',
+        plural: 'leaves',
+        optionLabel: '{value} {label}',
+      },
+      aperturaAnte: {
+        title: 'Choose the opening direction',
+        options: {
+          Normale: 'One-sided',
+          'Destra Sinistra': 'Right & left',
+        },
+      },
+      tipologia: {
+        title: 'Choose the typology',
+        options: {
+          '1': '1',
+          '1+1': '1 + 1',
+        },
+      },
+      pannelloFisso: {
+        title: 'Do you want a fixed panel?',
+        quantity: 'Number of fixed panels',
+        sameTracks: 'Do the fixed panels use the same tracks as the sliding leaves?',
+        widthQuestion: 'How would you like to define the fixed panel width?',
+        widthOptions: {
+          manuale: 'I will enter the width',
+          uguale_anta: 'Same as the sliding leaves',
+        },
+        widthInput: 'Enter the fixed panel width (mm)',
+      },
+      profiloSuperioreFissi: {
+        title: 'Choose the top profile length for the fixed panels',
+        options: {
+          'Quanto i fissi': 'Same as the fixed panels',
+          'Quanto tutto il binario': 'Same as the full track',
+        },
+      },
+      anteNascoste: {
+        title: 'Should the leaves hide behind the wall?',
+        options: {
+          Si: 'Yes',
+          No: 'No',
+        },
+      },
+      doorBox: {
+        title: 'Add the Door Box?',
+        mount: 'Door Box mounting',
+        options: {
+          Si: 'Yes',
+          No: 'No',
+        },
+        sides: {
+          Destra: 'Right',
+          Sinistra: 'Left',
+        },
+      },
+      binario: {
+        title: 'Choose the track',
+        options: {
+          'A vista': 'Exposed',
+          Nascosto: 'Hidden in drywall',
+        },
+      },
+      montaggio: {
+        title: 'Select the mounting',
+        placeholder: '-- Choose an option --',
+        options: {
+          'A soffitto': 'Ceiling',
+          Parete: 'Wall',
+        },
+      },
+      lunghezzaBinario: {
+        title: 'Choose the track length',
+        helper: 'Complete the previous fields to show the available lengths.',
+        optionLabel: '{value} Metres',
+        label: 'Track length:',
+      },
+      traversino: {
+        title: 'Add the decorative adhesive bar?',
+        quantity: 'Metres',
+        options: {
+          Si: 'Yes',
+          No: 'No',
+        },
+      },
+      optionalMagnetica: {
+        title: 'Magnetica model accessories',
+      },
+      optionalGenerali: {
+        title: 'Optional accessories',
+        selectAll: 'Select all',
+      },
+      maniglie: {
+        title: 'Handles and recessed pulls',
+        quantityLabel: 'Quantity',
+      },
+      kit: {
+        title: 'Profile processing kits',
+        note: 'Only required on the first order',
+      },
+      summaryStep: {
+        title: 'Final summary',
+        description: 'Review your choices and save the detailed PDF quote with hardware and machining.',
+        disclaimerBold: '* Glass Com is not responsible for mistakes in the calculations or the use of the tool.',
+        disclaimer: 'Please refer to the catalogues, price lists and technical sheets provided.',
+      },
+    },
+    summary: {
+      quoteEyebrow: 'Quote summary',
+      quoteTitle: 'Configuration total',
+      configTitle: 'Configuration data',
+      itemsTitle: 'Line items',
+      cutsEyebrow: 'Profile cuts',
+      cutsTitle: 'Cut calculation',
+      emptyCuts: 'No cuts are available for this configuration.',
+      tableHeaders: {
+        element: 'Element',
+        quantity: 'Quantity',
+        length: 'Length (mm)',
+      },
+      totalSuffix: '+ VAT and shipping',
+      labels: {
+        modello: 'Model',
+        ambientazione: '3D environment',
+        tipologia: 'Typology',
+        numeroAnte: 'Leaves',
+        numeroBinari: 'Tracks',
+        apertura: 'Opening',
+        montaggio: 'Mounting',
+        doorBox: 'Door Box',
+        binario: 'Track',
+        lunghezzaBinario: 'Track length',
+        traversino: 'Decorative bar',
+        finitura: 'Finish',
+        spessoreVetro: 'Recommended glass thickness',
+        dimensioniVano: 'Opening size',
+      },
+      defaults: {
+        finitura: 'Black',
+        spessoreVetro: '4+4 mm',
+        doorBoxNo: 'No',
+        doorBoxYes: 'Yes',
+      },
+    },
+    totals: {
+      totalLabel: 'Total',
+      totalFormatted: '{value} + VAT and shipping',
+    },
+    buttons: {
+      prev: 'Back',
+      next: 'Next',
+      openSummary: 'Show full summary',
+      savePdf: 'Save as PDF',
+    },
+    pdf: {
+      title: 'Akina Door Quote',
+      summaryTitle: 'Configuration summary',
+      quoteTitle: 'Economic details',
+      cutsTitle: 'Cut calculation',
+      tableHeaders: {
+        description: 'Description',
+        code: 'Code',
+        quantity: 'Qty',
+        unit: 'Unit price',
+        total: 'Total',
+      },
+      disclaimer:
+        'Glass Com is not responsible for errors in the calculations or the use of this tool. Always refer to the latest catalogues, price lists and technical sheets.',
+      totalLabel: 'Total',
+      summaryLabels: {
+        label: '{label}',
+        value: '{value}',
+      },
+    },
+    alerts: {
+      popupBlocked: 'Unable to open the full summary. Please allow browser pop-ups to continue.',
+      modelMissing: 'Please select a model to continue.',
+      pdfUnavailable: 'Unable to generate the PDF in this environment.',
+    },
+    quote: {
+      itemText: '{description} (Code: {code}, Quantity: {quantity}, Unit price: {unit}, Total: {total})',
+      noSummary: 'No data available',
+    },
+    cuts: {
+      panelEqual: 'Same as the leaves ({value} mm)',
+      rows: {
+        binariInizialiFinali: 'Initial & end tracks',
+        binariCentrali: 'Intermediate tracks',
+        anteLarghezza: 'Sliding leaves – width',
+        anteAltezza: 'Sliding leaves – height',
+        profiliOrizzontali: 'Horizontal leaf profiles',
+        profiliVerticali: 'Vertical leaf profiles',
+        coverSenzaSpazzolino: 'Vertical covers without brush',
+        coverConSpazzolino: 'Vertical covers with brush',
+        vetriAnte: 'Sliding leaf glass',
+        pannelliFissi: 'Fixed panels',
+        vetriPannelliFissi: 'Fixed panel glass',
+        profiloSuperioreFissi: 'Top profile for fixed panels',
+        ingombroProfili: 'Sliding hardware footprint',
+        ingombroTotale: 'Overall profiles + covers footprint',
+        traversino: 'Decorative adhesive bar',
+        montantiVerticali: 'Leaf stile cut',
+        traversiOrizzontali: 'Cross-rail cut',
+        vetriAnteGenerici: 'Leaf glass / panels',
+        binarioSuperiore: 'Top track',
+        guidaInferiore: 'Bottom guide',
+        doorBox: 'Door Box',
+      },
+    },
+    fullSummary: {
+      title: 'Akina configurator full summary',
+      eyebrow: 'Akina configurator',
+      generatedAt: 'Generated on {value}',
+      configTitle: 'Configurator choices',
+      quoteTitle: 'Economic details',
+      cutsTitle: 'Cut calculation',
+      totalLabel: 'Total',
+      totalSuffix: '+ VAT and shipping',
+      print: 'Print',
+      snapshotTitle: 'Configuration preview',
+      snapshotAlt: '3D preview of the configured door',
+      emptySummary: 'No information available.',
+      emptyQuote: 'No quote items available.',
+      emptyCuts: 'No cuts are available for this configuration.',
+      itemLabels: {
+        code: 'Item code',
+        quantity: 'Quantity',
+        unitPrice: 'Unit price',
+        total: 'Total',
+      },
+      cutsHeaders: {
+        element: 'Element',
+        quantity: 'Quantity',
+        length: 'Length (mm)',
+      },
+    },
+    misc: {
+      documentTitle: 'Akina Door Quoter',
+      meters: '{value} m',
+      mmPair: '{width} × {height} mm',
+      yes: 'Yes',
+      no: 'No',
+      none: '—',
+      environment: { soloporta: 'Door only' },
+      doorBoxSides: { Destra: 'Right', Sinistra: 'Left' },
+      mountings: { 'A soffitto': 'Ceiling', Parete: 'Wall' },
+    },
+    quoteCategories: {
+      binari: 'Tracks with cover',
+      cover: 'Mounting cover',
+      scorrimento: 'Carriages and sliding mechanics',
+      fissi: 'Tracks, accessories and frames for fixed panels',
+      doorBox: 'Door Box',
+      maniglie: 'Handles and pulls',
+      kit: 'Profile processing kits',
+      traversino: 'Decorative adhesive bar',
+    },
+    accessories: {
+      labels: {
+        code: 'Code: {code}',
+        price: 'Price: {price}',
+      },
+      defaults: {
+        fallbackName: 'Item',
+      },
+      items: {
+        'MAG-AC-ELB': { name: 'Electric lock' },
+        'MAG-AC-TC1': { name: 'Remote control' },
+        'MAG-AC-TC2': { name: 'Smart remote' },
+        'MAG-AC-TC3': { name: 'Smart remote with magnetic mount' },
+        'MAG-AC-TNT': { name: 'Keypad with fingerprint & badge reader' },
+        'MAG-AC-CAV': { name: '4-wire connection cable' },
+        'MAG-AC-MTS': { name: 'Mini top sensor' },
+        'MAG-AC-CSB': { name: 'Clean Switch black' },
+        'MAG-AC-CSW': { name: 'Clean Switch white' },
+        'MAG-AC-SBH': { name: 'Square Clean Switch mount' },
+        'MAG-AC-SBW': { name: 'Rectangular Clean Switch mount' },
+        'MAG-AC-SYN': { name: 'Sync cable for leaves' },
+        'UNK-KIT1S-K1A': { name: 'Reduced leaf kit (+€100 per leaf)' },
+        'UNK-PTO': { name: 'Push to Open with soft close' },
+        'UNK-CAM-L1500': { name: 'Belt for oversized leaf synchronisation' },
+        MAQ1015: { name: 'Adhesive straight handle pair 10 × 160 mm' },
+        'UNK-NTI NO': { name: 'Adhesive round recessed pull pair Ø 110 mm' },
+        'UNK-MRC200.33 NO': { name: 'C-handle pair 200 × 33 mm' },
+        'UNK-MRC206.33 NO': { name: 'C-handle pair 206 × 33 mm' },
+        'UNK-KSM NO': { name: 'Magnetic lock kit for sliding door' },
+        NRCI50.220: { name: 'Adhesive recessed pull pair 50 × 110 mm' },
+        'NRCI45.220 NO': { name: 'Adhesive recessed pull pair 45 × 220 mm' },
+        'UNK-PFT': { name: 'Frame drilling bit' },
+        'UNK-PSC': { name: 'Belt clamping pliers' },
+        'UNK-PVT': { name: 'Frame screw fixing extension' },
+        'UNK-DDC': { name: 'Belt sizing template' },
+        'UNK-DFT': { name: 'Frame profile drilling template' },
+        'UNK-GS1-L20': { name: 'Primary track 2 m' },
+        'UNK-GS1-L30': { name: 'Primary track 3 m' },
+        'UNK-GS1-L40': { name: 'Primary track 4 m' },
+        'UNK-GS1-L60': { name: 'Primary track 6 m' },
+        'UNK-GS2-L20': { name: 'Additional track 2 m' },
+        'UNK-GS2-L30': { name: 'Additional track 3 m' },
+        'UNK-GS2-L40': { name: 'Additional track 4 m' },
+        'UNK-GS2-L60': { name: 'Additional track 6 m' },
+        'UNK-GP1-L25': { name: 'Wall-mounted track kit 2.5 m' },
+        'UNK-GP1-L40': { name: 'Wall-mounted track kit 4 m' },
+        'M100-P40-L20': { name: 'Visible magnetic track 2 m (per leaf)' },
+        'M100-P40-L27': { name: 'Visible magnetic track 2.7 m (per leaf)' },
+        'M100-P40-L34': { name: 'Visible magnetic track 3.4 m (per leaf)' },
+        'M100-CS55-L21': { name: 'Recessed magnetic track 2.1 m (per leaf)' },
+        'M100-CS55-L28': { name: 'Recessed magnetic track 2.8 m (per leaf)' },
+        'UNK-CCS-L30 NO': { name: 'Mounting cover' },
+        'M100-CF-L20': { name: 'Front cover 2 m' },
+        'M100-CS-L20': { name: 'Top cover 2 m' },
+        'M100-PM-L20': { name: 'Mounting profile 2 m' },
+        'M100-CF-L27': { name: 'Front cover 2.7 m' },
+        'M100-CS-L27': { name: 'Top cover 2.7 m' },
+        'M100-PM-L27': { name: 'Mounting profile 2.7 m' },
+        'UNK-PF-K1A': { name: 'Fixed panel accessory kit' },
+        'UNK-TK3-L30 NO': { name: 'Fixed panel frame' },
+        'UNK-TK1-L30': { name: 'Sliding leaf frame' },
+        'UNK-TK2-L30': { name: 'Central leaf frame' },
+        'UNK-TK3-L30': { name: 'Single leaf frame' },
+        'UNK-DBDX-K1A': { name: 'Door Box Right' },
+        'UNK-BDSX-K1A': { name: 'Door Box Left' },
+        DEP01: { name: 'Decorative adhesive bar (m)' },
+      },
+    },
+  },
+  de: {
+    language: {
+      switchAria: 'Sprache',
+      names: {
+        it: 'Italienisch',
+        en: 'Englisch',
+        de: 'Deutsch',
+        zh: 'Chinesisch',
+      },
+    },
+    header: {
+      eyebrow: 'Akina Türkonfigurator',
+      title: 'Konfigurieren, visualisieren und Angebot erhalten',
+      progressAria: 'Fortschritt des Konfigurators',
+    },
+    steps: ['Abmessungen & Modell', 'Struktur', 'Paneele & Profile', 'Lauftechnik', 'Zubehör', 'Zusammenfassung'],
+    viewer: {
+      loadingTitle: '3D-Modelle werden geladen…',
+      controlsAria: 'Bedienelemente des 3D-Viewers',
+      ariaLabel: 'Parametrische 3D-Vorschau',
+      partButtons: {
+        top: 'Oberes Profil',
+        bottom: 'Unteres Profil',
+        left: 'Linkes Profil',
+        right: 'Rechtes Profil',
+        track: 'Laufschiene',
+        cover: 'Abdeckung',
+      },
+      buttons: {
+        resetHighlight: 'Hervorhebung zurücksetzen',
+        resetCamera: 'Kamera zurücksetzen',
+        fullscreen: 'Vollbild',
+      },
+      moveLabel: 'Flügel verschieben',
+      moveLeftAria: 'Flügel nach links verschieben',
+      moveRightAria: 'Flügel nach rechts verschieben',
+      assetWarning: {
+        title: 'Warnung beim Laden der Assets',
+        localMissing:
+          'Die lokalen 3D-Modelle konnten nicht geladen werden. Lege die Dateien im Ordner <code>profili3dakina</code> ab, um die volle Darstellung zu erhalten.',
+        remoteMissing:
+          'Die entfernten Assets sind nicht erreichbar. Bitte Verbindung prüfen oder Remote-Laden aktivieren.',
+      },
+      dimensionsTemplate:
+        'Flügel: {leaves} · Flügelbreite: {leafWidth} mm · Höhe: {height} mm · Gesamtbreite: {total} mm',
+      trackLabel: 'Schiene: {value}',
+      partInfo: {
+        code: 'Code: {code}',
+        dimensions: 'Abmessungen: {text}',
+        pieces: 'Stückzahl: {value}',
+      },
+    },
+    form: {
+      validation: {
+        selectModel: 'Wähle ein Modell',
+        selectOpening: 'Wähle die Öffnungsart der Flügel',
+        selectTipologia: 'Wähle die Typologie',
+        selectFixed: 'Gib an, ob ein festes Feld benötigt wird',
+        selectFixedPlacement: 'Gib die Position der festen Felder an',
+        default: 'Bitte das Pflichtfeld ausfüllen.',
+        selectFixedProfile: 'Bitte die Länge des oberen Profils auswählen.',
+        selectHidden: 'Bitte angeben, ob die Flügel hinter der Wand verschwinden sollen.',
+        selectDoorBox: 'Bitte angeben, ob der Door Box hinzugefügt werden soll.',
+        selectDoorBoxSide: 'Bitte die Montage-Seite der Door Box wählen.',
+        selectTrack: 'Bitte die Schienenart wählen.',
+        selectDecorative: 'Bitte angeben, ob die Dekorleiste gewünscht ist.',
+      },
+      dimensions: {
+        title: 'Öffnungsmaße',
+        width: 'Öffnungsbreite (mm)',
+        height: 'Öffnungshöhe (mm)',
+      },
+      placeholders: {
+        widthExample: 'z. B. 800 mm',
+      },
+      model: {
+        title: 'Modell wählen',
+        options: {
+          TRASCINAMENTO: 'TRASCINAMENTO',
+          INDIPENDENTE: 'INDIPENDENTE',
+          MAGNETICA: 'MAGNETICA',
+          SINGOLA: 'SINGOLA',
+          SOLO_PANNELLO: 'SOLO PANNELLO FISSO',
+          SOLO_ANTA: 'SOLO ANTA',
+        },
+      },
+      soloPanel: {
+        title: 'Konfiguration nur festes Feld',
+        count: 'Anzahl fester Felder',
+        widthLabel: 'Feldbreite {index} (mm)',
+        heightLabel: 'Feldhöhe {index} (mm)',
+      },
+      soloLeaf: {
+        title: 'Konfiguration nur Flügel',
+        count: 'Anzahl Flügel',
+        widthLabel: 'Flügelbreite {index} (mm)',
+        heightLabel: 'Flügelhöhe {index} (mm)',
+      },
+      numeroAnte: {
+        title: 'Anzahl der Flügel wählen',
+        label: 'Anzahl der Flügel',
+        singular: 'Flügel',
+        plural: 'Flügel',
+        optionLabel: '{value} {label}',
+      },
+      aperturaAnte: {
+        title: 'Öffnungsart wählen',
+        options: {
+          Normale: 'Einseitig',
+          'Destra Sinistra': 'Links · Rechts',
+        },
+      },
+      tipologia: {
+        title: 'Typologie wählen',
+        options: {
+          '1': '1',
+          '1+1': '1 + 1',
+        },
+      },
+      pannelloFisso: {
+        title: 'Festes Feld hinzufügen?',
+        quantity: 'Anzahl fester Felder',
+        sameTracks: 'Befinden sich die festen Felder auf denselben Schienen wie die Schiebetüren?',
+        widthQuestion: 'Wie soll die Breite des festen Feldes festgelegt werden?',
+        widthOptions: {
+          manuale: 'Breite manuell angeben',
+          uguale_anta: 'Wie die Schiebetüren',
+        },
+        widthInput: 'Breite des festen Feldes (in mm) eingeben',
+      },
+      profiloSuperioreFissi: {
+        title: 'Länge des oberen Profils für feste Felder wählen',
+        options: {
+          'Quanto i fissi': 'So lang wie die festen Felder',
+          'Quanto tutto il binario': 'So lang wie die gesamte Schiene',
+        },
+      },
+      anteNascoste: {
+        title: 'Sollen die Flügel hinter der Wand verschwinden?',
+        options: {
+          Si: 'Ja',
+          No: 'Nein',
+        },
+      },
+      doorBox: {
+        title: 'Door Box hinzufügen?',
+        mount: 'Door-Box-Montage',
+        options: {
+          Si: 'Ja',
+          No: 'Nein',
+        },
+        sides: {
+          Destra: 'Rechts',
+          Sinistra: 'Links',
+        },
+      },
+      binario: {
+        title: 'Schiene wählen',
+        options: {
+          'A vista': 'Sichtbar',
+          Nascosto: 'Verdeckt im Trockenbau',
+        },
+      },
+      montaggio: {
+        title: 'Montage wählen',
+        placeholder: '-- Option wählen --',
+        options: {
+          'A soffitto': 'Decke',
+          Parete: 'Wand',
+        },
+      },
+      lunghezzaBinario: {
+        title: 'Schienenlänge wählen',
+        helper: 'Bitte zuerst die vorherigen Felder ausfüllen, um verfügbare Längen anzuzeigen.',
+        optionLabel: '{value} Meter',
+        label: 'Schienenlänge:',
+      },
+      traversino: {
+        title: 'Dekoratives Klebeband hinzufügen?',
+        quantity: 'Meteranzahl',
+        options: {
+          Si: 'Ja',
+          No: 'Nein',
+        },
+      },
+      optionalMagnetica: {
+        title: 'Optionales Zubehör für Modell Magnetica',
+      },
+      optionalGenerali: {
+        title: 'Optionales Zubehör',
+        selectAll: 'Alle auswählen',
+      },
+      maniglie: {
+        title: 'Griffe und Griffmulden',
+        quantityLabel: 'Menge',
+      },
+      kit: {
+        title: 'Profilbearbeitungs-Kits',
+        note: 'Nur bei der ersten Bestellung erforderlich',
+      },
+      summaryStep: {
+        title: 'Abschließende Zusammenfassung',
+        description: 'Überprüfe deine Auswahl und speichere das detaillierte PDF-Angebot inklusive Zubehör und Bearbeitungen.',
+        disclaimerBold: '* Glass Com übernimmt keine Haftung für Berechnungsfehler und die Nutzung des Tools.',
+        disclaimer: 'Bitte nutze die verfügbaren Kataloge, Preislisten und technischen Datenblätter.',
+      },
+    },
+    summary: {
+      quoteEyebrow: 'Angebotsübersicht',
+      quoteTitle: 'Konfigurationssumme',
+      configTitle: 'Konfigurationsdaten',
+      itemsTitle: 'Positionen',
+      cutsEyebrow: 'Profilzuschnitte',
+      cutsTitle: 'Zuschnittberechnung',
+      emptyCuts: 'Für diese Konfiguration sind keine Zuschnitte verfügbar.',
+      tableHeaders: {
+        element: 'Element',
+        quantity: 'Menge',
+        length: 'Länge (mm)',
+      },
+      totalSuffix: '+ MwSt. und Transportkosten',
+      labels: {
+        modello: 'Modell',
+        ambientazione: '3D-Umgebung',
+        tipologia: 'Typologie',
+        numeroAnte: 'Anzahl Flügel',
+        numeroBinari: 'Anzahl Schienen',
+        apertura: 'Öffnung',
+        montaggio: 'Montage',
+        doorBox: 'Door Box',
+        binario: 'Schiene',
+        lunghezzaBinario: 'Schienenlänge',
+        traversino: 'Dekorleiste',
+        finitura: 'Oberfläche',
+        spessoreVetro: 'Empfohlene Glasstärke',
+        dimensioniVano: 'Öffnungsmaß',
+      },
+      defaults: {
+        finitura: 'Schwarz',
+        spessoreVetro: '4+4 mm',
+        doorBoxNo: 'Nein',
+        doorBoxYes: 'Ja',
+      },
+    },
+    totals: {
+      totalLabel: 'Gesamtsumme',
+      totalFormatted: '{value} + MwSt. und Transportkosten',
+    },
+    buttons: {
+      prev: 'Zurück',
+      next: 'Weiter',
+      openSummary: 'Komplette Übersicht anzeigen',
+      savePdf: 'Als PDF speichern',
+    },
+    pdf: {
+      title: 'Akina Türangebot',
+      summaryTitle: 'Konfigurationsübersicht',
+      quoteTitle: 'Kalkulationsdetails',
+      cutsTitle: 'Zuschnittberechnung',
+      tableHeaders: {
+        description: 'Beschreibung',
+        code: 'Code',
+        quantity: 'Menge',
+        unit: 'Preis',
+        total: 'Summe',
+      },
+      disclaimer:
+        'Glass Com übernimmt keine Haftung für Fehler in den Berechnungen oder bei der Nutzung des Tools. Bitte immer aktuelle Kataloge, Preislisten und technischen Datenblätter verwenden.',
+      totalLabel: 'Gesamtsumme',
+      summaryLabels: {
+        label: '{label}',
+        value: '{value}',
+      },
+    },
+    alerts: {
+      popupBlocked: 'Die vollständige Übersicht konnte nicht geöffnet werden. Bitte Pop-ups im Browser zulassen.',
+      modelMissing: 'Bitte ein Modell auswählen.',
+      pdfUnavailable: 'PDF kann in dieser Umgebung nicht erstellt werden.',
+    },
+    quote: {
+      itemText: '{description} (Code: {code}, Menge: {quantity}, Einzelpreis: {unit}, Summe: {total})',
+      noSummary: 'Keine Daten verfügbar',
+    },
+    cuts: {
+      panelEqual: 'Wie die Flügel ({value} mm)',
+      rows: {
+        binariInizialiFinali: 'Anfangs- und Endschienen',
+        binariCentrali: 'Zwischenschienen',
+        anteLarghezza: 'Schiebetürflügel – Breite',
+        anteAltezza: 'Schiebetürflügel – Höhe',
+        profiliOrizzontali: 'Horizontale Flügelprofile',
+        profiliVerticali: 'Vertikale Flügelprofile',
+        coverSenzaSpazzolino: 'Vertikalabdeckungen ohne Bürste',
+        coverConSpazzolino: 'Vertikalabdeckungen mit Bürste',
+        vetriAnte: 'Gläser Schiebetürflügel',
+        pannelliFissi: 'Feste Paneele',
+        vetriPannelliFissi: 'Gläser feste Paneele',
+        profiloSuperioreFissi: 'Oberes Profil feste Paneele',
+        ingombroProfili: 'Aufbau Laufprofile',
+        ingombroTotale: 'Gesamtaufbau Profile + Abdeckungen',
+        traversino: 'Dekorative Klebeleiste',
+        montantiVerticali: 'Vertikale Pfosten Zuschnitt',
+        traversiOrizzontali: 'Horizontale Traverse',
+        vetriAnteGenerici: 'Gläser / Paneele Flügel',
+        binarioSuperiore: 'Obere Schiene',
+        guidaInferiore: 'Bodenführung',
+        doorBox: 'Door Box',
+      },
+    },
+    fullSummary: {
+      title: 'Komplette Akina-Angebotsübersicht',
+      eyebrow: 'Akina Konfigurator',
+      generatedAt: 'Erstellt am {value}',
+      configTitle: 'Konfigurator-Auswahl',
+      quoteTitle: 'Kalkulationsdetails',
+      cutsTitle: 'Zuschnittberechnung',
+      totalLabel: 'Gesamtsumme',
+      totalSuffix: '+ MwSt. und Versand',
+      print: 'Drucken',
+      snapshotTitle: 'Konfigurationsvorschau',
+      snapshotAlt: '3D-Vorschau der konfigurierten Tür',
+      emptySummary: 'Keine Informationen verfügbar.',
+      emptyQuote: 'Keine Angebotspositionen verfügbar.',
+      emptyCuts: 'Für diese Konfiguration sind keine Zuschnitte verfügbar.',
+      itemLabels: {
+        code: 'Artikelcode',
+        quantity: 'Menge',
+        unitPrice: 'Einzelpreis',
+        total: 'Gesamt',
+      },
+      cutsHeaders: {
+        element: 'Element',
+        quantity: 'Menge',
+        length: 'Länge (mm)',
+      },
+    },
+    misc: {
+      documentTitle: 'Akina Türkonfigurator',
+      meters: '{value} m',
+      mmPair: '{width} × {height} mm',
+      yes: 'Ja',
+      no: 'Nein',
+      none: '—',
+      environment: { soloporta: 'Nur Tür' },
+      doorBoxSides: { Destra: 'Rechts', Sinistra: 'Links' },
+      mountings: { 'A soffitto': 'Decke', Parete: 'Wand' },
+    },
+    quoteCategories: {
+      binari: 'Schienen mit Cover',
+      cover: 'Montageabdeckung',
+      scorrimento: 'Laufwagen und Mechanik',
+      fissi: 'Schienen, Zubehör und Rahmen für feste Felder',
+      doorBox: 'Door Box',
+      maniglie: 'Griffe und Griffmulden',
+      kit: 'Profilbearbeitungs-Kits',
+      traversino: 'Dekorative Klebeleiste',
+    },
+    accessories: {
+      labels: {
+        code: 'Code: {code}',
+        price: 'Preis: {price}',
+      },
+      defaults: {
+        fallbackName: 'Artikel',
+      },
+      items: {
+        'MAG-AC-ELB': { name: 'Elektroschloss' },
+        'MAG-AC-TC1': { name: 'Handsender' },
+        'MAG-AC-TC2': { name: 'Smart-Handsender' },
+        'MAG-AC-TC3': { name: 'Smart-Handsender mit Magnethalter' },
+        'MAG-AC-TNT': { name: 'Tastatur mit Fingerprint- & RFID-Leser' },
+        'MAG-AC-CAV': { name: '4-adriges Anschlusskabel' },
+        'MAG-AC-MTS': { name: 'Mini-Oberflächensensor' },
+        'MAG-AC-CSB': { name: 'Clean Switch schwarz' },
+        'MAG-AC-CSW': { name: 'Clean Switch weiß' },
+        'MAG-AC-SBH': { name: 'Clean Switch Halter quadratisch' },
+        'MAG-AC-SBW': { name: 'Clean Switch Halter rechteckig' },
+        'MAG-AC-SYN': { name: 'Synchronisationskabel für Flügel' },
+        'UNK-KIT1S-K1A': { name: 'Kit schmaler Flügel (+100 € pro Flügel)' },
+        'UNK-PTO': { name: 'Push to Open mit Soft Close' },
+        'UNK-CAM-L1500': { name: 'Synchronisationsriemen für große Flügel' },
+        MAQ1015: { name: 'Gerade Selbstklebegriffe 10 × 160 mm (Paar)' },
+        'UNK-NTI NO': { name: 'Selbstklebende runde Griffmulden Ø 110 mm (Paar)' },
+        'UNK-MRC200.33 NO': { name: 'C-Griffpaar 200 × 33 mm' },
+        'UNK-MRC206.33 NO': { name: 'C-Griffpaar 206 × 33 mm' },
+        'UNK-KSM NO': { name: 'Magnetisches Schlosskit für Schiebetür' },
+        NRCI50.220: { name: 'Selbstklebende Griffmulden 50 × 110 mm (Paar)' },
+        'NRCI45.220 NO': { name: 'Selbstklebende Griffmulden 45 × 220 mm (Paar)' },
+        'UNK-PFT': { name: 'Bohrer für Türrahmen' },
+        'UNK-PSC': { name: 'Zange zum Gurtspannen' },
+        'UNK-PVT': { name: 'Verlängerung zur Schraubbefestigung am Rahmen' },
+        'UNK-DDC': { name: 'Schablone zur Gurtauslegung' },
+        'UNK-DFT': { name: 'Bohrschablone für Rahmenprofile' },
+        'UNK-GS1-L20': { name: 'Hauptschiene 2 m' },
+        'UNK-GS1-L30': { name: 'Hauptschiene 3 m' },
+        'UNK-GS1-L40': { name: 'Hauptschiene 4 m' },
+        'UNK-GS1-L60': { name: 'Hauptschiene 6 m' },
+        'UNK-GS2-L20': { name: 'Zusatzschiene 2 m' },
+        'UNK-GS2-L30': { name: 'Zusatzschiene 3 m' },
+        'UNK-GS2-L40': { name: 'Zusatzschiene 4 m' },
+        'UNK-GS2-L60': { name: 'Zusatzschiene 6 m' },
+        'UNK-GP1-L25': { name: 'Wandschienen-Kit 2,5 m' },
+        'UNK-GP1-L40': { name: 'Wandschienen-Kit 4 m' },
+        'M100-P40-L20': { name: 'Sichtbare Magnetschiene 2 m (pro Flügel)' },
+        'M100-P40-L27': { name: 'Sichtbare Magnetschiene 2,7 m (pro Flügel)' },
+        'M100-P40-L34': { name: 'Sichtbare Magnetschiene 3,4 m (pro Flügel)' },
+        'M100-CS55-L21': { name: 'Verdeckte Magnetschiene 2,1 m (pro Flügel)' },
+        'M100-CS55-L28': { name: 'Verdeckte Magnetschiene 2,8 m (pro Flügel)' },
+        'UNK-CCS-L30 NO': { name: 'Montageabdeckung' },
+        'M100-CF-L20': { name: 'Frontabdeckung 2 m' },
+        'M100-CS-L20': { name: 'Deckabdeckung 2 m' },
+        'M100-PM-L20': { name: 'Montageprofil 2 m' },
+        'M100-CF-L27': { name: 'Frontabdeckung 2,7 m' },
+        'M100-CS-L27': { name: 'Deckabdeckung 2,7 m' },
+        'M100-PM-L27': { name: 'Montageprofil 2,7 m' },
+        'UNK-PF-K1A': { name: 'Zubehörkit für Festfeld' },
+        'UNK-TK3-L30 NO': { name: 'Rahmen für Festfeld' },
+        'UNK-TK1-L30': { name: 'Rahmen für Schiebetürflügel' },
+        'UNK-TK2-L30': { name: 'Rahmen für mittleren Flügel' },
+        'UNK-TK3-L30': { name: 'Rahmen für Einzelflügel' },
+        'UNK-DBDX-K1A': { name: 'Door Box rechts' },
+        'UNK-BDSX-K1A': { name: 'Door Box links' },
+        DEP01: { name: 'Dekoratives Klebeband (m)' },
+      },
+    },
+  },
+  zh: {
+    language: {
+      switchAria: '语言',
+      names: {
+        it: '意大利语',
+        en: '英语',
+        de: '德语',
+        zh: '中文',
+      },
+    },
+    header: {
+      eyebrow: 'Akina 门报价器',
+      title: '配置、预览并获取报价',
+      progressAria: '配置器进度',
+    },
+    steps: ['尺寸与型号', '结构', '面板与型材', '滑动系统', '配件', '汇总'],
+    viewer: {
+      loadingTitle: '正在加载 3D 模型…',
+      controlsAria: '3D 预览控制',
+      ariaLabel: '参数化 3D 预览',
+      partButtons: {
+        top: '上框',
+        bottom: '下框',
+        left: '左侧立柱',
+        right: '右侧立柱',
+        track: '轨道',
+        cover: '遮板',
+      },
+      buttons: {
+        resetHighlight: '重置高亮',
+        resetCamera: '重置相机',
+        fullscreen: '全屏',
+      },
+      moveLabel: '移动门扇',
+      moveLeftAria: '向左移动门扇',
+      moveRightAria: '向右移动门扇',
+      assetWarning: {
+        title: '资源加载警告',
+        localMissing:
+          '无法加载本地 3D 模型。请将文件放入 <code>profili3dakina</code> 文件夹以获得完整效果。',
+        remoteMissing:
+          '无法访问远程资源。请检查网络或启用远程加载。',
+      },
+      dimensionsTemplate:
+        '门扇: {leaves} · 门扇宽度: {leafWidth} 毫米 · 高度: {height} 毫米 · 总宽度: {total} 毫米',
+      trackLabel: '轨道: {value}',
+      partInfo: {
+        code: '编码: {code}',
+        dimensions: '尺寸: {text}',
+        pieces: '数量: {value}',
+      },
+    },
+    form: {
+      validation: {
+        selectModel: '请选择型号',
+        selectOpening: '请选择门扇开启方式',
+        selectTipologia: '请选择类型',
+        selectFixed: '请说明是否需要固定面板',
+        selectFixedPlacement: '请说明固定面板的位置',
+        default: '请填写必填字段。',
+        selectFixedProfile: '请选择固定面板上框长度。',
+        selectHidden: '请选择门扇是否隐藏在墙后。',
+        selectDoorBox: '请选择是否添加 Door Box。',
+        selectDoorBoxSide: '请选择 Door Box 的安装方向。',
+        selectTrack: '请选择轨道类型。',
+        selectDecorative: '请选择是否添加装饰贴条。',
+      },
+      dimensions: {
+        title: '洞口尺寸',
+        width: '洞口宽度 (毫米)',
+        height: '洞口高度 (毫米)',
+      },
+      placeholders: {
+        widthExample: '例如 800 mm',
+      },
+      model: {
+        title: '选择型号',
+        options: {
+          TRASCINAMENTO: 'TRASCINAMENTO',
+          INDIPENDENTE: 'INDIPENDENTE',
+          MAGNETICA: 'MAGNETICA',
+          SINGOLA: 'SINGOLA',
+          SOLO_PANNELLO: 'SOLO PANNELLO FISSO',
+          SOLO_ANTA: 'SOLO ANTA',
+        },
+      },
+      soloPanel: {
+        title: '仅固定面板配置',
+        count: '固定面板数量',
+        widthLabel: '固定面板宽度 {index} (毫米)',
+        heightLabel: '固定面板高度 {index} (毫米)',
+      },
+      soloLeaf: {
+        title: '仅门扇配置',
+        count: '门扇数量',
+        widthLabel: '门扇宽度 {index} (毫米)',
+        heightLabel: '门扇高度 {index} (毫米)',
+      },
+      numeroAnte: {
+        title: '选择门扇数量',
+        label: '门扇数量',
+        singular: '扇门',
+        plural: '扇门',
+        optionLabel: '{value} {label}',
+      },
+      aperturaAnte: {
+        title: '选择门扇开启方式',
+        options: {
+          Normale: '单侧开启',
+          'Destra Sinistra': '左右对开',
+        },
+      },
+      tipologia: {
+        title: '选择类型',
+        options: {
+          '1': '1',
+          '1+1': '1 + 1',
+        },
+      },
+      pannelloFisso: {
+        title: '是否需要固定面板？',
+        quantity: '固定面板数量',
+        sameTracks: '固定面板是否与滑动门使用同一轨道？',
+        widthQuestion: '如何设定固定面板的宽度？',
+        widthOptions: {
+          manuale: '手动输入宽度',
+          uguale_anta: '与滑动门相同',
+        },
+        widthInput: '输入固定面板宽度 (毫米)',
+      },
+      profiloSuperioreFissi: {
+        title: '选择固定面板上框长度',
+        options: {
+          'Quanto i fissi': '与固定面板等长',
+          'Quanto tutto il binario': '与整条轨道等长',
+        },
+      },
+      anteNascoste: {
+        title: '门扇是否隐藏在墙后？',
+        options: {
+          Si: '是',
+          No: '否',
+        },
+      },
+      doorBox: {
+        title: '是否添加 Door Box？',
+        mount: 'Door Box 安装方向',
+        options: {
+          Si: '是',
+          No: '否',
+        },
+        sides: {
+          Destra: '右侧',
+          Sinistra: '左侧',
+        },
+      },
+      binario: {
+        title: '选择轨道',
+        options: {
+          'A vista': '外露安装',
+          Nascosto: '石膏板内隐藏',
+        },
+      },
+      montaggio: {
+        title: '选择安装方式',
+        placeholder: '-- 请选择 --',
+        options: {
+          'A soffitto': '顶装',
+          Parete: '墙装',
+        },
+      },
+      lunghezzaBinario: {
+        title: '选择轨道长度',
+        helper: '请先完成上方字段以显示可选长度。',
+        optionLabel: '{value} 米',
+        label: '轨道长度：',
+      },
+      traversino: {
+        title: '添加装饰贴条？',
+        quantity: '米数',
+        options: {
+          Si: '是',
+          No: '否',
+        },
+      },
+      optionalMagnetica: {
+        title: 'Magnetica 型号可选配件',
+      },
+      optionalGenerali: {
+        title: '通用可选配件',
+        selectAll: '全选',
+      },
+      maniglie: {
+        title: '把手与拉手',
+        quantityLabel: '数量',
+      },
+      kit: {
+        title: '型材加工工具包',
+        note: '仅首单需要购买',
+      },
+      summaryStep: {
+        title: '最终汇总',
+        description: '确认您的选择，并将包含配件与加工详情的 PDF 报价保存下来。',
+        disclaimerBold: '＊Glass Com 对计算及工具使用中的错误不承担任何责任。',
+        disclaimer: '请务必参考提供的目录、价目表与技术资料。',
+      },
+    },
+    summary: {
+      quoteEyebrow: '报价汇总',
+      quoteTitle: '配置总计',
+      configTitle: '配置信息',
+      itemsTitle: '详细条目',
+      cutsEyebrow: '型材切割',
+      cutsTitle: '切割计算',
+      emptyCuts: '当前配置没有切割数据。',
+      tableHeaders: {
+        element: '部件',
+        quantity: '数量',
+        length: '长度 (毫米)',
+      },
+      totalSuffix: '+ 含增值税及运输费用',
+      labels: {
+        modello: '型号',
+        ambientazione: '3D 场景',
+        tipologia: '类型',
+        numeroAnte: '门扇数量',
+        numeroBinari: '轨道数量',
+        apertura: '开启方式',
+        montaggio: '安装方式',
+        doorBox: 'Door Box',
+        binario: '轨道',
+        lunghezzaBinario: '轨道长度',
+        traversino: '装饰贴条',
+        finitura: '表面处理',
+        spessoreVetro: '推荐玻璃厚度',
+        dimensioniVano: '洞口尺寸',
+      },
+      defaults: {
+        finitura: '黑色',
+        spessoreVetro: '4+4 毫米',
+        doorBoxNo: '否',
+        doorBoxYes: '是',
+      },
+    },
+    totals: {
+      totalLabel: '总计',
+      totalFormatted: '{value} + 含增值税及运输费用',
+    },
+    buttons: {
+      prev: '上一步',
+      next: '下一步',
+      openSummary: '查看完整汇总',
+      savePdf: '保存为 PDF',
+    },
+    pdf: {
+      title: 'Akina 门报价',
+      summaryTitle: '配置汇总',
+      quoteTitle: '费用明细',
+      cutsTitle: '切割计算',
+      tableHeaders: {
+        description: '描述',
+        code: '编码',
+        quantity: '数量',
+        unit: '单价',
+        total: '小计',
+      },
+      disclaimer:
+        'Glass Com 对计算及工具使用中的错误不承担责任。请始终参考最新的目录、价目表和技术资料。',
+      totalLabel: '总计',
+      summaryLabels: {
+        label: '{label}',
+        value: '{value}',
+      },
+    },
+    alerts: {
+      popupBlocked: '无法打开完整汇总。请允许浏览器弹出窗口。',
+      modelMissing: '请选择一个型号继续。',
+      pdfUnavailable: '当前环境无法生成 PDF。',
+    },
+    quote: {
+      itemText: '{description} (编码: {code}, 数量: {quantity}, 单价: {unit}, 小计: {total})',
+      noSummary: '暂无数据',
+    },
+    cuts: {
+      panelEqual: '与门扇相同 ({value} 毫米)',
+      rows: {
+        binariInizialiFinali: '首末轨道',
+        binariCentrali: '中间轨道',
+        anteLarghezza: '滑动门扇宽度',
+        anteAltezza: '滑动门扇高度',
+        profiliOrizzontali: '门扇横向型材',
+        profiliVerticali: '门扇竖向型材',
+        coverSenzaSpazzolino: '竖向遮板（无毛刷）',
+        coverConSpazzolino: '竖向遮板（带毛刷）',
+        vetriAnte: '滑动门扇玻璃',
+        pannelliFissi: '固定面板',
+        vetriPannelliFissi: '固定面板玻璃',
+        profiloSuperioreFissi: '固定面板上框',
+        ingombroProfili: '滑动五金占用',
+        ingombroTotale: '型材 + 遮板总占用',
+        traversino: '装饰贴条',
+        montantiVerticali: '门扇竖框切割',
+        traversiOrizzontali: '门扇横梁切割',
+        vetriAnteGenerici: '门扇玻璃 / 面板',
+        binarioSuperiore: '上轨道',
+        guidaInferiore: '下导向',
+        doorBox: 'Door Box',
+      },
+    },
+    fullSummary: {
+      title: 'Akina 报价完整汇总',
+      eyebrow: 'Akina 配置器',
+      generatedAt: '生成时间 {value}',
+      configTitle: '配置选择',
+      quoteTitle: '费用明细',
+      cutsTitle: '切割计算',
+      totalLabel: '总计',
+      totalSuffix: '+ 含增值税及运输费用',
+      print: '打印',
+      snapshotTitle: '配置预览',
+      snapshotAlt: '配置门的 3D 预览图',
+      emptySummary: '暂无信息。',
+      emptyQuote: '暂无报价条目。',
+      emptyCuts: '当前配置没有切割数据。',
+      itemLabels: {
+        code: '产品编码',
+        quantity: '数量',
+        unitPrice: '单价',
+        total: '合计',
+      },
+      cutsHeaders: {
+        element: '部件',
+        quantity: '数量',
+        length: '长度 (毫米)',
+      },
+    },
+    misc: {
+      documentTitle: 'Akina 门报价器',
+      meters: '{value} 米',
+      mmPair: '{width} × {height} 毫米',
+      yes: '是',
+      no: '否',
+      none: '—',
+      environment: { soloporta: '仅门体' },
+      doorBoxSides: { Destra: '右侧', Sinistra: '左侧' },
+      mountings: { 'A soffitto': '吊顶安装', Parete: '墙面安装' },
+    },
+    quoteCategories: {
+      binari: '带遮板的轨道',
+      cover: '安装遮板',
+      scorrimento: '滑轮与滑动机构',
+      fissi: '固定面板的轨道、配件与框体',
+      doorBox: 'Door Box',
+      maniglie: '把手与拉手',
+      kit: '型材加工工具包',
+      traversino: '装饰贴条',
+    },
+    accessories: {
+      labels: {
+        code: '编码: {code}',
+        price: '价格: {price}',
+      },
+      defaults: {
+        fallbackName: '配件',
+      },
+      items: {
+        'MAG-AC-ELB': { name: '电控锁' },
+        'MAG-AC-TC1': { name: '遥控器' },
+        'MAG-AC-TC2': { name: '智能遥控器' },
+        'MAG-AC-TC3': { name: '智能遥控器（含磁吸支架）' },
+        'MAG-AC-TNT': { name: '指纹+门禁密码键盘' },
+        'MAG-AC-CAV': { name: '4芯连接线' },
+        'MAG-AC-MTS': { name: '顶部微型传感器' },
+        'MAG-AC-CSB': { name: 'Clean Switch 黑色' },
+        'MAG-AC-CSW': { name: 'Clean Switch 白色' },
+        'MAG-AC-SBH': { name: 'Clean Switch 方形支架' },
+        'MAG-AC-SBW': { name: 'Clean Switch 长方形支架' },
+        'MAG-AC-SYN': { name: '门扇同步连接线' },
+        'UNK-KIT1S-K1A': { name: '窄门扇套件（每扇 +€100）' },
+        'UNK-PTO': { name: '推开助力含缓冲' },
+        'UNK-CAM-L1500': { name: '加大门扇同步皮带' },
+        MAQ1015: { name: '自粘直柄对 10 × 160 mm' },
+        'UNK-NTI NO': { name: '自粘圆形内拉手对 Ø 110 mm' },
+        'UNK-MRC200.33 NO': { name: 'C 型拉手对 200 × 33 mm' },
+        'UNK-MRC206.33 NO': { name: 'C 型拉手对 206 × 33 mm' },
+        'UNK-KSM NO': { name: '滑门磁力锁套件' },
+        NRCI50.220: { name: '自粘内拉手对 50 × 110 mm' },
+        'NRCI45.220 NO': { name: '自粘内拉手对 45 × 220 mm' },
+        'UNK-PFT': { name: '门框钻孔钻头' },
+        'UNK-PSC': { name: '皮带夹钳' },
+        'UNK-PVT': { name: '门框螺钉延长件' },
+        'UNK-DDC': { name: '皮带定位模板' },
+        'UNK-DFT': { name: '门框型材钻孔模板' },
+        'UNK-GS1-L20': { name: '主轨道 2 米' },
+        'UNK-GS1-L30': { name: '主轨道 3 米' },
+        'UNK-GS1-L40': { name: '主轨道 4 米' },
+        'UNK-GS1-L60': { name: '主轨道 6 米' },
+        'UNK-GS2-L20': { name: '附加轨道 2 米' },
+        'UNK-GS2-L30': { name: '附加轨道 3 米' },
+        'UNK-GS2-L40': { name: '附加轨道 4 米' },
+        'UNK-GS2-L60': { name: '附加轨道 6 米' },
+        'UNK-GP1-L25': { name: '墙装轨道套件 2.5 米' },
+        'UNK-GP1-L40': { name: '墙装轨道套件 4 米' },
+        'M100-P40-L20': { name: '外露磁力轨道 2 米（每扇）' },
+        'M100-P40-L27': { name: '外露磁力轨道 2.7 米（每扇）' },
+        'M100-P40-L34': { name: '外露磁力轨道 3.4 米（每扇）' },
+        'M100-CS55-L21': { name: '隐藏磁力轨道 2.1 米（每扇）' },
+        'M100-CS55-L28': { name: '隐藏磁力轨道 2.8 米（每扇）' },
+        'UNK-CCS-L30 NO': { name: '安装遮板' },
+        'M100-CF-L20': { name: '正面遮板 2 米' },
+        'M100-CS-L20': { name: '上方遮板 2 米' },
+        'M100-PM-L20': { name: '安装型材 2 米' },
+        'M100-CF-L27': { name: '正面遮板 2.7 米' },
+        'M100-CS-L27': { name: '上方遮板 2.7 米' },
+        'M100-PM-L27': { name: '安装型材 2.7 米' },
+        'UNK-PF-K1A': { name: '固定面板配件套件' },
+        'UNK-TK3-L30 NO': { name: '固定面板框体' },
+        'UNK-TK1-L30': { name: '滑动门扇框体' },
+        'UNK-TK2-L30': { name: '中间门扇框体' },
+        'UNK-TK3-L30': { name: '单扇框体' },
+        'UNK-DBDX-K1A': { name: 'Door Box 右侧' },
+        'UNK-BDSX-K1A': { name: 'Door Box 左侧' },
+        DEP01: { name: '装饰贴条 (米)' },
+      },
+    },
+  },
+};
+
+let currentLanguage = 'it';
+
+function getTranslationValue(lang, path) {
+  const root = TRANSLATIONS[lang];
+  if (!root) return undefined;
+  return path.split('.').reduce((acc, segment) => {
+    if (acc && Object.prototype.hasOwnProperty.call(acc, segment)) {
+      return acc[segment];
+    }
+    return undefined;
+  }, root);
+}
+
+function translationExists(path) {
+  return getTranslationValue(currentLanguage, path) !== undefined || getTranslationValue('it', path) !== undefined;
+}
+
+function formatTemplate(template, replacements = {}) {
+  if (typeof template !== 'string') return template;
+  return template.replace(/\{(\w+)\}/g, (match, token) => {
+    if (Object.prototype.hasOwnProperty.call(replacements, token)) {
+      const value = replacements[token];
+      return value === undefined || value === null ? '' : String(value);
+    }
+    return match;
+  });
+}
+
+function t(path, replacements) {
+  const value = getTranslationValue(currentLanguage, path);
+  if (value !== undefined) {
+    return typeof value === 'string' ? formatTemplate(value, replacements) : value;
+  }
+  const fallback = getTranslationValue('it', path);
+  if (fallback !== undefined) {
+    return typeof fallback === 'string' ? formatTemplate(fallback, replacements) : fallback;
+  }
+  return typeof path === 'string' ? formatTemplate(path, replacements) : path;
+}
+
+function tArray(path) {
+  const value = t(path);
+  return Array.isArray(value) ? value : [];
+}
+
+function resolveMessage(message, replacements) {
+  if (!message) return '';
+  if (typeof message === 'string' && translationExists(message)) {
+    return t(message, replacements);
+  }
+  return formatTemplate(message, replacements);
+}
+
+function getModelLabel(model) {
+  if (!model) return t('misc.none');
+  const config = MODEL_CONFIG[model];
+  if (config?.labelKey) {
+    return t(config.labelKey);
+  }
+  return config?.label ?? model;
+}
+
+function getEnvironmentLabel(value) {
+  if (!value) return t('misc.none');
+  const config = ENVIRONMENT_CONFIG[value];
+  if (config?.labelKey) {
+    return t(config.labelKey);
+  }
+  return config?.label ?? value;
+}
+
+function getBinarioLabel(value) {
+  if (!value) return t('misc.none');
+  const config = BINARIO_CONFIG[value];
+  if (config?.labelKey) {
+    return t(config.labelKey);
+  }
+  return config?.label ?? value;
+}
+
+function resolveAccessoryName(code, fallback) {
+  if (!code) {
+    return fallback || t('accessories.defaults.fallbackName');
+  }
+  const key = `accessories.items.${code}.name`;
+  const translation = getTranslationValue(currentLanguage, key);
+  if (typeof translation === 'string') {
+    return translation;
+  }
+  const fallbackTranslation = getTranslationValue('it', key);
+  if (typeof fallbackTranslation === 'string') {
+    return fallbackTranslation;
+  }
+  return fallback || t('accessories.defaults.fallbackName');
+}
+
+function applyAccessoryTranslations() {
+  const cards = document.querySelectorAll('.accessory-card');
+  cards.forEach((card) => {
+    const checkbox = card.querySelector('input[type="checkbox"]');
+    const quantityInput = card.querySelector('input[type="number"]');
+    const code = checkbox?.value || quantityInput?.name?.replace(/.*\[(.*)\]/, '$1') || '';
+    const fallbackName = checkbox?.dataset.name || quantityInput?.dataset.name || code;
+    const nameKey = checkbox?.dataset.i18nName || quantityInput?.dataset.i18nName;
+    const name = nameKey ? t(nameKey) : resolveAccessoryName(code, fallbackName);
+    const priceValue = Number(checkbox?.dataset.price || quantityInput?.dataset.price || 0);
+
+    const nameNode = card.querySelector('.accessory-card__name');
+    if (nameNode) {
+      nameNode.textContent = name;
+    }
+
+    const codeNode = card.querySelector('.accessory-card__code');
+    if (codeNode && code) {
+      codeNode.textContent = t('accessories.labels.code', { code });
+    }
+
+    const priceNode = card.querySelector('.accessory-card__price');
+    if (priceNode) {
+      priceNode.textContent = t('accessories.labels.price', { price: formatCurrency(priceValue) });
+    }
+
+    const quantityLabel = card.querySelector('.accessory-card__quantity span');
+    if (quantityLabel) {
+      quantityLabel.textContent = t('form.maniglie.quantityLabel');
+    }
+  });
+}
+
+function updateDocumentLanguageAttributes() {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute('lang', currentLanguage);
+  document.title = t('misc.documentTitle');
+}
+
+function updateLanguageSwitchUI() {
+  if (!selectors.languageButtons) return;
+  selectors.languageButtons.forEach((button) => {
+    const isActive = button.dataset.lang === currentLanguage;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
+function applyTranslationsToDom() {
+  if (typeof document === 'undefined') return;
+  updateDocumentLanguageAttributes();
+
+  document.querySelectorAll('[data-i18n]').forEach((node) => {
+    const key = node.getAttribute('data-i18n');
+    if (!key) return;
+    const value = t(key);
+    if (node.dataset.i18nHtml === 'true') {
+      node.innerHTML = value;
+    } else {
+      node.textContent = value;
+    }
+  });
+
+  document.querySelectorAll('[data-i18n-attr]').forEach((node) => {
+    const descriptor = node.getAttribute('data-i18n-attr');
+    if (!descriptor) return;
+    descriptor
+      .split(/\s+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .forEach((entry) => {
+        const [attr, key] = entry.split(':');
+        if (attr && key) {
+          node.setAttribute(attr, t(key));
+        }
+      });
+  });
+
+  applyAccessoryTranslations();
+  updateLanguageSwitchUI();
+  updateTrackLengthOptions({ preserveSelection: true });
+  if (selectors.modelInput) {
+    updateNumeroAnteOptions(selectors.modelInput.value || 'TRASCINAMENTO', { preserveSelection: true });
+  }
+}
+
+function setLanguage(lang) {
+  const targetLang = SUPPORTED_LANGUAGES.includes(lang) ? lang : 'it';
+  const changed = currentLanguage !== targetLang;
+  currentLanguage = targetLang;
+  applyTranslationsToDom();
+  if (changed) {
+    refreshOutputs({ force: true });
+  }
+}
+
+function initializeLanguageSwitcher() {
+  if (!selectors.languageButtons) return;
+  selectors.languageButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const { lang } = button.dataset;
+      if (lang) {
+        setLanguage(lang);
+      }
+    });
+  });
+  applyTranslationsToDom();
+}
+
+function getCurrentLocale() {
+  switch (currentLanguage) {
+    case 'en':
+      return 'en-GB';
+    case 'de':
+      return 'de-DE';
+    case 'zh':
+      return 'zh-CN';
+    default:
+      return 'it-IT';
+  }
+}
+
+function formatMetersValue(value) {
+  const formatter = new Intl.NumberFormat(getCurrentLocale(), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return formatter.format(value);
+}
+
 const MODEL_CONFIG = {
-  TRASCINAMENTO: { label: 'Trascinamento', defaultOpening: 'scorrevole-parete' },
-  INDIPENDENTE: { label: 'Indipendente', defaultOpening: 'scorrevole-parete' },
-  MAGNETICA: { label: 'Magnetica', defaultOpening: 'scorrevole-parete' },
-  SINGOLA: { label: 'Singola', defaultOpening: 'battente' },
-  SOLO_PANNELLO: { label: 'Solo pannello fisso', defaultOpening: 'fisso' },
-  SOLO_ANTA: { label: 'Solo anta', defaultOpening: 'scorrevole-parete' },
+  TRASCINAMENTO: { labelKey: 'form.model.options.TRASCINAMENTO', defaultOpening: 'scorrevole-parete' },
+  INDIPENDENTE: { labelKey: 'form.model.options.INDIPENDENTE', defaultOpening: 'scorrevole-parete' },
+  MAGNETICA: { labelKey: 'form.model.options.MAGNETICA', defaultOpening: 'scorrevole-parete' },
+  SINGOLA: { labelKey: 'form.model.options.SINGOLA', defaultOpening: 'battente' },
+  SOLO_PANNELLO: { labelKey: 'form.model.options.SOLO_PANNELLO', defaultOpening: 'fisso' },
+  SOLO_ANTA: { labelKey: 'form.model.options.SOLO_ANTA', defaultOpening: 'scorrevole-parete' },
 };
 
 const ENVIRONMENT_CONFIG = {
-  soloporta: { label: 'Solo porta' },
+  soloporta: { labelKey: 'misc.environment.soloporta' },
 };
 
 const MODEL_ANTE_OPTIONS = {
@@ -24,38 +1970,38 @@ const MODEL_ANTE_OPTIONS = {
 };
 
 const BINARIO_CONFIG = {
-  'A vista': { label: 'A vista', track: 'standard' },
-  Nascosto: { label: 'Nascosto nel cartongesso', track: 'incasso' },
+  'A vista': { labelKey: 'form.binario.options.A vista', track: 'standard' },
+  Nascosto: { labelKey: 'form.binario.options.Nascosto', track: 'incasso' },
 };
 
 const TRACK_LENGTH_OPTIONS = {
   DEFAULT: [
-    { code: 20, meters: 2, label: '2,0 Metri' },
-    { code: 30, meters: 3, label: '3,0 Metri' },
-    { code: 40, meters: 4, label: '4,0 Metri' },
-    { code: 60, meters: 6, label: '6,0 Metri' },
+    { code: 20, meters: 2 },
+    { code: 30, meters: 3 },
+    { code: 40, meters: 4 },
+    { code: 60, meters: 6 },
   ],
   SINGOLA: {
     Parete: [
-      { code: 25, meters: 2.5, label: '2,5 Metri' },
-      { code: 40, meters: 4, label: '4,0 Metri' },
+      { code: 25, meters: 2.5 },
+      { code: 40, meters: 4 },
     ],
     'A soffitto': [
-      { code: 20, meters: 2, label: '2,0 Metri' },
-      { code: 30, meters: 3, label: '3,0 Metri' },
-      { code: 40, meters: 4, label: '4,0 Metri' },
-      { code: 60, meters: 6, label: '6,0 Metri' },
+      { code: 20, meters: 2 },
+      { code: 30, meters: 3 },
+      { code: 40, meters: 4 },
+      { code: 60, meters: 6 },
     ],
   },
   MAGNETICA: {
     'A vista': [
-      { code: 20, meters: 2, label: '2,0 Metri' },
-      { code: 27, meters: 2.7, label: '2,7 Metri' },
-      { code: 34, meters: 3.4, label: '3,4 Metri' },
+      { code: 20, meters: 2 },
+      { code: 27, meters: 2.7 },
+      { code: 34, meters: 3.4 },
     ],
     Nascosto: [
-      { code: 21, meters: 2.1, label: '2,1 Metri' },
-      { code: 28, meters: 2.8, label: '2,8 Metri' },
+      { code: 21, meters: 2.1 },
+      { code: 28, meters: 2.8 },
     ],
   },
 };
@@ -255,26 +2201,28 @@ function createFallbackPart(key) {
   return group;
 }
 
-const formatter = new Intl.NumberFormat('it-IT', {
-  style: 'currency',
-  currency: 'EUR',
-});
-
 function formatCurrency(value) {
-  return formatter.format(value);
+  const formatter = new Intl.NumberFormat(getCurrentLocale(), {
+    style: 'currency',
+    currency: 'EUR',
+  });
+  const numericValue = Number.isFinite(value) ? value : Number(value) || 0;
+  return formatter.format(numericValue);
 }
 
 function formatMeters(value) {
-  return new Intl.NumberFormat('it-IT', {
-    minimumFractionDigits: value % 1 === 0 ? 0 : 1,
+  const numericValue = Number(value) || 0;
+  return new Intl.NumberFormat(getCurrentLocale(), {
+    minimumFractionDigits: numericValue % 1 === 0 ? 0 : 1,
     maximumFractionDigits: 1,
-  }).format(value);
+  }).format(numericValue);
 }
 
 function formatMillimeters(value) {
-  return new Intl.NumberFormat('it-IT', {
+  const numericValue = Math.max(0, Math.round(Number(value) || 0));
+  return new Intl.NumberFormat(getCurrentLocale(), {
     maximumFractionDigits: 0,
-  }).format(Math.max(0, Math.round(value || 0)));
+  }).format(numericValue);
 }
 
 function mmFromCode(code) {
@@ -328,7 +2276,8 @@ function getQuoteItemImage(item) {
     QUOTE_ITEM_IMAGE_CACHE[code] = resolved;
     return resolved;
   }
-  const generated = generateQuoteItemImage(code || 'Articolo', item?.descrizione || '');
+  const fallbackLabel = t('accessories.defaults.fallbackName');
+  const generated = generateQuoteItemImage(code || fallbackLabel, item?.descrizione || '');
   if (code) {
     QUOTE_ITEM_IMAGE_CACHE[code] = generated;
   }
@@ -1889,6 +3838,7 @@ const selectors = {
   form: document.getElementById('akina-configurator-form'),
   formSteps: document.querySelectorAll('.form-step'),
   progressSteps: document.querySelectorAll('.progress-step'),
+  languageButtons: document.querySelectorAll('.language-switch__button'),
   prevButton: document.getElementById('step-prev'),
   nextButton: document.getElementById('step-next'),
   stepFeedback: document.getElementById('step-feedback'),
@@ -1991,7 +3941,7 @@ let currentStepIndex = 0;
 
 function showStepFeedback(message = '') {
   if (!selectors.stepFeedback) return;
-  selectors.stepFeedback.textContent = message;
+  selectors.stepFeedback.textContent = resolveMessage(message);
 }
 
 function toggleSummaryCards(visible) {
@@ -2045,6 +3995,9 @@ function validateStep(index) {
   const fields = Array.from(step.querySelectorAll('input, select, textarea')).filter((field) => !field.disabled);
   fields.forEach((field) => {
     field.closest('.configurator-section')?.classList.remove('configurator-section--error');
+    if (typeof field.setCustomValidity === 'function') {
+      field.setCustomValidity('');
+    }
   });
 
   for (const field of fields) {
@@ -2053,7 +4006,8 @@ function validateStep(index) {
       const shouldValidate = field.dataset.stepValidate === 'true' && field.required;
       if (shouldValidate && !field.value) {
         section?.classList.add('configurator-section--error');
-        showStepFeedback(field.dataset.validationMessage || 'Completa il campo obbligatorio.');
+        const message = resolveMessage(field.dataset.validationMessage || 'form.validation.default');
+        showStepFeedback(message);
         section?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return false;
       }
@@ -2066,8 +4020,12 @@ function validateStep(index) {
 
     if (!field.checkValidity()) {
       section?.classList.add('configurator-section--error');
+      const message = resolveMessage(field.dataset.validationMessage || field.validationMessage || 'form.validation.default');
+      if (typeof field.setCustomValidity === 'function') {
+        field.setCustomValidity(message);
+      }
       field.reportValidity();
-      showStepFeedback(field.validationMessage);
+      showStepFeedback(message);
       return false;
     }
   }
@@ -2097,7 +4055,10 @@ function gatherCheckboxDetails(inputs) {
     .filter((input) => input.checked)
     .map((input) => ({
       value: input.value,
-      name: input.dataset.name || input.value,
+      name:
+        input.dataset.i18nName
+          ? t(input.dataset.i18nName)
+          : resolveAccessoryName(input.value, input.dataset.name || input.value),
       price: Number(input.dataset.price || 0),
     }));
 }
@@ -2107,7 +4068,10 @@ function getCheckboxMeta(inputs, value) {
   if (!node) return null;
   return {
     value: node.value,
-    name: node.dataset.name || node.value,
+    name:
+      node.dataset.i18nName
+        ? t(node.dataset.i18nName)
+        : resolveAccessoryName(node.value, node.dataset.name || node.value),
     price: Number(node.dataset.price || 0),
   };
 }
@@ -2170,7 +4134,7 @@ function updatePanelDimensions(container, count, prefix) {
   }
 }
 
-function updateNumeroAnteOptions(model) {
+function updateNumeroAnteOptions(model, { preserveSelection = false } = {}) {
   const select = selectors.numeroAnteSelect;
   if (!select) return;
   const available = MODEL_ANTE_OPTIONS[model] ?? MODEL_ANTE_OPTIONS.DEFAULT;
@@ -2180,7 +4144,10 @@ function updateNumeroAnteOptions(model) {
   available.forEach((value) => {
     const option = document.createElement('option');
     option.value = String(value);
-    option.textContent = `${value} ${value === 1 ? 'anta' : 'ante'}`;
+    option.textContent = t('form.numeroAnte.optionLabel', {
+      value,
+      label: value === 1 ? t('form.numeroAnte.singular') : t('form.numeroAnte.plural'),
+    });
     select.appendChild(option);
   });
 
@@ -2191,7 +4158,9 @@ function updateNumeroAnteOptions(model) {
 
   const preferred = available.includes(Number(previous)) ? previous : String(available[0]);
   select.value = preferred;
-  select.dispatchEvent(new Event('change', { bubbles: true }));
+  if (!preserveSelection || preferred !== previous) {
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 }
 
 function isBipartingAllowed(model, count) {
@@ -2361,7 +4330,7 @@ function syncMontaggioVisibility(model) {
   toggleRequired(selectors.montaggioSelect, show);
 }
 
-function updateTrackLengthOptions() {
+function updateTrackLengthOptions({ preserveSelection = false } = {}) {
   const select = selectors.lunghezzaBinarioSelect;
   if (!select) return;
   const model = document.getElementById('model-select')?.value || 'TRASCINAMENTO';
@@ -2372,14 +4341,15 @@ function updateTrackLengthOptions() {
   const previous = select.value;
   select.innerHTML = '';
 
-  options.forEach(({ code, meters, label }) => {
+  options.forEach(({ code, meters }) => {
     const option = document.createElement('option');
     option.value = String(code);
     option.dataset.code = String(code);
     option.dataset.meters = String(meters);
     option.dataset.mm = String(mmFromCode(code));
-    option.dataset.label = label;
-    option.textContent = label;
+    const labelText = t('form.lunghezzaBinario.optionLabel', { value: formatMetersValue(meters) });
+    option.dataset.label = labelText;
+    option.textContent = labelText;
     select.appendChild(option);
   });
 
@@ -2389,8 +4359,11 @@ function updateTrackLengthOptions() {
       : String(options[0].code);
     select.value = preferred;
     selectors.lunghezzaBinarioMsg.textContent = '';
+    if (!preserveSelection && preferred !== previous) {
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   } else {
-    selectors.lunghezzaBinarioMsg.textContent = 'Compila i campi precedenti per mostrare le lunghezze disponibili.';
+    selectors.lunghezzaBinarioMsg.textContent = t('form.lunghezzaBinario.helper');
   }
 }
 
@@ -2408,7 +4381,10 @@ function collectConfiguration() {
       code: input.name.replace(/.*\[(.*)\]/, '$1'),
       quantity: Number(input.value || 0),
       price: Number(input.dataset.price || 0),
-      name: input.dataset.name || input.name,
+      name: resolveAccessoryName(
+        input.name.replace(/.*\[(.*)\]/, '$1'),
+        input.dataset.name || input.name
+      ),
     }))
     .filter((item) => item.quantity > 0);
 
@@ -3027,49 +5003,49 @@ function calculateQuote(config) {
   const binariItems = [];
   buildTrackItems(binariItems, config, derived);
   if (binariItems.length > 0) {
-    categories.push({ label: 'Binari con Cover', items: binariItems });
+    categories.push({ label: t('quoteCategories.binari'), items: binariItems });
   }
 
   const coverItems = [];
   buildCoverItems(coverItems, config, derived);
   if (coverItems.length > 0) {
-    categories.push({ label: 'Cover di Montaggio', items: coverItems });
+    categories.push({ label: t('quoteCategories.cover'), items: coverItems });
   }
 
   const scorrimentoItems = [];
   buildScorrimentoItems(scorrimentoItems, config, derived, optionalGeneral, optionalMagnetica);
   if (scorrimentoItems.length > 0) {
-    categories.push({ label: 'Carrelli e Meccaniche di Scorrimento', items: scorrimentoItems });
+    categories.push({ label: t('quoteCategories.scorrimento'), items: scorrimentoItems });
   }
 
   const fissiItems = [];
   buildFixedPanelItems(fissiItems, config, derived);
   if (fissiItems.length > 0) {
-    categories.push({ label: 'Binari, Accessori e Telai per Pannello fisso', items: fissiItems });
+    categories.push({ label: t('quoteCategories.fissi'), items: fissiItems });
   }
 
   const doorBoxItems = [];
   buildDoorBoxItems(doorBoxItems, config);
   if (doorBoxItems.length > 0) {
-    categories.push({ label: 'Door Box', items: doorBoxItems });
+    categories.push({ label: t('quoteCategories.doorBox'), items: doorBoxItems });
   }
 
   const maniglieItems = [];
   buildManiglieItems(maniglieItems, config);
   if (maniglieItems.length > 0) {
-    categories.push({ label: 'Maniglie e Nicchie', items: maniglieItems });
+    categories.push({ label: t('quoteCategories.maniglie'), items: maniglieItems });
   }
 
   const kitItems = [];
   buildKitItems(kitItems, config);
   if (kitItems.length > 0) {
-    categories.push({ label: 'Kit di Lavorazione Profili', items: kitItems });
+    categories.push({ label: t('quoteCategories.kit'), items: kitItems });
   }
 
   const traversinoItems = [];
   buildTraversinoItems(traversinoItems, config);
   if (traversinoItems.length > 0) {
-    categories.push({ label: 'Traversino Decorativo Adesivo', items: traversinoItems });
+    categories.push({ label: t('quoteCategories.traversino'), items: traversinoItems });
   }
 
   const total = categories.reduce(
@@ -3267,45 +5243,86 @@ function calculateCuts(config, derived) {
         window.akinaSlidingCutSheet = sheet;
       }
 
-      const formatMm = (value) => `${Math.max(0, Math.round(Number(value) || 0))} mm`;
+      const formatMm = (value) => `${formatMillimeters(value)} mm`;
       const rows = [];
 
-      rows.push({ element: 'Binari iniziali e finali', quantity: sheet.binariInizialiFinali, length: formatMm(sheet.lunghezzaBinario) });
+      rows.push({
+        element: t('cuts.rows.binariInizialiFinali'),
+        quantity: sheet.binariInizialiFinali,
+        length: formatMm(sheet.lunghezzaBinario),
+      });
       if (sheet.binariCentrali > 0) {
-        rows.push({ element: 'Binari centrali', quantity: sheet.binariCentrali, length: formatMm(sheet.lunghezzaBinario) });
-      }
-
-      rows.push({ element: 'Ante scorrevoli - larghezza', quantity: sheet.numeroAnte, length: formatMm(sheet.larghezzaAnta) });
-      rows.push({ element: 'Ante scorrevoli - altezza', quantity: sheet.numeroAnte, length: formatMm(sheet.altezzaAnta) });
-
-      rows.push({ element: 'Profili orizzontali anta', quantity: sheet.pezziProfiloOrizzontale, length: formatMm(sheet.lunghezzaProfiloOrizzontale) });
-      rows.push({ element: 'Profili verticali anta', quantity: sheet.pezziProfiloVerticale, length: formatMm(sheet.altezzaProfiloVerticale) });
-
-      rows.push({ element: 'Cover verticali senza spazzolino', quantity: sheet.pezziCoverVerticaleSenzaSpazzolino, length: formatMm(sheet.altezzaCoverVerticale) });
-      if (sheet.pezziCoverVerticaleConSpazzolino > 0) {
-        rows.push({ element: 'Cover verticali con spazzolino', quantity: sheet.pezziCoverVerticaleConSpazzolino, length: formatMm(sheet.altezzaCoverVerticale) });
+        rows.push({
+          element: t('cuts.rows.binariCentrali'),
+          quantity: sheet.binariCentrali,
+          length: formatMm(sheet.lunghezzaBinario),
+        });
       }
 
       rows.push({
-        element: 'Vetri ante scorrevoli',
+        element: t('cuts.rows.anteLarghezza'),
         quantity: sheet.numeroAnte,
-        length: `${formatMm(sheet.larghezzaVetro)} × ${formatMm(sheet.altezzaVetro)}`,
+        length: formatMm(sheet.larghezzaAnta),
+      });
+      rows.push({
+        element: t('cuts.rows.anteAltezza'),
+        quantity: sheet.numeroAnte,
+        length: formatMm(sheet.altezzaAnta),
+      });
+
+      rows.push({
+        element: t('cuts.rows.profiliOrizzontali'),
+        quantity: sheet.pezziProfiloOrizzontale,
+        length: formatMm(sheet.lunghezzaProfiloOrizzontale),
+      });
+      rows.push({
+        element: t('cuts.rows.profiliVerticali'),
+        quantity: sheet.pezziProfiloVerticale,
+        length: formatMm(sheet.altezzaProfiloVerticale),
+      });
+
+      rows.push({
+        element: t('cuts.rows.coverSenzaSpazzolino'),
+        quantity: sheet.pezziCoverVerticaleSenzaSpazzolino,
+        length: formatMm(sheet.altezzaCoverVerticale),
+      });
+      if (sheet.pezziCoverVerticaleConSpazzolino > 0) {
+        rows.push({
+          element: t('cuts.rows.coverConSpazzolino'),
+          quantity: sheet.pezziCoverVerticaleConSpazzolino,
+          length: formatMm(sheet.altezzaCoverVerticale),
+        });
+      }
+
+      rows.push({
+        element: t('cuts.rows.vetriAnte'),
+        quantity: sheet.numeroAnte,
+        length: t('misc.mmPair', {
+          width: formatMillimeters(sheet.larghezzaVetro),
+          height: formatMillimeters(sheet.altezzaVetro),
+        }),
       });
 
       if (sheet.pannelloFisso === 'Si' && sheet.numeroPannelliFissi > 0) {
         rows.push({
-          element: 'Pannelli fissi',
+          element: t('cuts.rows.pannelliFissi'),
           quantity: sheet.numeroPannelliFissi,
-          length: `${formatMm(sheet.larghezzaPannelloFisso)} × ${formatMm(sheet.altezzaAnta)}`,
+          length: t('misc.mmPair', {
+            width: formatMillimeters(sheet.larghezzaPannelloFisso),
+            height: formatMillimeters(sheet.altezzaAnta),
+          }),
         });
         rows.push({
-          element: 'Vetri pannello fisso',
+          element: t('cuts.rows.vetriPannelliFissi'),
           quantity: sheet.numeroPannelliFissi,
-          length: `${formatMm(sheet.larghezzaVetroFisso)} × ${formatMm(sheet.altezzaVetroFisso)}`,
+          length: t('misc.mmPair', {
+            width: formatMillimeters(sheet.larghezzaVetroFisso),
+            height: formatMillimeters(sheet.altezzaVetroFisso),
+          }),
         });
         if (sheet.lunghezzaProfiloSuperioreFissi > 0) {
           rows.push({
-            element: 'Profilo superiore pannelli fissi',
+            element: t('cuts.rows.profiloSuperioreFissi'),
             quantity: 1,
             length: formatMm(sheet.lunghezzaProfiloSuperioreFissi),
           });
@@ -3313,21 +5330,21 @@ function calculateCuts(config, derived) {
       }
 
       rows.push({
-        element: 'Ingombro profili di scorrimento',
+        element: t('cuts.rows.ingombroProfili'),
         quantity: 1,
         length: formatMm(sheet.ingombroProfiliScorrimento),
       });
       rows.push({
-        element: 'Ingombro totale profili + cover',
+        element: t('cuts.rows.ingombroTotale'),
         quantity: 1,
         length: formatMm(sheet.ingombroTotaleProfiliCover),
       });
 
       if (sheet.traversino === 'Si' && sheet.traversinoMeters > 0) {
         rows.push({
-          element: 'Traversino decorativo adesivo',
+          element: t('cuts.rows.traversino'),
           quantity: 1,
-          length: `${Number(sheet.traversinoMeters).toFixed(2)} m`,
+          length: t('misc.meters', { value: formatMeters(sheet.traversinoMeters) }),
         });
       }
 
@@ -3345,30 +5362,48 @@ function calculateCuts(config, derived) {
   const glassHeight = Math.max(Math.round(stileLength - 60), 0);
   const trackLength = Math.max(Math.round(effective?.lunghezzaBinarioMm || config.lunghezzaBinario || config.width * 1.2), 0);
 
+  const formatMmValue = (value) => `${formatMillimeters(value)} mm`;
+
   const cuts = [
-    { element: 'Montanti verticali anta', quantity: leaves * 2, length: stileLength },
-    { element: 'Traversi orizzontali', quantity: leaves * 2, length: railLength },
-    { element: 'Vetri / pannelli anta', quantity: leaves, length: `${glassWidth} × ${glassHeight}` },
-    { element: 'Binario superiore', quantity: 1, length: trackLength },
-    { element: 'Guida inferiore', quantity: 1, length: Math.round(leafWidth) },
+    { element: t('cuts.rows.montantiVerticali'), quantity: leaves * 2, length: formatMmValue(stileLength) },
+    { element: t('cuts.rows.traversiOrizzontali'), quantity: leaves * 2, length: formatMmValue(railLength) },
+    {
+      element: t('cuts.rows.vetriAnteGenerici'),
+      quantity: leaves,
+      length: t('misc.mmPair', {
+        width: formatMillimeters(glassWidth),
+        height: formatMillimeters(glassHeight),
+      }),
+    },
+    { element: t('cuts.rows.binarioSuperiore'), quantity: 1, length: formatMmValue(trackLength) },
+    { element: t('cuts.rows.guidaInferiore'), quantity: 1, length: formatMmValue(Math.round(leafWidth)) },
   ];
 
   if (config.pannelloFisso === 'Si') {
     const pannelliCount = Math.max(Number(config.numeroPannelliFissi) || 0, 0);
     if (pannelliCount > 0) {
       cuts.push({
-        element: 'Pannelli fissi',
+        element: t('cuts.rows.pannelliFissi'),
         quantity: pannelliCount,
         length:
           config.sceltaPannelloFisso === 'manuale' && config.larghezzaPannelloFisso
-            ? `${Math.round(config.larghezzaPannelloFisso)} × ${config.height}`
-            : `Uguali alle ante (${Math.round(effective?.larghezzaAnta || leafWidth)} mm)`,
+            ? t('misc.mmPair', {
+                width: formatMillimeters(config.larghezzaPannelloFisso),
+                height: formatMillimeters(config.height),
+              })
+            : t('cuts.panelEqual', {
+                value: formatMillimeters(effective?.larghezzaAnta || leafWidth),
+              }),
       });
     }
   }
 
   if (config.doorBox === 'Si') {
-    cuts.push({ element: 'Door Box', quantity: 1, length: Math.round(config.height) });
+    cuts.push({
+      element: t('cuts.rows.doorBox'),
+      quantity: 1,
+      length: formatMmValue(Math.round(config.height)),
+    });
   }
 
   return cuts;
@@ -3386,7 +5421,7 @@ function renderCutsTable(cuts) {
     const emptyRow = document.createElement('tr');
     emptyRow.className = 'cuts-table__empty';
     emptyRow.innerHTML = `
-      <td colspan="3">Nessun taglio disponibile per questa configurazione.</td>
+      <td colspan="3">${t('summary.emptyCuts')}</td>
     `;
     selectors.cutsBody.appendChild(emptyRow);
     return;
@@ -3419,7 +5454,13 @@ function renderQuoteBreakdown(categories) {
       const li = document.createElement('li');
       li.className = 'quote-breakdown__item';
       const total = Number(item.prezzo || 0) * Number(item.quantita || 0);
-      li.textContent = `${item.descrizione} (Codice: ${item.codice}, Quantità: ${item.quantita}, Prezzo unitario: ${formatCurrency(item.prezzo)}, Totale: ${formatCurrency(total)})`;
+      li.textContent = t('quote.itemText', {
+        description: item.descrizione,
+        code: item.codice,
+        quantity: item.quantita,
+        unit: formatCurrency(item.prezzo),
+        total: formatCurrency(total),
+      });
       list.appendChild(li);
     });
 
@@ -3432,30 +5473,29 @@ function buildSelectionSummaryItems(config, derived) {
   const items = [];
 
   items.push({
-    label: 'Modello',
-    value: MODEL_CONFIG[config.model]?.label ?? config.model ?? '—',
+    label: t('summary.labels.modello'),
+    value: getModelLabel(config.model),
   });
 
-  const environmentLabel =
-    ENVIRONMENT_CONFIG[config.environment]?.label ?? 'Solo porta';
-  items.push({ label: 'Ambientazione 3D', value: environmentLabel });
+  const environmentLabel = getEnvironmentLabel(config.environment);
+  items.push({ label: t('summary.labels.ambientazione'), value: environmentLabel });
 
   if (config.model === 'SINGOLA') {
     items.push({
-      label: 'Tipologia',
+      label: t('summary.labels.tipologia'),
       value: getCardLabel(selectors.tipologiaContainer, '.tipologia-option', config.tipologia, config.tipologia),
     });
   }
 
   const rawNumeroAnte = Number(derived?.numeroAnte ?? config.numeroAnte ?? config.leaves ?? 0);
   items.push({
-    label: 'Numero ante',
+    label: t('summary.labels.numeroAnte'),
     value: Number.isFinite(rawNumeroAnte) ? rawNumeroAnte : '—',
   });
 
   const rawNumeroBinari = Number(derived?.numeroBinari ?? 0);
   items.push({
-    label: 'Numero binari',
+    label: t('summary.labels.numeroBinari'),
     value: Number.isFinite(rawNumeroBinari) ? rawNumeroBinari : '—',
   });
 
@@ -3465,42 +5505,44 @@ function buildSelectionSummaryItems(config, derived) {
     config.aperturaAnte,
     config.aperturaAnte || '—'
   );
-  items.push({ label: 'Apertura', value: aperturaLabel });
+  items.push({ label: t('summary.labels.apertura'), value: aperturaLabel });
 
-  items.push({ label: 'Montaggio', value: derived?.montaggioEffettivo || config.montaggio || '—' });
+  items.push({ label: t('summary.labels.montaggio'), value: derived?.montaggioEffettivo || config.montaggio || '—' });
 
   const doorBoxValue =
     config.doorBox === 'Si'
       ? config.doorBoxMounting
-        ? `Si (${config.doorBoxMounting})`
-        : 'Si'
-      : 'No';
-  items.push({ label: 'Door Box', value: doorBoxValue });
+        ? `${t('misc.yes')} (${config.doorBoxMounting})`
+        : t('misc.yes')
+      : t('misc.no');
+  items.push({ label: t('summary.labels.doorBox'), value: doorBoxValue });
 
-  items.push({
-    label: 'Binario',
-    value: BINARIO_CONFIG[config.binario]?.label ?? config.binario ?? '—',
-  });
+  items.push({ label: t('summary.labels.binario'), value: getBinarioLabel(config.binario) });
 
   const lengthLabel =
     derived?.lunghezzaBinarioLabel ||
-    (derived?.lunghezzaBinarioMetri ? `${formatMeters(derived.lunghezzaBinarioMetri)} Metri` : '—');
-  items.push({ label: 'Lunghezza binario', value: lengthLabel });
+    (derived?.lunghezzaBinarioMetri
+      ? t('form.lunghezzaBinario.optionLabel', { value: formatMetersValue(derived.lunghezzaBinarioMetri) })
+      : t('misc.none'));
+  items.push({ label: t('summary.labels.lunghezzaBinario'), value: lengthLabel });
 
   const traversinoMeters = Number(config.traversinoMeters) || 0;
   const traversinoValue =
     config.traversino === 'Si'
       ? traversinoMeters > 0
-        ? `Si (${traversinoMeters} m)`
-        : 'Si'
-      : 'No';
-  items.push({ label: 'Traversino decorativo', value: traversinoValue });
+        ? `${t('misc.yes')} (${t('misc.meters', { value: traversinoMeters })})`
+        : t('misc.yes')
+      : t('misc.no');
+  items.push({ label: t('summary.labels.traversino'), value: traversinoValue });
 
-  items.push({ label: 'Finitura', value: 'Nera' });
-  items.push({ label: 'Spessore vetro consigliato', value: '4+4 mm' });
+  items.push({ label: t('summary.labels.finitura'), value: t('summary.defaults.finitura') });
+  items.push({ label: t('summary.labels.spessoreVetro'), value: t('summary.defaults.spessoreVetro') });
 
   if (config.width && config.height) {
-    items.push({ label: 'Dimensioni vano', value: `${config.width} × ${config.height} mm` });
+    items.push({
+      label: t('summary.labels.dimensioniVano'),
+      value: t('misc.mmPair', { width: config.width, height: config.height }),
+    });
   }
 
   return items;
@@ -3820,7 +5862,7 @@ function refreshOutputs({ force = false } = {}) {
 
   const quote = calculateQuote(config);
   if (quote.error) {
-    alert(quote.error);
+    alert(resolveMessage(quote.error));
     return;
   }
 
@@ -3830,7 +5872,7 @@ function refreshOutputs({ force = false } = {}) {
   const cuts = calculateCuts(config, derived);
 
   if (selectors.quoteTotal) {
-    selectors.quoteTotal.textContent = `${formatCurrency(quote.total)} + IVA e Spese di Trasporto`;
+    selectors.quoteTotal.textContent = t('totals.totalFormatted', { value: formatCurrency(quote.total) });
   }
 
   renderQuoteBreakdown(quote.categories || []);
@@ -3856,7 +5898,7 @@ async function handleSavePdf() {
 
   const quote = calculateQuote(config);
   if (quote.error) {
-    alert(quote.error);
+    alert(resolveMessage(quote.error));
     return;
   }
 
@@ -3870,7 +5912,7 @@ async function handleSavePdf() {
   const JsPdfConstructor = jsPdfNamespace?.jsPDF || jsPdfNamespace;
 
   if (!JsPdfConstructor) {
-    alert('Impossibile generare il PDF in questo ambiente.');
+    alert(t('alerts.pdfUnavailable'));
     return;
   }
 
@@ -3902,11 +5944,11 @@ async function handleSavePdf() {
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(20);
-  pdf.text('Preventivo Porta Akina', margin, 20);
+  pdf.text(t('pdf.title'), margin, 20);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(11);
-  pdf.text(new Date().toLocaleDateString('it-IT'), pageWidth - margin, 20, { align: 'right' });
+  pdf.text(new Date().toLocaleDateString(getCurrentLocale()), pageWidth - margin, 20, { align: 'right' });
 
   let cursorY = 46;
   pdf.setTextColor(palette.text[0], palette.text[1], palette.text[2]);
@@ -3925,7 +5967,7 @@ async function handleSavePdf() {
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(14);
-  pdf.text('Riepilogo configurazione', margin, cursorY);
+  pdf.text(t('pdf.summaryTitle'), margin, cursorY);
   cursorY += 6;
 
   pdf.setFont('helvetica', 'normal');
@@ -4062,7 +6104,7 @@ async function handleSavePdf() {
     pdf.roundedRect(margin, cursorY, contentWidth, placeholderHeight, 4, 4, 'F');
     pdf.setFont('helvetica', 'italic');
     pdf.setFontSize(10);
-    pdf.text('Nessuna voce di preventivo disponibile.', margin + 10, cursorY + placeholderHeight / 2 + 3);
+    pdf.text(t('fullSummary.emptyQuote'), margin + 10, cursorY + placeholderHeight / 2 + 3);
     cursorY += placeholderHeight + 12;
   } else {
     const tableBoxHeight = paddingTop + headerRowHeight + tableContentHeight + paddingBottom;
@@ -4077,11 +6119,11 @@ async function handleSavePdf() {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(tableFontSize);
     pdf.setTextColor(palette.text[0], palette.text[1], palette.text[2]);
-    pdf.text('Descrizione', columnPositions.description, headerY + headerRowHeight - 2);
-    pdf.text('Codice', columnPositions.code, headerY + headerRowHeight - 2);
-    pdf.text('Qtà', columnPositions.quantity, headerY + headerRowHeight - 2);
-    pdf.text('Prezzo', columnPositions.unit, headerY + headerRowHeight - 2);
-    pdf.text('Totale', columnPositions.total, headerY + headerRowHeight - 2);
+    pdf.text(t('pdf.tableHeaders.description'), columnPositions.description, headerY + headerRowHeight - 2);
+    pdf.text(t('pdf.tableHeaders.code'), columnPositions.code, headerY + headerRowHeight - 2);
+    pdf.text(t('pdf.tableHeaders.quantity'), columnPositions.quantity, headerY + headerRowHeight - 2);
+    pdf.text(t('pdf.tableHeaders.unit'), columnPositions.unit, headerY + headerRowHeight - 2);
+    pdf.text(t('pdf.tableHeaders.total'), columnPositions.total, headerY + headerRowHeight - 2);
 
     let rowCursor = headerY + headerRowHeight;
     pdf.setFont('helvetica', 'normal');
@@ -4130,25 +6172,19 @@ async function handleSavePdf() {
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(12);
   pdf.setTextColor(palette.text[0], palette.text[1], palette.text[2]);
-  pdf.text('Totale', margin + 8, cursorY + totalBoxHeight / 2 + 3);
+  pdf.text(t('pdf.totalLabel'), margin + 8, cursorY + totalBoxHeight / 2 + 3);
 
   pdf.setFontSize(14);
   pdf.setTextColor(palette.accent[0], palette.accent[1], palette.accent[2]);
-  pdf.text(
-    `${formatCurrency(total)} + IVA e Spese di Trasporto`,
-    margin + contentWidth - 8,
-    cursorY + totalBoxHeight / 2 + 3,
-    { align: 'right' }
-  );
+  pdf.text(t('totals.totalFormatted', { value: formatCurrency(total) }), margin + contentWidth - 8, cursorY + totalBoxHeight / 2 + 3, {
+    align: 'right',
+  });
 
   cursorY += totalBoxHeight + 6;
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8.5);
   pdf.setTextColor(palette.muted[0], palette.muted[1], palette.muted[2]);
-  const disclaimerLines = pdf.splitTextToSize(
-    'La Glass Com non si assume responsabilità per errori nei calcoli e nell’utilizzo del tool. Utilizzare sempre cataloghi, listini e schede tecniche aggiornati.',
-    contentWidth
-  );
+  const disclaimerLines = pdf.splitTextToSize(t('pdf.disclaimer'), contentWidth);
   pdf.text(disclaimerLines, margin, cursorY + 4);
 
   const timestamp = new Date().toISOString().slice(0, 10);
@@ -4172,7 +6208,7 @@ async function handleOpenFullSummary() {
 
   const quote = calculateQuote(config);
   if (quote.error) {
-    alert(quote.error);
+    alert(resolveMessage(quote.error));
     return;
   }
 
@@ -4185,7 +6221,7 @@ async function handleOpenFullSummary() {
 
   const summaryWindow = window.open('', '_blank');
   if (!summaryWindow) {
-    alert('Impossibile aprire il riepilogo completo. Abilita i pop-up del browser per proseguire.');
+    alert(t('alerts.popupBlocked'));
     return;
   }
 
@@ -4203,12 +6239,15 @@ async function handleOpenFullSummary() {
 }
 
 function buildFullSummaryHTML({ snapshot, summaryItems, categories, cuts, total }) {
-  const now = new Date().toLocaleString('it-IT');
-  const summaryCards = Array.isArray(summaryItems)
+  const locale = getCurrentLocale();
+  const now = new Date().toLocaleString(locale);
+  const noneLabel = t('misc.none');
+
+  const summaryCards = Array.isArray(summaryItems) && summaryItems.length > 0
     ? summaryItems
         .map((item) => {
           const label = escapeHtml(item.label || '');
-          const value = escapeHtml(item.value || '—');
+          const value = escapeHtml(item.value || noneLabel);
           return `
             <article class="full-summary__fact">
               <p class="full-summary__fact-label">${label}</p>
@@ -4219,7 +6258,14 @@ function buildFullSummaryHTML({ snapshot, summaryItems, categories, cuts, total 
         .join('')
     : '';
 
-  const numberFormatter = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 });
+  const summaryContent = summaryCards || `<p class="full-summary__empty">${escapeHtml(t('fullSummary.emptySummary'))}</p>`;
+
+  const numberFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
+  const itemLabels = t('fullSummary.itemLabels') || {};
+  const quantityLabel = escapeHtml(itemLabels.quantity || '');
+  const unitPriceLabel = escapeHtml(itemLabels.unitPrice || '');
+  const totalLabelText = escapeHtml(itemLabels.total || '');
+  const codeLabel = escapeHtml(itemLabels.code || '');
 
   const categorySections = Array.isArray(categories)
     ? categories
@@ -4227,26 +6273,28 @@ function buildFullSummaryHTML({ snapshot, summaryItems, categories, cuts, total 
           if (!Array.isArray(category.items) || category.items.length === 0) {
             return '';
           }
+
           const itemsMarkup = category.items
             .map((item) => {
               const quantityValue = Number(item.quantita);
               const unitPriceValue = Number(item.prezzo);
               const safeQuantity = Number.isFinite(quantityValue) ? quantityValue : 0;
               const totalLine = Number.isFinite(unitPriceValue) ? unitPriceValue * safeQuantity : 0;
+
               const quantityDisplay = escapeHtml(
                 Number.isFinite(quantityValue)
                   ? numberFormatter.format(quantityValue)
-                  : String(item.quantita ?? '—')
+                  : String(item.quantita ?? noneLabel)
               );
               const unitPriceDisplay = escapeHtml(
                 Number.isFinite(unitPriceValue) ? formatCurrency(unitPriceValue) : formatCurrency(0)
               );
-              const totalDisplay = escapeHtml(
+              const totalDisplayLine = escapeHtml(
                 Number.isFinite(totalLine) ? formatCurrency(totalLine) : formatCurrency(0)
               );
               const imageSrc = escapeHtml(getQuoteItemImage(item));
-              const description = escapeHtml(item.descrizione || 'Articolo');
-              const code = escapeHtml(item.codice || '—');
+              const description = escapeHtml(resolveMessage(item.descrizione || noneLabel));
+              const code = escapeHtml(item.codice || noneLabel);
 
               return `
                 <li class="full-summary__item">
@@ -4255,77 +6303,97 @@ function buildFullSummaryHTML({ snapshot, summaryItems, categories, cuts, total 
                   </div>
                   <div class="full-summary__item-body">
                     <h4>${description}</h4>
-                    <p class="full-summary__item-code">Codice articolo: <strong>${code}</strong></p>
+                    <p class="full-summary__item-code">${codeLabel}: <strong>${code}</strong></p>
                     <div class="full-summary__item-meta">
-                      <span>Quantità: <strong>${quantityDisplay}</strong></span>
-                      <span>Prezzo unitario: <strong>${unitPriceDisplay}</strong></span>
-                      <span>Totale: <strong>${totalDisplay}</strong></span>
+                      <span>${quantityLabel}: <strong>${quantityDisplay}</strong></span>
+                      <span>${unitPriceLabel}: <strong>${unitPriceDisplay}</strong></span>
+                      <span>${totalLabelText}: <strong>${totalDisplayLine}</strong></span>
                     </div>
                   </div>
                 </li>
               `;
             })
+            .filter(Boolean)
             .join('');
 
           if (!itemsMarkup) {
             return '';
           }
 
+          const categoryLabel = escapeHtml(resolveMessage(category.label || ''));
+
           return `
             <section class="full-summary__category">
-              <h3>${escapeHtml(category.label || '')}</h3>
+              <h3>${categoryLabel}</h3>
               <ul class="full-summary__items">
                 ${itemsMarkup}
               </ul>
             </section>
           `;
         })
+        .filter(Boolean)
         .join('')
     : '';
 
-  const cutsMarkup = Array.isArray(cuts) && cuts.length > 0
+  const categoriesContent =
+    categorySections || `<p class="full-summary__empty">${escapeHtml(t('fullSummary.emptyQuote'))}</p>`;
+
+  const cutsHeaders = t('fullSummary.cutsHeaders') || {};
+  const elementHeader = escapeHtml(
+    cutsHeaders.element || t('summary.tableHeaders.element') || t('fullSummary.itemLabels.code')
+  );
+  const quantityHeader = escapeHtml(cutsHeaders.quantity || t('summary.tableHeaders.quantity'));
+  const lengthHeader = escapeHtml(cutsHeaders.length || t('summary.tableHeaders.length'));
+
+  const cutsContent = Array.isArray(cuts) && cuts.length > 0
     ? `
         <table class="full-summary__cuts-table">
           <thead>
             <tr>
-              <th>Elemento</th>
-              <th>Quantità</th>
-              <th>Dimensione</th>
+              <th>${elementHeader}</th>
+              <th>${quantityHeader}</th>
+              <th>${lengthHeader}</th>
             </tr>
           </thead>
           <tbody>
             ${cuts
               .map((row) => {
-                const element = escapeHtml(row.element || '—');
-                const quantity = escapeHtml(String(row.quantity ?? '—'));
-                const length = escapeHtml(String(row.length ?? '—'));
+                const element = escapeHtml(resolveMessage(row.element || noneLabel));
+                const quantity = escapeHtml(String(row.quantity ?? noneLabel));
+                const length = escapeHtml(String(row.length ?? noneLabel));
                 return `<tr><td>${element}</td><td>${quantity}</td><td>${length}</td></tr>`;
               })
               .join('')}
           </tbody>
         </table>
       `
-    : '<p class="full-summary__empty">Nessun taglio disponibile per questa configurazione.</p>';
+    : `<p class="full-summary__empty">${escapeHtml(t('fullSummary.emptyCuts'))}</p>`;
 
   const snapshotMarkup = snapshot
     ? `
         <section class="full-summary__panel full-summary__panel--snapshot">
-          <h2>Anteprima configurazione</h2>
+          <h2>${escapeHtml(t('fullSummary.snapshotTitle'))}</h2>
           <div class="full-summary__snapshot">
-            <img src="${escapeHtml(snapshot)}" alt="Anteprima 3D della porta configurata" />
+            <img src="${escapeHtml(snapshot)}" alt="${escapeHtml(t('fullSummary.snapshotAlt'))}" />
           </div>
         </section>
       `
     : '';
 
   const totalDisplay = escapeHtml(formatCurrency(total));
+  const documentTitle = escapeHtml(t('fullSummary.title'));
+  const eyebrow = escapeHtml(t('fullSummary.eyebrow'));
+  const generatedAt = escapeHtml(t('fullSummary.generatedAt', { value: now }));
+  const totalLabel = escapeHtml(t('fullSummary.totalLabel'));
+  const totalSuffix = escapeHtml(t('fullSummary.totalSuffix'));
+  const printLabel = escapeHtml(t('fullSummary.print'));
 
   return `<!DOCTYPE html>
-<html lang="it">
+<html lang="${escapeHtml(currentLanguage)}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Riepilogo completo Porta Akina</title>
+    <title>${documentTitle}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -4622,31 +6690,29 @@ function buildFullSummaryHTML({ snapshot, summaryItems, categories, cuts, total 
     <div class="full-summary">
       <header class="full-summary__hero">
         <div>
-          <p class="full-summary__eyebrow">Preventivatore Akina</p>
-          <h1>Riepilogo completo</h1>
-          <p class="full-summary__meta">Generato il ${escapeHtml(now)}</p>
+          <p class="full-summary__eyebrow">${eyebrow}</p>
+          <h1>${documentTitle}</h1>
+          <p class="full-summary__meta">${generatedAt}</p>
         </div>
         <div class="full-summary__total">
-          <span>Totale configurazione</span>
+          <span>${totalLabel}</span>
           <strong>${totalDisplay}</strong>
-          <p>+ IVA e Spese di Trasporto</p>
-          <button type="button" onclick="window.print()">Stampa</button>
+          <p>${totalSuffix}</p>
+          <button type="button" onclick="window.print()">${printLabel}</button>
         </div>
       </header>
       ${snapshotMarkup}
       <section class="full-summary__panel">
-        <h2>Scelte del configuratore</h2>
-        <div class="full-summary__grid">
-          ${summaryCards || '<p class="full-summary__empty">Nessuna informazione disponibile.</p>'}
-        </div>
+        <h2>${escapeHtml(t('fullSummary.configTitle'))}</h2>
+        <div class="full-summary__grid">${summaryContent}</div>
       </section>
       <section class="full-summary__panel">
-        <h2>Dettaglio preventivo</h2>
-        ${categorySections || '<p class="full-summary__empty">Nessuna voce di preventivo disponibile.</p>'}
+        <h2>${escapeHtml(t('fullSummary.quoteTitle'))}</h2>
+        ${categoriesContent}
       </section>
       <section class="full-summary__panel">
-        <h2>Calcolo tagli</h2>
-        ${cutsMarkup}
+        <h2>${escapeHtml(t('fullSummary.cutsTitle'))}</h2>
+        ${cutsContent}
       </section>
     </div>
   </body>
@@ -4722,6 +6788,8 @@ let doorBoxGroup;
 let doorBoxMountingGroup;
 let binarioGroup;
 let traversinoGroup;
+
+initializeLanguageSwitcher();
 
 modelGroup = setupSelectionGroup(selectors.modelContainer, '.model-option', document.getElementById('model-select'), {
   onChange: (value) => {
