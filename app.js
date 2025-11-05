@@ -2782,7 +2782,6 @@ class DoorVisualizer {
       trackLengthM,
     };
 
-    params.glassHeight = Math.max(params.heightM - 0.1, 0.05);
     params.slidingLeavesCount = slidingLeaves.length;
     params.fixedPanelsCount = fixedPanels.length;
     params.fixedPanelsShareTrack = Boolean(options.fixedPanelsShareTrack);
@@ -2819,6 +2818,8 @@ class DoorVisualizer {
 
     this.lastParams = params;
 
+    params.trackGap = params.trackGap ?? (params.trackMode === 'hidden' ? 0.02 : 0.01);
+    params.glassHeight = Math.max(params.heightM - params.trackGap - 0.1, 0.05);
     this.resetHighlights();
     this.buildDoor(params);
     this.updateDimensionsInfo(this.lastParams);
@@ -3182,6 +3183,8 @@ class DoorVisualizer {
         fixedPanelsCount: params.fixedPanelsCount,
         doorWidthMm: segment.widthMm,
         doorWidthM: segment.widthM,
+        trackMode: params.trackMode,
+        trackGap: params.trackGap,
       };
       const leaf = this.buildLeaf(segment, segmentParams);
       if (leaf) {
@@ -3241,14 +3244,30 @@ class DoorVisualizer {
     }
 
     const wallThickness = Math.max(Number(params?.wallThicknessM) || 0.08, 0.02);
-    const lintelThickness = Math.min(Math.max(wallThickness, 0.05), 0.12);
+    const primaryLeafWidthM = Math.max(
+      Number(params?.primaryLeafWidthM) || 0,
+      (() => {
+        if (Array.isArray(params?.slidingLeaves) && params.slidingLeaves.length) {
+          const total = params.slidingLeaves.reduce((sum, leaf) => sum + (leaf?.widthM || 0), 0);
+          return total / params.slidingLeaves.length;
+        }
+        const segmentCount = Math.max(
+          Number(params?.slidingLeavesCount) || 0,
+          Number(params?.fixedPanelsCount) || 0,
+          1
+        );
+        return (Number(params?.totalWidthM) || 0) / segmentCount;
+      })()
+    );
+    const columnWidth = Math.max(wallThickness, primaryLeafWidthM);
+    const lintelThickness = Math.max(columnWidth / 2, 0.05);
     const wallDepth = Math.max(Number(params?.wallDepthM) || 0.25, 0.05);
 
     const extraLeft = Math.max(Number(params?.extraTrackLeftM) || 0, 0);
     const extraRight = Math.max(Number(params?.extraTrackRightM) || 0, 0);
     const lintelWidth = Math.max(
-      totalWidthM + extraLeft + extraRight + wallThickness * 2,
-      wallThickness * 2
+      totalWidthM + extraLeft + extraRight + columnWidth * 2,
+      columnWidth * 2
     );
     const lintelCenterOffset = (extraRight - extraLeft) / 2;
 
@@ -3259,19 +3278,19 @@ class DoorVisualizer {
     });
 
     const leftWall = new THREE.Mesh(
-      new THREE.BoxGeometry(wallThickness, heightM, wallDepth),
+      new THREE.BoxGeometry(columnWidth, heightM, wallDepth),
       baseMaterial.clone()
     );
-    leftWall.position.set(-totalWidthM / 2 - wallThickness / 2, heightM / 2, 0);
+    leftWall.position.set(-totalWidthM / 2 - columnWidth / 2, heightM / 2, 0);
     leftWall.name = 'vanoWall_left';
     leftWall.renderOrder = -5;
     this.vanoGroup.add(leftWall);
 
     const rightWall = new THREE.Mesh(
-      new THREE.BoxGeometry(wallThickness, heightM, wallDepth),
+      new THREE.BoxGeometry(columnWidth, heightM, wallDepth),
       baseMaterial.clone()
     );
-    rightWall.position.set(totalWidthM / 2 + wallThickness / 2, heightM / 2, 0);
+    rightWall.position.set(totalWidthM / 2 + columnWidth / 2, heightM / 2, 0);
     rightWall.name = 'vanoWall_right';
     rightWall.renderOrder = -5;
     this.vanoGroup.add(rightWall);
@@ -3306,9 +3325,13 @@ class DoorVisualizer {
     const glassWidth = Math.max(doorWidthM - 0.05, 0.05);
     const profileInset = Math.max((doorWidthM - glassWidth) / 2, 0);
     const profileOffset = Math.max(doorWidthM / 2 - profileInset, 0);
+    const trackGap = Math.max(Number(params.trackGap) || 0, 0);
+    const effectiveHeight = Math.max(params.heightM - trackGap, 0);
+    const effectiveHeightMm = Math.max(Math.round(effectiveHeight * 1000), 0);
+    const verticalCenterOffset = (effectiveHeight - params.heightM) / 2;
 
     const commonInfo = {
-      dimensions: `Altezza: ${formatMillimeters(heightMm)} mm`,
+      dimensions: `Altezza: ${formatMillimeters(effectiveHeightMm)} mm`,
       pieces,
     };
 
@@ -3325,7 +3348,8 @@ class DoorVisualizer {
     );
     if (leftProfile) {
       leftProfile.position.x = -profileOffset;
-      leftProfile.scale.set(1, heightM, 1);
+      leftProfile.position.y = verticalCenterOffset;
+      leftProfile.scale.set(1, effectiveHeight, 1);
       group.add(leftProfile);
     }
 
@@ -3342,7 +3366,8 @@ class DoorVisualizer {
     );
     if (rightProfile) {
       rightProfile.position.x = profileOffset;
-      rightProfile.scale.set(1, heightM, 1);
+      rightProfile.position.y = verticalCenterOffset;
+      rightProfile.scale.set(1, effectiveHeight, 1);
       group.add(rightProfile);
     }
 
@@ -3360,7 +3385,7 @@ class DoorVisualizer {
       horizontalInfo
     );
     if (topProfile) {
-      topProfile.position.y = heightM / 2;
+      topProfile.position.y = verticalCenterOffset + effectiveHeight / 2;
       topProfile.scale.set(doorWidthM, 1, 1);
       group.add(topProfile);
     }
@@ -3375,7 +3400,7 @@ class DoorVisualizer {
       }
     );
     if (bottomProfile) {
-      bottomProfile.position.y = -heightM / 2;
+      bottomProfile.position.y = verticalCenterOffset - effectiveHeight / 2;
       bottomProfile.scale.set(doorWidthM, 1, 1);
       group.add(bottomProfile);
     }
@@ -3384,7 +3409,7 @@ class DoorVisualizer {
       const coverInfo = {
         name: 'Cover',
         code: 'UNK-A203-40',
-        dimensions: `Altezza: ${formatMillimeters(heightMm)} mm`,
+        dimensions: `Altezza: ${formatMillimeters(effectiveHeightMm)} mm`,
         pieces: pieces * 2,
         images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia12.png',
       };
@@ -3396,7 +3421,8 @@ class DoorVisualizer {
       );
       if (coverLeft) {
         coverLeft.position.x = -profileOffset;
-        coverLeft.scale.set(1, heightM, 1);
+        coverLeft.position.y = verticalCenterOffset;
+        coverLeft.scale.set(1, effectiveHeight, 1);
         group.add(coverLeft);
       }
       const coverRight = this.decoratePart(
@@ -3407,12 +3433,13 @@ class DoorVisualizer {
       );
       if (coverRight) {
         coverRight.position.x = profileOffset;
-        coverRight.scale.set(1, heightM, 1);
+        coverRight.position.y = verticalCenterOffset;
+        coverRight.scale.set(1, effectiveHeight, 1);
         group.add(coverRight);
       }
     }
 
-    const glassHeight = Math.max((params.glassHeight ?? heightM - 0.1), 0.05);
+    const glassHeight = Math.max((params.glassHeight ?? effectiveHeight - 0.1), 0.05);
 
     const glass = new THREE.Mesh(
       new THREE.PlaneGeometry(glassWidth, glassHeight),
@@ -3424,13 +3451,13 @@ class DoorVisualizer {
       })
     );
     glass.name = `glassPanel_${suffix}`;
-    glass.position.set(0, 0, 0);
+    glass.position.set(0, verticalCenterOffset, 0);
     glass.renderOrder = 1;
     glass.userData.originalColor = glass.material.color.clone();
     glass.userData.partInfo = {
       name: 'Pannello Vetrato',
       code: 'GLASS',
-      dimensions: `Larghezza: ${formatMillimeters(Math.max(doorWidthMm - 50, 0))} mm · Altezza: ${formatMillimeters(Math.max(heightMm - 100, 0))} mm`,
+      dimensions: `Larghezza: ${formatMillimeters(Math.max(doorWidthMm - 50, 0))} mm · Altezza: ${formatMillimeters(Math.max(effectiveHeightMm - 100, 0))} mm`,
       pieces,
       images: '/wp-content/uploads/2024/10/Tavola-disegno-1-copia-412.png',
     };
@@ -3464,8 +3491,9 @@ class DoorVisualizer {
       }
     );
     if (!track) return null;
+    const halfGap = Math.max(((Number(params.trackGap) || 0.01) / 2), 0.005);
     const trackVerticalOffset =
-      params.trackMode === 'hidden' ? this.frameThickness - 0.02 : -0.0125;
+      params.trackMode === 'hidden' ? this.frameThickness + halfGap : halfGap;
     const extraLeft = Math.max(Number(params.extraTrackLeftM) || 0, 0);
     const extraRight = Math.max(Number(params.extraTrackRightM) || 0, 0);
     const trackLengthM = Math.max(Number(params.trackLengthM) || Number(params.totalWidthM) || 0, 0);
