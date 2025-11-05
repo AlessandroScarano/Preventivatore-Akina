@@ -2845,14 +2845,8 @@ class DoorVisualizer {
     let slidingAreaEnd = doorRightEdge + extraRight - rightFixedWidthM;
 
     if (!params.fixedPanelsShareTrack) {
-      if (leftFixedWidthM > 0) {
-        const leftLimit = doorLeftEdge + leftFixedWidthM;
-        slidingAreaStart = Math.max(slidingAreaStart, leftLimit);
-      }
-      if (rightFixedWidthM > 0) {
-        const rightLimit = doorRightEdge - rightFixedWidthM;
-        slidingAreaEnd = Math.min(slidingAreaEnd, rightLimit);
-      }
+      slidingAreaStart = doorLeftEdge - extraLeft;
+      slidingAreaEnd = doorRightEdge + extraRight;
     }
 
     if (slidingAreaEnd < slidingAreaStart) {
@@ -2912,23 +2906,36 @@ class DoorVisualizer {
       cursor += panel.widthM;
     });
 
+    const computeOptions = {
+      shareTrack: params.fixedPanelsShareTrack,
+      leftFixedWidthM,
+      rightFixedWidthM,
+      doorLeftEdge,
+      doorRightEdge,
+      extraLeft,
+      extraRight,
+    };
+
     const openPositions = this.computeOpenPositions(
       params.openingMode,
       slidingSegments,
       slidingAreaStart,
-      slidingAreaEnd
+      slidingAreaEnd,
+      computeOptions
     );
     const stackLeftPositions = this.computeStackPositions(
       'left',
       slidingSegments,
       slidingAreaStart,
-      slidingAreaEnd
+      slidingAreaEnd,
+      computeOptions
     );
     const stackRightPositions = this.computeStackPositions(
       'right',
       slidingSegments,
       slidingAreaStart,
-      slidingAreaEnd
+      slidingAreaEnd,
+      computeOptions
     );
 
     slidingSegments.forEach((segment, index) => {
@@ -3008,7 +3015,7 @@ class DoorVisualizer {
     };
   }
 
-  computeOpenPositions(mode, segments, areaStart, areaEnd) {
+  computeOpenPositions(mode, segments, areaStart, areaEnd, options = {}) {
     const count = segments.length;
     if (count === 0) return [];
 
@@ -3025,13 +3032,26 @@ class DoorVisualizer {
       Math.min((end - start) * 0.02, 0.04),
       0.12
     );
+    const {
+      shareTrack = true,
+      leftFixedWidthM = 0,
+      rightFixedWidthM = 0,
+      doorLeftEdge = start,
+      doorRightEdge = end,
+    } = options;
+    const leftAnchor = !shareTrack && leftFixedWidthM > 0
+      ? doorLeftEdge + leftFixedWidthM / 2
+      : start + (segments[0]?.widthM ?? 0) / 2;
+    const rightAnchor = !shareTrack && rightFixedWidthM > 0
+      ? doorRightEdge - rightFixedWidthM / 2
+      : end - (segments[count - 1]?.widthM ?? 0) / 2;
 
     if (mode === 'none') {
       return segments.map((segment) => segment.closedX ?? segment.center ?? 0);
     }
 
     if (mode === 'single-left') {
-      const base = start + (segments[0]?.widthM ?? 0) / 2;
+      const base = leftAnchor;
       for (let i = 0; i < count; i += 1) {
         const width = segments[i].widthM;
         const target = base + i * stackSpacing;
@@ -3043,7 +3063,7 @@ class DoorVisualizer {
     }
 
     if (mode === 'single-right') {
-      const base = end - (segments[count - 1]?.widthM ?? 0) / 2;
+      const base = rightAnchor;
       for (let i = count - 1; i >= 0; i -= 1) {
         const width = segments[i].widthM;
         const offset = (count - 1 - i) * stackSpacing;
@@ -3058,7 +3078,7 @@ class DoorVisualizer {
     const leftCount = Math.floor(count / 2);
     const rightCount = count - leftCount;
     if (leftCount > 0) {
-      const baseLeft = start + (segments[0]?.widthM ?? 0) / 2;
+      const baseLeft = leftAnchor;
       for (let i = 0; i < leftCount; i += 1) {
         const width = segments[i].widthM;
         const target = baseLeft + i * stackSpacing;
@@ -3069,7 +3089,7 @@ class DoorVisualizer {
     }
 
     if (rightCount > 0) {
-      const baseRight = end - (segments[count - 1]?.widthM ?? 0) / 2;
+      const baseRight = rightAnchor;
       for (let i = 0; i < rightCount; i += 1) {
         const index = leftCount + i;
         const width = segments[index].widthM;
@@ -3083,33 +3103,44 @@ class DoorVisualizer {
     return positions;
   }
 
-  computeStackPositions(direction, segments, areaStart, areaEnd) {
+  computeStackPositions(direction, segments, areaStart, areaEnd, options = {}) {
     const count = segments.length;
     if (count === 0) return [];
 
     const start = Math.min(areaStart, areaEnd);
     const end = Math.max(areaStart, areaEnd);
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const {
+      shareTrack = true,
+      leftFixedWidthM = 0,
+      rightFixedWidthM = 0,
+      doorLeftEdge = start,
+      doorRightEdge = end,
+    } = options;
 
     if (direction === 'left') {
       const referenceWidth = segments[0]?.widthM ?? 0;
-      const base = start + referenceWidth / 2;
+      const desired = !shareTrack && leftFixedWidthM > 0
+        ? doorLeftEdge + leftFixedWidthM / 2
+        : start + referenceWidth / 2;
       return segments.map((segment) => {
         const width = segment.widthM ?? referenceWidth;
         const min = start + width / 2;
         const max = end - width / 2;
-        return clamp(base, min, max);
+        return clamp(desired, min, max);
       });
     }
 
     if (direction === 'right') {
       const referenceWidth = segments[segments.length - 1]?.widthM ?? 0;
-      const base = end - referenceWidth / 2;
+      const desired = !shareTrack && rightFixedWidthM > 0
+        ? doorRightEdge - rightFixedWidthM / 2
+        : end - referenceWidth / 2;
       return segments.map((segment) => {
         const width = segment.widthM ?? referenceWidth;
         const min = start + width / 2;
         const max = end - width / 2;
-        return clamp(base, min, max);
+        return clamp(desired, min, max);
       });
     }
 
@@ -3136,11 +3167,32 @@ class DoorVisualizer {
     this.applyEnvironment(params);
 
     const trackDepthRequirement = (() => {
-      const totalTracks = Math.max(Math.floor(params.trackCount || 0), 0);
-      if (totalTracks <= 0) {
+      const declaredTracks = Math.max(Math.floor(params.trackCount || 0), 0);
+      const slidingEstimate = (() => {
+        if (
+          Number.isFinite(params.slidingTrackCount) &&
+          params.slidingTrackCount !== null &&
+          params.slidingTrackCount > 0
+        ) {
+          return Math.max(Math.floor(params.slidingTrackCount), 0);
+        }
+        if (params.slidingLeavesCount > 0) {
+          return Math.max(Math.floor(params.slidingLeavesCount), 0);
+        }
+        return 0;
+      })();
+      const fixedTrackAllowance =
+        !params.fixedPanelsShareTrack && params.fixedPanelsCount > 0 ? 1 : 0;
+      const effectiveTracks = Math.max(
+        declaredTracks,
+        slidingEstimate + fixedTrackAllowance,
+        fixedTrackAllowance > 0 ? 1 : 0
+      );
+      if (effectiveTracks <= 0) {
         return 0.12;
       }
-      const span = (Math.max(totalTracks - 1, 0) * this.zOffset) + 0.08;
+      const baseThickness = 0.08;
+      const span = baseThickness + Math.max(effectiveTracks - 1, 0) * this.zOffset;
       return Math.max(span, 0.12);
     })();
     const enforcedWallDepth = Math.max(
