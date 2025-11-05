@@ -2840,8 +2840,25 @@ class DoorVisualizer {
     const doorLeftEdge = -totalWidthM / 2;
     const doorRightEdge = totalWidthM / 2;
 
-    const slidingAreaStart = doorLeftEdge - extraLeft + leftFixedWidthM;
-    const slidingAreaEnd = doorRightEdge + extraRight - rightFixedWidthM;
+    let slidingAreaStart = doorLeftEdge - extraLeft + leftFixedWidthM;
+    let slidingAreaEnd = doorRightEdge + extraRight - rightFixedWidthM;
+
+    if (!params.fixedPanelsShareTrack) {
+      if (leftFixedWidthM > 0) {
+        const leftLimit = doorLeftEdge + leftFixedWidthM;
+        slidingAreaStart = Math.max(slidingAreaStart, leftLimit);
+      }
+      if (rightFixedWidthM > 0) {
+        const rightLimit = doorRightEdge - rightFixedWidthM;
+        slidingAreaEnd = Math.min(slidingAreaEnd, rightLimit);
+      }
+    }
+
+    if (slidingAreaEnd < slidingAreaStart) {
+      const midpoint = (slidingAreaStart + slidingAreaEnd) / 2;
+      slidingAreaStart = midpoint;
+      slidingAreaEnd = midpoint;
+    }
 
     let cursor = -totalWidthM / 2;
     let zIndex = 0;
@@ -3116,6 +3133,21 @@ class DoorVisualizer {
     this.isClosed = true;
 
     this.applyEnvironment(params);
+
+    const trackDepthRequirement = (() => {
+      const totalTracks = Math.max(Math.floor(params.trackCount || 0), 0);
+      if (totalTracks <= 0) {
+        return 0.12;
+      }
+      const span = (Math.max(totalTracks - 1, 0) * this.zOffset) + 0.08;
+      return Math.max(span, 0.12);
+    })();
+    const enforcedWallDepth = Math.max(
+      Number(params.wallDepthM) || 0,
+      trackDepthRequirement
+    );
+    params.wallDepthM = enforcedWallDepth;
+
     this.buildVano(params);
     this.doorFrames.position.set(0, params.heightM / 2, 0);
 
@@ -3432,7 +3464,8 @@ class DoorVisualizer {
       }
     );
     if (!track) return null;
-    const trackVerticalOffset = this.frameThickness - (params.trackMode === 'hidden' ? 0.02 : 0);
+    const trackVerticalOffset =
+      params.trackMode === 'hidden' ? this.frameThickness - 0.02 : -0.0125;
     const extraLeft = Math.max(Number(params.extraTrackLeftM) || 0, 0);
     const extraRight = Math.max(Number(params.extraTrackRightM) || 0, 0);
     const trackLengthM = Math.max(Number(params.trackLengthM) || Number(params.totalWidthM) || 0, 0);
@@ -5819,8 +5852,26 @@ function updateVisualizerPreview(config, derived) {
   }
 
   const totalTrackExtraMm = Math.max(targetTrackLengthMm - effectiveTotalWidthMm, 0);
-  const extraTrackLeftMm = totalTrackExtraMm > 0 ? totalTrackExtraMm / 2 : 0;
-  const extraTrackRightMm = totalTrackExtraMm - extraTrackLeftMm;
+  let extraTrackLeftMm = 0;
+  let extraTrackRightMm = 0;
+  if (totalTrackExtraMm > 0) {
+    if (config.anteNascoste === 'Si') {
+      if (openingMode === 'single-left') {
+        extraTrackLeftMm = totalTrackExtraMm;
+      } else if (openingMode === 'single-right') {
+        extraTrackRightMm = totalTrackExtraMm;
+      } else {
+        extraTrackRightMm = totalTrackExtraMm;
+      }
+    } else if (openingMode === 'single-left') {
+      extraTrackLeftMm = totalTrackExtraMm;
+    } else if (openingMode === 'single-right') {
+      extraTrackRightMm = totalTrackExtraMm;
+    } else {
+      extraTrackLeftMm = totalTrackExtraMm / 2;
+      extraTrackRightMm = totalTrackExtraMm - extraTrackLeftMm;
+    }
+  }
 
   visualizer.updateDoor({
     heightMm: config.height,
