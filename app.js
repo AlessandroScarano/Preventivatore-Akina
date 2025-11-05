@@ -3221,12 +3221,9 @@ class DoorVisualizer {
     const lintelCenterOffset = (extraRight - extraLeft) / 2;
 
     const baseMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color('#dbe3f8'),
-      transparent: true,
-      opacity: 0.22,
+      color: new THREE.Color('#ffffff'),
       roughness: 0.35,
       metalness: 0,
-      depthWrite: false,
     });
 
     const leftWall = new THREE.Mesh(
