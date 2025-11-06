@@ -3200,6 +3200,7 @@ class DoorVisualizer {
       trackDepthRequirement
     );
     params.wallDepthM = enforcedWallDepth;
+    params.wallThicknessM = Math.max(Number(params.wallThicknessM) || 0.08, 0.08);
 
     this.buildVano(params);
     this.doorFrames.position.set(0, params.heightM / 2, 0);
@@ -3314,6 +3315,10 @@ class DoorVisualizer {
     const columnWidth = Math.max(wallThickness, primaryLeafWidthM);
     const lintelThickness = Math.max(columnWidth / 2, 0.05);
     const wallDepth = Math.max(Number(params?.wallDepthM) || 0.25, 0.05);
+
+    params.columnWidthM = columnWidth;
+    params.lintelThickness = lintelThickness;
+    params.wallDepthM = wallDepth;
 
     const extraLeft = Math.max(Number(params?.extraTrackLeftM) || 0, 0);
     const extraRight = Math.max(Number(params?.extraTrackRightM) || 0, 0);
@@ -3544,13 +3549,18 @@ class DoorVisualizer {
     );
     if (!track) return null;
     const halfGap = Math.max(((Number(params.trackGap) || 0.01) / 2), 0.005);
-    const trackVerticalOffset =
-      params.trackMode === 'hidden' ? this.frameThickness + halfGap : halfGap;
+    const lintelThickness = Math.max(Number(params.lintelThickness) || 0.1, 0.05);
+    const lintelBottomY = Number(params.heightM) || 0;
+    const lintelCenterY = lintelBottomY + lintelThickness / 2;
+    const visibleTrackY = lintelBottomY - halfGap / 2;
+    const hiddenTrackY = lintelCenterY;
     const extraLeft = Math.max(Number(params.extraTrackLeftM) || 0, 0);
     const extraRight = Math.max(Number(params.extraTrackRightM) || 0, 0);
     const trackLengthM = Math.max(Number(params.trackLengthM) || Number(params.totalWidthM) || 0, 0);
     const centerOffset = (extraRight - extraLeft) / 2;
-    track.position.set(centerOffset, params.heightM + trackVerticalOffset, index * this.zOffset);
+    const positionY = params.trackMode === 'hidden' ? hiddenTrackY : visibleTrackY;
+    track.position.set(centerOffset, positionY, index * this.zOffset);
+    track.visible = params.trackMode !== 'hidden';
     track.scale.set(trackLengthM, 1, 1);
     return track;
   }
