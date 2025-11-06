@@ -2420,10 +2420,10 @@ class DoorVisualizer {
 
     this.scene.add(ambient, hemisphere, keyLight, rimLight);
 
-    const floorMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color('#ffffff'),
-      roughness: 0.4,
-      metalness: 0.05,
+    const floorMaterial = new THREE.ShadowMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.3,
     });
     const floorGeometry = new THREE.PlaneGeometry(1, 1, 1, 1);
     this.floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -2729,6 +2729,12 @@ class DoorVisualizer {
       node.castShadow = true;
       node.receiveShadow = true;
       node.userData.originalColor = node.material?.color?.clone?.();
+      if (node.material?.emissive) {
+        node.userData.originalEmissive = node.material.emissive.clone();
+      }
+      if (typeof node.material?.emissiveIntensity === 'number') {
+        node.userData.originalEmissiveIntensity = node.material.emissiveIntensity;
+      }
       node.userData.partInfo = partInfo;
       this.partMeshes.push(node);
     });
@@ -2852,7 +2858,12 @@ class DoorVisualizer {
 
     this.lastParams = params;
 
-    params.trackGap = params.trackGap ?? (params.trackMode === 'hidden' ? 0.02 : 0.01);
+    if (!Number.isFinite(params.trackGap)) {
+      params.trackGap = params.trackMode === 'hidden' ? 0.008 : 0.012;
+    } else {
+      const minimumGap = params.trackMode === 'hidden' ? 0.006 : 0.01;
+      params.trackGap = Math.max(params.trackGap, minimumGap);
+    }
     params.glassHeight = Math.max(params.heightM - params.trackGap - 0.1, 0.05);
     this.resetHighlights();
     this.buildDoor(params);
@@ -3603,14 +3614,19 @@ class DoorVisualizer {
     const lintelBottomY = Number(params.heightM) || 0;
     const lintelCenterY = lintelBottomY + lintelThickness / 2;
     const visibleTrackY = lintelBottomY - halfGap / 2;
-    const hiddenTrackY = lintelCenterY;
+    const hiddenTrackY = lintelBottomY + lintelThickness / 2 - halfGap * 0.5;
     const extraLeft = Math.max(Number(params.extraTrackLeftM) || 0, 0);
     const extraRight = Math.max(Number(params.extraTrackRightM) || 0, 0);
     const trackLengthM = Math.max(Number(params.trackLengthM) || Number(params.totalWidthM) || 0, 0);
     const centerOffset = (extraRight - extraLeft) / 2;
     const positionY = params.trackMode === 'hidden' ? hiddenTrackY : visibleTrackY;
     track.position.set(centerOffset, positionY, index * this.zOffset);
-    track.visible = params.trackMode !== 'hidden';
+    const isHidden = params.trackMode === 'hidden';
+    track.visible = !isHidden;
+    if (isHidden) {
+      track.castShadow = false;
+      track.receiveShadow = false;
+    }
     track.scale.set(trackLengthM, 1, 1);
     return track;
   }
@@ -3656,8 +3672,18 @@ class DoorVisualizer {
       this.showPartInfo(null);
       return;
     }
+    const neonColor = new THREE.Color('#63f5ff');
+    const neonEmissive = new THREE.Color('#1bcfff');
     matches.forEach((mesh) => {
-      mesh.material?.color?.set?.(0xee0000);
+      if (mesh.material?.color) {
+        mesh.material.color.set(neonColor);
+      }
+      if (mesh.material?.emissive) {
+        mesh.material.emissive.set(neonEmissive);
+      }
+      if (typeof mesh.material?.emissiveIntensity === 'number') {
+        mesh.material.emissiveIntensity = 1.35;
+      }
     });
     this.showPartInfo(matches[0].userData?.partInfo || null);
   }
@@ -3666,6 +3692,15 @@ class DoorVisualizer {
     this.partMeshes.forEach((mesh) => {
       if (mesh.userData?.originalColor && mesh.material?.color) {
         mesh.material.color.copy(mesh.userData.originalColor);
+      }
+      if (mesh.userData?.originalEmissive && mesh.material?.emissive) {
+        mesh.material.emissive.copy(mesh.userData.originalEmissive);
+      }
+      if (
+        typeof mesh.userData?.originalEmissiveIntensity === 'number' &&
+        typeof mesh.material?.emissiveIntensity === 'number'
+      ) {
+        mesh.material.emissiveIntensity = mesh.userData.originalEmissiveIntensity;
       }
     });
     this.showPartInfo(null);
