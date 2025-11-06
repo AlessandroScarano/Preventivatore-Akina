@@ -3256,7 +3256,9 @@ class DoorVisualizer {
       ) + columnWidth * 2;
       const spanZ = Math.max(Number(params.wallDepthM) || 0.3, 0.3) + 0.6;
       const offsetX = ((Number(params.extraTrackRightM) || 0) - (Number(params.extraTrackLeftM) || 0)) / 2;
-      this.floor.scale.set(Math.max(spanX, 2.6), Math.max(spanZ, 2.6), 1);
+      const padX = Math.max(spanX * 0.5, 2);
+      const padZ = Math.max(spanZ * 0.5, 2);
+      this.floor.scale.set(Math.max(spanX + padX, 4), Math.max(spanZ + padZ, 4), 1);
       this.floor.position.x = offsetX;
     }
     this.doorFrames.position.set(0, params.heightM / 2, 0);
@@ -6084,8 +6086,15 @@ function refreshOutputs({ force = false } = {}) {
   }
 
   const quote = calculateQuote(config);
+  const finalStepIndex = formSteps.length ? formSteps.length - 1 : -1;
+  const isFinalStepActive = finalStepIndex >= 0 && currentStepIndex === finalStepIndex;
+  const shouldAlert = force || isFinalStepActive;
+
   if (quote.error) {
-    alert(resolveMessage(quote.error));
+    derived = quote.derived || derived;
+    if (shouldAlert) {
+      alert(resolveMessage(quote.error));
+    }
     return;
   }
 
