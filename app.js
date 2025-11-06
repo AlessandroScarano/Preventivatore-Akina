@@ -3370,7 +3370,7 @@ class DoorVisualizer {
         return (Number(params?.totalWidthM) || 0) / segmentCount;
       })()
     );
-    const columnWidth = Math.max(wallThickness, primaryLeafWidthM);
+    const columnWidth = Math.max(wallThickness, primaryLeafWidthM * 2);
     const lintelThickness = Math.max(columnWidth / 2, 0.05);
     const wallDepth = Math.max(Number(params?.wallDepthM) || 0.25, 0.05);
 
@@ -3614,9 +3614,8 @@ class DoorVisualizer {
     const halfGap = Math.max(((Number(params.trackGap) || 0.01) / 2), 0.005);
     const lintelThickness = Math.max(Number(params.lintelThickness) || 0.1, 0.05);
     const lintelBottomY = Number(params.heightM) || 0;
-    const lintelCenterY = lintelBottomY + lintelThickness / 2;
     const visibleTrackY = lintelBottomY - halfGap / 2;
-    const hiddenTrackY = lintelBottomY + lintelThickness / 2 - halfGap * 0.5;
+    const hiddenTrackY = lintelBottomY + Math.max(lintelThickness * 0.4, halfGap);
     const extraLeft = Math.max(Number(params.extraTrackLeftM) || 0, 0);
     const extraRight = Math.max(Number(params.extraTrackRightM) || 0, 0);
     const trackLengthM = Math.max(Number(params.trackLengthM) || Number(params.totalWidthM) || 0, 0);
