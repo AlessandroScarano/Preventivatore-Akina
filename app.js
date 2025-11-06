@@ -3396,7 +3396,7 @@ class DoorVisualizer {
     leftWall.position.set(-totalWidthM / 2 - columnWidth / 2, heightM / 2, 0);
     leftWall.name = 'vanoWall_left';
     leftWall.renderOrder = -5;
-    leftWall.castShadow = false;
+    leftWall.castShadow = true;
     leftWall.receiveShadow = true;
     this.vanoGroup.add(leftWall);
 
@@ -3407,7 +3407,7 @@ class DoorVisualizer {
     rightWall.position.set(totalWidthM / 2 + columnWidth / 2, heightM / 2, 0);
     rightWall.name = 'vanoWall_right';
     rightWall.renderOrder = -5;
-    rightWall.castShadow = false;
+    rightWall.castShadow = true;
     rightWall.receiveShadow = true;
     this.vanoGroup.add(rightWall);
 
@@ -3418,7 +3418,7 @@ class DoorVisualizer {
     lintel.position.set(lintelCenterOffset, heightM + lintelThickness / 2, 0);
     lintel.name = 'vanoLintel_top';
     lintel.renderOrder = -5;
-    lintel.castShadow = false;
+    lintel.castShadow = true;
     lintel.receiveShadow = true;
     this.vanoGroup.add(lintel);
 
