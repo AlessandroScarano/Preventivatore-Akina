@@ -429,8 +429,53 @@ a {
   gap: 0.6rem;
 }
 
+.viewer-controls__row--environment {
+  width: 100%;
+  justify-content: center;
+  gap: 1rem;
+}
+
 .viewer-controls__row.is-hidden {
   display: none;
+}
+
+.viewer-environment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.viewer-environment__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.viewer-environment__select {
+  border: 1px solid rgba(62, 90, 255, 0.25);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-strong);
+  padding: 0.45rem 2rem 0.45rem 0.75rem;
+  border-radius: var(--radius-small);
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(62, 90, 255, 0.15);
+  backdrop-filter: blur(12px);
+  appearance: none;
+  background-image: linear-gradient(135deg, rgba(62, 90, 255, 0.12), rgba(173, 199, 255, 0.12));
+}
+
+.viewer-environment__select:focus-visible {
+  outline: 2px solid rgba(62, 90, 255, 0.4);
+  outline-offset: 2px;
+}
+
+.viewer-environment__select option {
+  font-weight: 500;
 }
 
 .viewer-controls__row button {

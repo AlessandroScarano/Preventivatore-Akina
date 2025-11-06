@@ -130,6 +130,15 @@
             <div id="dimensions-info" class="viewer-dimensions-info">Ante: 2 · Larghezza anta: 600 mm · Altezza: 2200 mm · Larghezza totale: 1200 mm</div>
             <div id="part-info" class="viewer-part-info" hidden></div>
             <div class="viewer-controls" aria-label="Controlli visualizzatore 3D" data-i18n-attr="aria-label:viewer.controlsAria">
+              <div class="viewer-controls__row viewer-controls__row--environment">
+                <label class="viewer-environment" data-i18n-container="true">
+                  <span class="viewer-environment__label" data-i18n="viewer.environment.label">Scenario 3D</span>
+                  <select id="viewer-environment-control" class="viewer-environment__select">
+                    <option value="soloporta" data-i18n="viewer.environment.options.soloporta">Versione classica</option>
+                    <option value="modernhd" data-i18n="viewer.environment.options.modernhd">Appartamento moderno HD</option>
+                  </select>
+                </label>
+              </div>
               <div id="part-buttons" class="viewer-controls__row is-hidden">
                 <button type="button" data-part="topProfile" data-i18n="viewer.partButtons.top">Profilo superiore</button>
                 <button type="button" data-part="bottomProfile" data-i18n="viewer.partButtons.bottom">Profilo inferiore</button>

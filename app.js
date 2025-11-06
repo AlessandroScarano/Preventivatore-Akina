@@ -47,6 +47,13 @@ const TRANSLATIONS = {
         resetCamera: 'Reset camera',
         fullscreen: 'Schermo intero',
       },
+      environment: {
+        label: 'Scenario 3D',
+        options: {
+          soloporta: 'Versione classica',
+          modernhd: 'Appartamento moderno HD',
+        },
+      },
       moveLabel: 'Sposta ante',
       moveLeftAria: 'Sposta ante a sinistra',
       moveRightAria: 'Sposta ante a destra',
@@ -359,7 +366,10 @@ const TRANSLATIONS = {
       yes: 'Si',
       no: 'No',
       none: '—',
-      environment: { soloporta: 'Solo porta' },
+      environment: {
+        soloporta: 'Versione classica',
+        modernhd: 'Appartamento moderno HD',
+      },
       doorBoxSides: { Destra: 'Destra', Sinistra: 'Sinistra' },
       mountings: { 'A soffitto': 'A soffitto', Parete: 'Parete' },
     },
@@ -475,6 +485,13 @@ const TRANSLATIONS = {
         resetHighlight: 'Reset highlight',
         resetCamera: 'Reset camera',
         fullscreen: 'Fullscreen',
+      },
+      environment: {
+        label: '3D style',
+        options: {
+          soloporta: 'Classic view',
+          modernhd: 'Modern apartment (HD)',
+        },
       },
       moveLabel: 'Move leaves',
       moveLeftAria: 'Move leaves to the left',
@@ -786,7 +803,10 @@ const TRANSLATIONS = {
       yes: 'Yes',
       no: 'No',
       none: '—',
-      environment: { soloporta: 'Door only' },
+      environment: {
+        soloporta: 'Classic view',
+        modernhd: 'Modern apartment (HD)',
+      },
       doorBoxSides: { Destra: 'Right', Sinistra: 'Left' },
       mountings: { 'A soffitto': 'Ceiling', Parete: 'Wall' },
     },
@@ -901,6 +921,13 @@ const TRANSLATIONS = {
         resetHighlight: 'Hervorhebung zurücksetzen',
         resetCamera: 'Kamera zurücksetzen',
         fullscreen: 'Vollbild',
+      },
+      environment: {
+        label: '3D-Umgebung',
+        options: {
+          soloporta: 'Klassische Ansicht',
+          modernhd: 'Modernes Apartment (HD)',
+        },
       },
       moveLabel: 'Flügel verschieben',
       moveLeftAria: 'Flügel nach links verschieben',
@@ -1212,7 +1239,10 @@ const TRANSLATIONS = {
       yes: 'Ja',
       no: 'Nein',
       none: '—',
-      environment: { soloporta: 'Nur Tür' },
+      environment: {
+        soloporta: 'Klassische Ansicht',
+        modernhd: 'Modernes Apartment (HD)',
+      },
       doorBoxSides: { Destra: 'Rechts', Sinistra: 'Links' },
       mountings: { 'A soffitto': 'Decke', Parete: 'Wand' },
     },
@@ -1327,6 +1357,13 @@ const TRANSLATIONS = {
         resetHighlight: '重置高亮',
         resetCamera: '重置相机',
         fullscreen: '全屏',
+      },
+      environment: {
+        label: '3D 场景',
+        options: {
+          soloporta: '经典视图',
+          modernhd: '现代公寓（高清）',
+        },
       },
       moveLabel: '移动门扇',
       moveLeftAria: '向左移动门扇',
@@ -1638,7 +1675,10 @@ const TRANSLATIONS = {
       yes: '是',
       no: '否',
       none: '—',
-      environment: { soloporta: '仅门体' },
+      environment: {
+        soloporta: '经典视图',
+        modernhd: '现代公寓（高清）',
+      },
       doorBoxSides: { Destra: '右侧', Sinistra: '左侧' },
       mountings: { 'A soffitto': '吊顶安装', Parete: '墙面安装' },
     },
@@ -1960,6 +2000,7 @@ const MODEL_CONFIG = {
 
 const ENVIRONMENT_CONFIG = {
   soloporta: { labelKey: 'misc.environment.soloporta' },
+  modernhd: { labelKey: 'misc.environment.modernhd' },
 };
 
 const MODEL_ANTE_OPTIONS = {
@@ -2163,6 +2204,138 @@ const FALLBACK_GEOMETRIES = {
   track: new THREE.BoxGeometry(1, 0.05, 0.08),
   cover: new THREE.BoxGeometry(0.03, 1, 0.04),
 };
+
+const PROCEDURAL_TEXTURE_CACHE = new Map();
+
+function clampColor(value) {
+  return Math.max(0, Math.min(255, value));
+}
+
+function addCanvasNoise(ctx, width, height, intensity = 0.05) {
+  if (!ctx || intensity <= 0) return;
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const { data } = imageData;
+  for (let i = 0; i < data.length; i += 4) {
+    const noise = (Math.random() - 0.5) * 255 * intensity;
+    data[i] = clampColor(data[i] + noise);
+    data[i + 1] = clampColor(data[i + 1] + noise);
+    data[i + 2] = clampColor(data[i + 2] + noise);
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function generateCanvasTexture(size, painter) {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  painter(ctx, size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.encoding = THREE.sRGBEncoding;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createParquetTexture() {
+  return generateCanvasTexture(512, (ctx, size) => {
+    const palette = ['#d9bea4', '#c89b6f', '#b98253', '#e3c8ae'];
+    const stripeHeight = size / palette.length;
+    palette.forEach((color, index) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(0, index * stripeHeight, size, stripeHeight + 1);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.fillRect(0, index * stripeHeight, size, 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+      ctx.fillRect(0, index * stripeHeight + stripeHeight - 2, size, 2);
+    });
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    for (let x = 0; x < size; x += 32) {
+      ctx.fillRect(x, 0, 2, size);
+    }
+    addCanvasNoise(ctx, size, size, 0.08);
+  });
+}
+
+function createPlasterTexture() {
+  return generateCanvasTexture(256, (ctx, size) => {
+    ctx.fillStyle = '#f5f3ef';
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.08)';
+    for (let i = 0; i < 1200; i += 1) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const alpha = 0.02 + Math.random() * 0.04;
+      ctx.fillStyle = `rgba(200, 200, 200, ${alpha})`;
+      ctx.fillRect(x, y, 1.5, 1.5);
+    }
+    addCanvasNoise(ctx, size, size, 0.04);
+  });
+}
+
+function createFabricTexture() {
+  return generateCanvasTexture(256, (ctx, size) => {
+    ctx.fillStyle = '#3b4a67';
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    for (let i = 0; i < size; i += 10) {
+      ctx.fillRect(0, i, size, 1);
+      ctx.fillRect(i, 0, 1, size);
+    }
+    addCanvasNoise(ctx, size, size, 0.1);
+  });
+}
+
+function createRugTexture() {
+  return generateCanvasTexture(256, (ctx, size) => {
+    const gradient = ctx.createLinearGradient(0, 0, size, size);
+    gradient.addColorStop(0, '#f8f8f6');
+    gradient.addColorStop(1, '#dcd8f4');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = 'rgba(120, 110, 190, 0.28)';
+    ctx.lineWidth = 2;
+    for (let i = 20; i < size; i += 36) {
+      ctx.strokeRect(i, i, size - i * 2, size - i * 2);
+    }
+    addCanvasNoise(ctx, size, size, 0.05);
+  });
+}
+
+function createArtworkTexture() {
+  return generateCanvasTexture(256, (ctx, size) => {
+    const gradient = ctx.createLinearGradient(0, 0, size, size);
+    gradient.addColorStop(0, '#8aa9ff');
+    gradient.addColorStop(0.5, '#f6d365');
+    gradient.addColorStop(1, '#fda085');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.beginPath();
+    ctx.arc(size * 0.68, size * 0.35, size * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(45, 62, 114, 0.22)';
+    ctx.fillRect(size * 0.12, size * 0.6, size * 0.3, size * 0.18);
+    addCanvasNoise(ctx, size, size, 0.04);
+  });
+}
+
+function getProceduralTexture(key, generator) {
+  if (!PROCEDURAL_TEXTURE_CACHE.has(key)) {
+    PROCEDURAL_TEXTURE_CACHE.set(key, generator());
+  }
+  const baseTexture = PROCEDURAL_TEXTURE_CACHE.get(key);
+  if (!baseTexture) return null;
+  const clone = baseTexture.clone();
+  clone.wrapS = baseTexture.wrapS;
+  clone.wrapT = baseTexture.wrapT;
+  clone.encoding = baseTexture.encoding;
+  clone.needsUpdate = true;
+  return clone;
+}
 
 function createFallbackPart(key) {
   let geometry = null;
@@ -2433,6 +2606,10 @@ class DoorVisualizer {
     this.floor.name = 'viewerFloor';
     this.scene.add(this.floor);
 
+    this.environmentGroup = new THREE.Group();
+    this.environmentGroup.name = 'viewerEnvironment';
+    this.scene.add(this.environmentGroup);
+
     this.doorRoot = new THREE.Group();
     this.vanoGroup = new THREE.Group();
     this.doorFrames = new THREE.Group();
@@ -2467,6 +2644,7 @@ class DoorVisualizer {
     this.frameThickness = 0.045;
     this.zOffset = 0.051;
     this.environmentMode = 'soloporta';
+    this.environmentSignature = null;
     this.lastParams = null;
     this.moveInterval = null;
     this.autoTimeline = null;
@@ -3341,8 +3519,379 @@ class DoorVisualizer {
   }
 
   applyEnvironment(params) {
-    this.environmentMode = params.environment || 'soloporta';
+    const mode = params.environment || 'soloporta';
+    if (!this.environmentGroup) {
+      this.environmentGroup = new THREE.Group();
+      this.environmentGroup.name = 'viewerEnvironment';
+      this.scene.add(this.environmentGroup);
+    }
+
+    const signature = [
+      mode,
+      Math.round(Number(params.totalWidthMm) || 0),
+      Math.round(Number(params.heightMm) || 0),
+      Math.round(Number(params.trackLengthMm) || 0),
+      Math.round(Number(params.extraTrackLeftMm) || 0),
+      Math.round(Number(params.extraTrackRightMm) || 0),
+      Math.round((Number(params.wallDepthM) || 0) * 1000),
+    ].join('|');
+
+    if (this.environmentSignature === signature) {
+      if (this.floor) {
+        if (mode === 'modernhd') {
+          this.floor.visible = false;
+        } else {
+          this.floor.visible = true;
+          this.floor.material.opacity = 0.3;
+        }
+      }
+      this.environmentMode = mode;
+      return;
+    }
+
+    this.environmentSignature = signature;
+    clearGroup(this.environmentGroup);
+
+    if (mode === 'modernhd') {
+      const modernEnvironment = this.buildModernEnvironment(params);
+      if (modernEnvironment) {
+        this.environmentGroup.add(modernEnvironment);
+      }
+      if (this.floor) {
+        this.floor.visible = false;
+      }
+    } else {
+      if (this.floor) {
+        this.floor.visible = true;
+        this.floor.material.opacity = 0.3;
+      }
+    }
+
+    this.environmentMode = mode;
   }
+
+  buildModernEnvironment(params) {
+    const environment = new THREE.Group();
+    environment.name = 'modernApartmentEnvironment';
+
+    const totalWidthM = Math.max(Number(params.totalWidthM) || 0, 0);
+    const trackLengthM = Math.max(Number(params.trackLengthM) || totalWidthM, totalWidthM);
+    const wallDepthM = Math.max(Number(params.wallDepthM) || 0.3, 0.3);
+    const heightM = Math.max(Number(params.heightM) || 2.1, 2.1);
+    const offsetX = ((Number(params.extraTrackRightM) || 0) - (Number(params.extraTrackLeftM) || 0)) / 2;
+    const effectiveWidth = Math.max(trackLengthM, totalWidthM);
+    const roomWidth = Math.max(effectiveWidth + 2.8, 5);
+    const roomDepth = Math.max(wallDepthM + 2.8, 4.2);
+    const roomHeight = Math.max(heightM + 1.5, 3.2);
+    const anisotropy = this.renderer?.capabilities?.getMaxAnisotropy?.() ?? 1;
+
+    const floorTexture = getProceduralTexture('modernFloor', createParquetTexture);
+    if (floorTexture) {
+      floorTexture.repeat.set(Math.max(roomWidth * 1.2, 4), Math.max(roomDepth * 1.2, 4));
+      floorTexture.anisotropy = anisotropy;
+    }
+    const floorMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#d7c2ae'),
+      map: floorTexture || null,
+      roughness: 0.45,
+      metalness: 0.08,
+    });
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(roomWidth + 2.4, roomDepth + 2.4),
+      floorMaterial
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(offsetX, -0.0005, 0);
+    floor.receiveShadow = true;
+    environment.add(floor);
+
+    const plasterTexture = getProceduralTexture('modernPlaster', createPlasterTexture);
+    if (plasterTexture) {
+      plasterTexture.repeat.set(Math.max(roomWidth * 0.6, 2), Math.max(roomHeight * 0.6, 2));
+      plasterTexture.anisotropy = anisotropy;
+    }
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#f5f3ef'),
+      map: plasterTexture || null,
+      roughness: 0.88,
+      metalness: 0.04,
+    });
+
+    const backWall = new THREE.Mesh(
+      new THREE.BoxGeometry(roomWidth + 2.4, roomHeight, 0.18),
+      wallMaterial.clone()
+    );
+    backWall.position.set(offsetX, roomHeight / 2, -roomDepth / 2 + 0.09);
+    backWall.castShadow = true;
+    backWall.receiveShadow = true;
+    environment.add(backWall);
+
+    const sideMaterial = wallMaterial.clone();
+    const sideDepth = roomDepth + 1.8;
+    const leftWall = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, roomHeight, sideDepth),
+      sideMaterial.clone()
+    );
+    leftWall.position.set(offsetX - (roomWidth + 2.4) / 2, roomHeight / 2, 0);
+    leftWall.castShadow = true;
+    leftWall.receiveShadow = true;
+    environment.add(leftWall);
+
+    const rightWall = leftWall.clone();
+    rightWall.position.x = offsetX + (roomWidth + 2.4) / 2;
+    environment.add(rightWall);
+
+    const ceilingTexture = getProceduralTexture('modernCeiling', () =>
+      generateCanvasTexture(256, (ctx, size) => {
+        ctx.fillStyle = '#f8f8f7';
+        ctx.fillRect(0, 0, size, size);
+        addCanvasNoise(ctx, size, size, 0.03);
+      })
+    );
+    if (ceilingTexture) {
+      ceilingTexture.repeat.set(Math.max(roomWidth * 0.5, 2), Math.max(roomDepth * 0.5, 2));
+      ceilingTexture.anisotropy = anisotropy;
+    }
+    const ceilingMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#f9f9f9'),
+      map: ceilingTexture || null,
+      roughness: 0.3,
+      metalness: 0.05,
+    });
+    const ceiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(roomWidth + 2.4, roomDepth + 2.4),
+      ceilingMaterial
+    );
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.set(offsetX, roomHeight + 0.02, 0);
+    environment.add(ceiling);
+
+    const rugTexture = getProceduralTexture('modernRug', createRugTexture);
+    if (rugTexture) {
+      rugTexture.repeat.set(Math.max(roomWidth * 0.4, 2), Math.max(roomDepth * 0.35, 2));
+      rugTexture.anisotropy = anisotropy;
+    }
+    const rug = new THREE.Mesh(
+      new THREE.PlaneGeometry(Math.min(roomWidth * 0.7, 3.2), Math.min(roomDepth * 0.55, 2.6)),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#f4f2ff'),
+        map: rugTexture || null,
+        roughness: 0.8,
+        metalness: 0.05,
+        side: THREE.DoubleSide,
+      })
+    );
+    rug.rotation.x = -Math.PI / 2;
+    rug.position.set(offsetX + 0.18, 0.002, roomDepth / 4);
+    rug.receiveShadow = false;
+    environment.add(rug);
+
+    const fabricTexture = getProceduralTexture('modernFabric', createFabricTexture);
+    if (fabricTexture) {
+      fabricTexture.repeat.set(2, 2);
+      fabricTexture.anisotropy = anisotropy;
+    }
+    const sofaMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#3f4c6b'),
+      map: fabricTexture || null,
+      roughness: 0.6,
+      metalness: 0.12,
+    });
+    const sofaWidth = Math.min(roomWidth * 0.45, 2.2);
+    const sofa = new THREE.Mesh(
+      new THREE.BoxGeometry(sofaWidth, 0.45, 0.9),
+      sofaMaterial.clone()
+    );
+    sofa.position.set(offsetX - roomWidth / 3.2, 0.225, roomDepth / 3);
+    sofa.castShadow = true;
+    sofa.receiveShadow = true;
+    environment.add(sofa);
+
+    const sofaBack = new THREE.Mesh(
+      new THREE.BoxGeometry(sofaWidth, 0.55, 0.15),
+      sofaMaterial.clone()
+    );
+    sofaBack.position.set(sofa.position.x, 0.55, sofa.position.z - 0.38);
+    sofaBack.castShadow = true;
+    sofaBack.receiveShadow = true;
+    environment.add(sofaBack);
+
+    const cushionMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#f5d7b8'),
+      roughness: 0.65,
+      metalness: 0.05,
+    });
+    const cushion = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.2, 0.3),
+      cushionMaterial
+    );
+    cushion.position.set(sofa.position.x - sofaWidth / 4, 0.48, sofa.position.z - 0.05);
+    cushion.castShadow = true;
+    environment.add(cushion);
+    const cushion2 = cushion.clone();
+    cushion2.material = cushionMaterial.clone();
+    cushion2.material.color = new THREE.Color('#b6c8ff');
+    cushion2.position.x = sofa.position.x + sofaWidth / 4;
+    environment.add(cushion2);
+
+    const tableTop = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.4, 0.4, 0.05, 28),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#f5efe6'),
+        roughness: 0.35,
+        metalness: 0.18,
+      })
+    );
+    tableTop.position.set(offsetX + sofaWidth * 0.1, 0.38, roomDepth / 4 + 0.15);
+    tableTop.castShadow = true;
+    environment.add(tableTop);
+    const tableStem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.12, 0.36, 24),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#b6b0a5'),
+        roughness: 0.4,
+        metalness: 0.25,
+      })
+    );
+    tableStem.position.set(tableTop.position.x, 0.18, tableTop.position.z);
+    tableStem.castShadow = true;
+    environment.add(tableStem);
+
+    const plantPot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.25, 0.3, 24),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#d9cec0'),
+        roughness: 0.5,
+        metalness: 0.1,
+      })
+    );
+    plantPot.position.set(offsetX - roomWidth / 2.8, 0.15, -roomDepth / 3.2);
+    plantPot.castShadow = true;
+    plantPot.receiveShadow = true;
+    environment.add(plantPot);
+    const foliage = new THREE.Mesh(
+      new THREE.ConeGeometry(0.35, 0.7, 28),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#4c8f6d'),
+        roughness: 0.5,
+        metalness: 0.08,
+      })
+    );
+    foliage.position.set(plantPot.position.x, 0.65, plantPot.position.z);
+    foliage.castShadow = true;
+    environment.add(foliage);
+
+    const consoleTop = new THREE.Mesh(
+      new THREE.BoxGeometry(Math.min(roomWidth * 0.45, 2.1), 0.08, 0.35),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#ffffff'),
+        roughness: 0.2,
+        metalness: 0.05,
+      })
+    );
+    consoleTop.position.set(offsetX + roomWidth / 3.2, 0.7, -roomDepth / 4);
+    consoleTop.castShadow = true;
+    consoleTop.receiveShadow = true;
+    environment.add(consoleTop);
+    const consoleLegLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.7, 0.32),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#cfc7bd'),
+        roughness: 0.4,
+        metalness: 0.15,
+      })
+    );
+    consoleLegLeft.position.set(consoleTop.position.x - consoleTop.geometry.parameters.width / 2 + 0.1, 0.35, consoleTop.position.z);
+    consoleLegLeft.castShadow = true;
+    environment.add(consoleLegLeft);
+    const consoleLegRight = consoleLegLeft.clone();
+    consoleLegRight.position.x = consoleTop.position.x + consoleTop.geometry.parameters.width / 2 - 0.1;
+    environment.add(consoleLegRight);
+
+    const book = new THREE.Mesh(
+      new THREE.BoxGeometry(0.25, 0.05, 0.18),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#3f4f7d'),
+        roughness: 0.5,
+        metalness: 0.05,
+      })
+    );
+    book.position.set(consoleTop.position.x - 0.3, consoleTop.position.y + 0.05, consoleTop.position.z + 0.05);
+    book.castShadow = true;
+    environment.add(book);
+    const book2 = book.clone();
+    book2.material = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#f2c998'),
+      roughness: 0.5,
+      metalness: 0.05,
+    });
+    book2.position.x = consoleTop.position.x - 0.02;
+    environment.add(book2);
+
+    const artworkTexture = getProceduralTexture('modernArtwork', createArtworkTexture);
+    const artworkMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#ffffff'),
+      map: artworkTexture || null,
+      emissive: new THREE.Color('#0f172a'),
+      emissiveIntensity: 0.12,
+      roughness: 0.55,
+      metalness: 0.08,
+    });
+    const artwork = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9), artworkMaterial);
+    artwork.position.set(offsetX - roomWidth * 0.15, roomHeight * 0.65, -roomDepth / 2 + 0.02);
+    artwork.castShadow = false;
+    environment.add(artwork);
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(1.46, 0.96, 0.04),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#e3dcd2'),
+        roughness: 0.4,
+        metalness: 0.1,
+      })
+    );
+    frame.position.copy(artwork.position);
+    environment.add(frame);
+
+    const pendantStem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.6, 18),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#cfcfcf'),
+        roughness: 0.3,
+        metalness: 0.6,
+      })
+    );
+    pendantStem.position.set(offsetX + roomWidth / 3.2, roomHeight - 0.2, -roomDepth / 4);
+    pendantStem.castShadow = true;
+    environment.add(pendantStem);
+    const pendantShade = new THREE.Mesh(
+      new THREE.ConeGeometry(0.32, 0.38, 32),
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color('#ffffff'),
+        emissive: new THREE.Color('#ffd8a1'),
+        emissiveIntensity: 0.45,
+        roughness: 0.35,
+        metalness: 0.15,
+      })
+    );
+    pendantShade.position.set(pendantStem.position.x, pendantStem.position.y - 0.49, pendantStem.position.z);
+    pendantShade.castShadow = true;
+    environment.add(pendantShade);
+
+    const pendantLight = new THREE.PointLight(0xffe0bb, 0.65, 6.5);
+    pendantLight.position.set(pendantShade.position.x, pendantShade.position.y - 0.05, pendantShade.position.z);
+    pendantLight.castShadow = true;
+    environment.add(pendantLight);
+
+    const accentLight = new THREE.SpotLight(0xbcd3ff, 0.35, 9, Math.PI / 3.2, 0.5, 1);
+    accentLight.position.set(offsetX - roomWidth / 3.4, roomHeight - 0.25, roomDepth / 4);
+    accentLight.target.position.set(offsetX, roomHeight / 2, 0);
+    accentLight.castShadow = true;
+    environment.add(accentLight);
+    environment.add(accentLight.target);
+
+    return environment;
+  }
+
 
   buildVano(params) {
     if (!this.vanoGroup) return;
@@ -4100,6 +4649,7 @@ const selectors = {
   traversinoMetersWrapper: document.getElementById('traversino-meters'),
   traversinoMetersInput: document.getElementById('traversino-meters-input'),
   environmentInput: document.getElementById('environment-select'),
+  environmentControl: document.getElementById('viewer-environment-control'),
   magneticaOptionalSection: document.getElementById('magnetica-optional-section'),
   optionalTrascinamento: document.querySelectorAll('.optional-trascinamento'),
   kitTrascinamento: document.querySelectorAll('.kit-trascinamento-only'),
@@ -7206,6 +7756,14 @@ selectors.montaggioSelect?.addEventListener('change', () => {
 });
 selectors.traversinoMetersInput?.addEventListener('input', () => refreshOutputs());
 
+selectors.environmentControl?.addEventListener('change', (event) => {
+  const value = event.target.value || 'soloporta';
+  if (selectors.environmentInput) {
+    selectors.environmentInput.value = value;
+  }
+  refreshOutputs();
+});
+
 selectors.form?.addEventListener('change', (event) => {
   event.target.closest('.configurator-section')?.classList.remove('configurator-section--error');
   showStepFeedback('');
@@ -7257,6 +7815,9 @@ Array.from(selectors.progressSteps ?? []).forEach((node, index) => {
 // Default selections
 if (selectors.environmentInput) {
   selectors.environmentInput.value = selectors.environmentInput.value || 'soloporta';
+}
+if (selectors.environmentControl) {
+  selectors.environmentControl.value = selectors.environmentInput?.value || 'soloporta';
 }
 modelGroup.select('TRASCINAMENTO');
 pannelloFissoGroup.select('No');
