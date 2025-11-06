@@ -2195,8 +2195,8 @@ function createFallbackPart(key) {
     geometry.clone(),
     new THREE.MeshStandardMaterial({ color: DEFAULT_PROFILE_COLOR })
   );
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   group.add(mesh);
   return group;
 }
@@ -2382,6 +2382,10 @@ class DoorVisualizer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(width, height);
     this.renderer.setClearAlpha(0);
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
     this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
@@ -2396,10 +2400,38 @@ class DoorVisualizer {
     this.controls.enablePan = false;
     this.controls.target.set(0, 1, 0);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-    const directional = new THREE.DirectionalLight(0xffffff, 0.85);
-    directional.position.set(2, 3, 2);
-    this.scene.add(ambient, directional);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.32);
+    const hemisphere = new THREE.HemisphereLight(0xf5f7ff, 0xdadada, 0.58);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    keyLight.position.set(2.4, 3.2, 2.4);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.near = 0.1;
+    keyLight.shadow.camera.far = 10;
+    keyLight.shadow.bias = -0.0004;
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+    rimLight.position.set(-2.2, 2.8, -2.6);
+    rimLight.castShadow = true;
+    rimLight.shadow.mapSize.set(1024, 1024);
+    rimLight.shadow.camera.near = 0.1;
+    rimLight.shadow.camera.far = 8;
+    rimLight.shadow.bias = -0.0006;
+
+    this.scene.add(ambient, hemisphere, keyLight, rimLight);
+
+    const floorMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color('#ffffff'),
+      roughness: 0.4,
+      metalness: 0.05,
+    });
+    const floorGeometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+    this.floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    this.floor.rotation.x = -Math.PI / 2;
+    this.floor.position.set(0, 0, 0);
+    this.floor.receiveShadow = true;
+    this.floor.name = 'viewerFloor';
+    this.scene.add(this.floor);
 
     this.doorRoot = new THREE.Group();
     this.vanoGroup = new THREE.Group();
@@ -2694,6 +2726,8 @@ class DoorVisualizer {
           node.material.color.set(color);
         }
       }
+      node.castShadow = true;
+      node.receiveShadow = true;
       node.userData.originalColor = node.material?.color?.clone?.();
       node.userData.partInfo = partInfo;
       this.partMeshes.push(node);
@@ -3189,11 +3223,11 @@ class DoorVisualizer {
         fixedTrackAllowance > 0 ? 1 : 0
       );
       if (effectiveTracks <= 0) {
-        return 0.12;
+        return 0.16;
       }
-      const baseThickness = 0.08;
-      const span = baseThickness + Math.max(effectiveTracks - 1, 0) * this.zOffset;
-      return Math.max(span, 0.12);
+      const safetyMargin = 0.04;
+      const halfDepth = safetyMargin + Math.max(effectiveTracks - 1, 0) * this.zOffset;
+      return Math.max(halfDepth * 2, 0.16);
     })();
     const enforcedWallDepth = Math.max(
       Number(params.wallDepthM) || 0,
@@ -3203,6 +3237,17 @@ class DoorVisualizer {
     params.wallThicknessM = Math.max(Number(params.wallThicknessM) || 0.08, 0.08);
 
     this.buildVano(params);
+    if (this.floor) {
+      const columnWidth = Math.max(Number(params.columnWidthM) || 0, 0.4);
+      const spanX = Math.max(
+        Number(params.trackLengthM) || Number(params.totalWidthM) || 0,
+        Number(params.totalWidthM) || 0
+      ) + columnWidth * 2;
+      const spanZ = Math.max(Number(params.wallDepthM) || 0.3, 0.3) + 0.6;
+      const offsetX = ((Number(params.extraTrackRightM) || 0) - (Number(params.extraTrackLeftM) || 0)) / 2;
+      this.floor.scale.set(Math.max(spanX, 2.6), Math.max(spanZ, 2.6), 1);
+      this.floor.position.x = offsetX;
+    }
     this.doorFrames.position.set(0, params.heightM / 2, 0);
 
     const {
@@ -3322,11 +3367,8 @@ class DoorVisualizer {
 
     const extraLeft = Math.max(Number(params?.extraTrackLeftM) || 0, 0);
     const extraRight = Math.max(Number(params?.extraTrackRightM) || 0, 0);
-    const lintelWidth = Math.max(
-      totalWidthM + extraLeft + extraRight + columnWidth * 2,
-      columnWidth * 2
-    );
-    const lintelCenterOffset = (extraRight - extraLeft) / 2;
+    const lintelWidth = Math.max(totalWidthM + columnWidth * 2, columnWidth * 2);
+    const lintelCenterOffset = 0;
 
     const baseMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color('#ffffff'),
@@ -3341,6 +3383,8 @@ class DoorVisualizer {
     leftWall.position.set(-totalWidthM / 2 - columnWidth / 2, heightM / 2, 0);
     leftWall.name = 'vanoWall_left';
     leftWall.renderOrder = -5;
+    leftWall.castShadow = false;
+    leftWall.receiveShadow = true;
     this.vanoGroup.add(leftWall);
 
     const rightWall = new THREE.Mesh(
@@ -3350,6 +3394,8 @@ class DoorVisualizer {
     rightWall.position.set(totalWidthM / 2 + columnWidth / 2, heightM / 2, 0);
     rightWall.name = 'vanoWall_right';
     rightWall.renderOrder = -5;
+    rightWall.castShadow = false;
+    rightWall.receiveShadow = true;
     this.vanoGroup.add(rightWall);
 
     const lintel = new THREE.Mesh(
@@ -3359,6 +3405,8 @@ class DoorVisualizer {
     lintel.position.set(lintelCenterOffset, heightM + lintelThickness / 2, 0);
     lintel.name = 'vanoLintel_top';
     lintel.renderOrder = -5;
+    lintel.castShadow = false;
+    lintel.receiveShadow = true;
     this.vanoGroup.add(lintel);
 
     baseMaterial.dispose();
@@ -3510,6 +3558,8 @@ class DoorVisualizer {
     glass.name = `glassPanel_${suffix}`;
     glass.position.set(0, verticalCenterOffset, 0);
     glass.renderOrder = 1;
+    glass.castShadow = false;
+    glass.receiveShadow = false;
     glass.userData.originalColor = glass.material.color.clone();
     glass.userData.partInfo = {
       name: 'Pannello Vetrato',
