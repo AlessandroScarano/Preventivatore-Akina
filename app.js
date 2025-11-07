@@ -3824,8 +3824,12 @@ class DoorVisualizer {
     const columnBaseGeometry = new THREE.CylinderGeometry(columnRadius * 1.3, columnRadius * 1.3, 0.08, 32);
     const columnCapitalGeometry = new THREE.CylinderGeometry(columnRadius * 1.4, columnRadius * 1.25, 0.12, 32);
     const columnWorldRadius = columnRadius * 1.4;
-    const sideOffset = Math.max(totalWidthM / 2 + 0.55, 0.95);
-    const depthOffset = Math.min(salonDepth / 2 - 0.5, 1.5);
+    const floorHalfWidth = (salonWidth + 2.2) / 2;
+    const floorHalfDepth = (salonDepth + 2.2) / 2;
+    const columnMarginX = Math.max(columnWorldRadius + 0.25, 0.65);
+    const columnMarginZ = Math.max(columnWorldRadius + 0.25, 0.65);
+    const sideOffset = Math.max(totalWidthM / 2 + columnWorldRadius + 0.25, floorHalfWidth - columnMarginX);
+    const depthOffset = Math.max(wallDepthM / 2 + columnWorldRadius + 0.15, floorHalfDepth - columnMarginZ);
 
     [-1, 1].forEach((side) => {
       [-1, 1].forEach((depthSide) => {
