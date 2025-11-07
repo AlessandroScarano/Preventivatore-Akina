@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preventivatore Porta Akina</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+          "three/examples/jsm/loaders/GLTFLoader.js": "https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js",
+          "three/examples/jsm/controls/OrbitControls.js": "https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js"
+        }
+      }
+    </script>
+    <script>
+      window.AKINA_ASSET_BASE = './profili3dakina/';
+      window.AKINA_ALLOW_REMOTE_ASSETS = false;
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="header-brand">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <div class="brand-copy">
+            <p class="brand-eyebrow" data-i18n="header.eyebrow">Preventivatore Porta Akina</p>
+            <h1 class="brand-title" data-i18n="header.title">Configura, visualizza e ottieni il preventivo</h1>
+          </div>
+        </div>
+        <div class="header-controls">
+          <div
+            class="language-switch"
+            role="group"
+            aria-label="Lingua"
+            data-i18n-attr="aria-label:language.switchAria"
+          >
+            <button
+              type="button"
+              class="language-switch__button is-active"
+              data-lang="it"
+              data-i18n-attr="aria-label:language.names.it"
+              aria-label="Italiano"
+            >
+              <span aria-hidden="true">🇮🇹</span>
+            </button>
+            <button
+              type="button"
+              class="language-switch__button"
+              data-lang="en"
+              data-i18n-attr="aria-label:language.names.en"
+              aria-label="English"
+            >
+              <span aria-hidden="true">🇬🇧</span>
+            </button>
+            <button
+              type="button"
+              class="language-switch__button"
+              data-lang="de"
+              data-i18n-attr="aria-label:language.names.de"
+              aria-label="Deutsch"
+            >
+              <span aria-hidden="true">🇩🇪</span>
+            </button>
+            <button
+              type="button"
+              class="language-switch__button"
+              data-lang="zh"
+              data-i18n-attr="aria-label:language.names.zh"
+              aria-label="中文"
+            >
+              <span aria-hidden="true">🇨🇳</span>
+            </button>
+          </div>
+        </div>
+        <nav
+          class="header-progress"
+          aria-label="Avanzamento configuratore"
+          data-i18n-attr="aria-label:header.progressAria"
+        >
+          <ol class="progress-steps">
+            <li class="progress-step is-active"><span data-i18n="steps.0">Dimensioni e modello</span></li>
+            <li class="progress-step"><span data-i18n="steps.1">Struttura</span></li>
+            <li class="progress-step"><span data-i18n="steps.2">Pannelli e profili</span></li>
+            <li class="progress-step"><span data-i18n="steps.3">Scorrimento</span></li>
+            <li class="progress-step"><span data-i18n="steps.4">Accessori</span></li>
+            <li class="progress-step"><span data-i18n="steps.5">Riepilogo</span></li>
+          </ol>
+        </nav>
+      </header>
+
+      <div class="app-main">
+        <section class="viewer-area" id="viewer-section" aria-labelledby="visualizer-titolo">
+          <div class="viewer-stage">
+            <div id="viewer-loading" class="viewer-loading is-hidden" aria-live="polite">
+              <div class="viewer-loading__panel">
+                <p class="viewer-loading__title" data-i18n="viewer.loadingTitle">Caricamento modelli 3D…</p>
+                <div class="viewer-loading__bar">
+                  <span id="viewer-loading-bar"></span>
+                </div>
+                <span id="viewer-loading-percent" class="viewer-loading__percent">0%</span>
+              </div>
+            </div>
+            <div
+              id="viewer-asset-warning"
+              class="viewer-warning is-hidden"
+              role="status"
+              aria-live="assertive"
+              hidden
+            ></div>
+            <div
+              id="viewer"
+              class="viewer"
+              role="img"
+              aria-label="Anteprima 3D parametrica"
+              data-i18n-attr="aria-label:viewer.ariaLabel"
+            ></div>
+            <div class="viewer-dimension viewer-dimension--height">
+              <span id="viewer-height-label">2200 mm</span>
+            </div>
+            <div class="viewer-dimension viewer-dimension--width">
+              <span id="viewer-width-label">1200 mm</span>
+            </div>
+            <div class="viewer-track" id="viewer-track-label">Binario: 2 m</div>
+            <div id="dimensions-info" class="viewer-dimensions-info">Ante: 2 · Larghezza anta: 600 mm · Altezza: 2200 mm · Larghezza totale: 1200 mm</div>
+            <div id="part-info" class="viewer-part-info" hidden></div>
+            <div class="viewer-controls" aria-label="Controlli visualizzatore 3D" data-i18n-attr="aria-label:viewer.controlsAria">
+              <div class="viewer-controls__row viewer-controls__row--environment">
+                <label class="viewer-environment" data-i18n-container="true">
+                  <span class="viewer-environment__label" data-i18n="viewer.environment.label">Scenario 3D</span>
+                  <select id="viewer-environment-control" class="viewer-environment__select">
+                    <option value="soloporta" data-i18n="viewer.environment.options.soloporta">Versione classica</option>
+                    <option value="classichd" data-i18n="viewer.environment.options.classichd">Appartamento classico HD</option>
+                    <option value="modernhd" data-i18n="viewer.environment.options.modernhd">Appartamento moderno HD</option>
+                  </select>
+                </label>
+              </div>
+              <div id="part-buttons" class="viewer-controls__row is-hidden">
+                <button type="button" data-part="topProfile" data-i18n="viewer.partButtons.top">Profilo superiore</button>
+                <button type="button" data-part="bottomProfile" data-i18n="viewer.partButtons.bottom">Profilo inferiore</button>
+                <button type="button" data-part="leftProfile" data-i18n="viewer.partButtons.left">Profilo sinistro</button>
+                <button type="button" data-part="rightProfile" data-i18n="viewer.partButtons.right">Profilo destro</button>
+                <button type="button" data-part="track" data-i18n="viewer.partButtons.track">Binario</button>
+                <button type="button" data-part="cover" data-i18n="viewer.partButtons.cover">Cover</button>
+              </div>
+              <div class="viewer-controls__row viewer-controls__row--actions">
+                <button type="button" id="reset-colors" data-i18n="viewer.buttons.resetHighlight">Reset evidenziazione</button>
+                <button type="button" id="reset-camera" data-i18n="viewer.buttons.resetCamera">Reset Camera</button>
+                <button type="button" id="fullscreen-toggle" data-i18n="viewer.buttons.fullscreen">Schermo intero</button>
+              </div>
+              <div
+                id="door-move-controls"
+                class="viewer-controls__row viewer-controls__row--move is-hidden"
+                aria-hidden="true"
+              >
+                <span class="viewer-controls__label" data-i18n="viewer.moveLabel">Sposta ante</span>
+                <div class="viewer-controls__group">
+                  <button
+                    type="button"
+                    id="move-doors-left"
+                    aria-label="Sposta ante a sinistra"
+                    data-i18n-attr="aria-label:viewer.moveLeftAria"
+                  >
+                    ◀
+                  </button>
+                  <button
+                    type="button"
+                    id="move-doors-right"
+                    aria-label="Sposta ante a destra"
+                    data-i18n-attr="aria-label:viewer.moveRightAria"
+                  >
+                    ▶
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="sidebar" id="configurator-section">
+          <form id="akina-configurator-form" class="configurator-form" novalidate>
+            <div class="form-step is-active" data-step="0">
+              <div class="configurator-section">
+                <h2 data-i18n="form.dimensions.title">Dimensioni del vano</h2>
+                <div class="dimension-grid">
+                  <label data-i18n-container="true">
+                    <span data-i18n="form.dimensions.width">Larghezza vano (mm)</span>
+                    <input type="number" name="width" id="width" min="600" max="9000" step="5" value="1200" required />
+                  </label>
+                  <label data-i18n-container="true">
+                    <span data-i18n="form.dimensions.height">Altezza vano (mm)</span>
+                    <input type="number" name="height" id="height" min="1800" max="3200" step="5" value="2200" required />
+                  </label>
+                </div>
+              </div>
+
+              <div class="configurator-section">
+                <h2 data-i18n="form.model.title">Scegli il modello</h2>
+                <div class="model-selection">
+                  <div class="model-option" data-value="TRASCINAMENTO">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/trascinamento.jpg" alt="TRASCINAMENTO" />
+                    <span data-i18n="form.model.options.TRASCINAMENTO">TRASCINAMENTO</span>
+                  </div>
+                  <div class="model-option" data-value="INDIPENDENTE">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/indipendente.jpg" alt="INDIPENDENTE" />
+                    <span data-i18n="form.model.options.INDIPENDENTE">INDIPENDENTE</span>
+                  </div>
+                  <div class="model-option" data-value="MAGNETICA">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/magnetica.jpg" alt="MAGNETICA" />
+                    <span data-i18n="form.model.options.MAGNETICA">MAGNETICA</span>
+                  </div>
+                  <div class="model-option" data-value="SINGOLA">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/singola.jpg" alt="SINGOLA" />
+                    <span data-i18n="form.model.options.SINGOLA">SINGOLA</span>
+                  </div>
+                  <div class="model-option" data-value="SOLO_PANNELLO">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/fisso.jpg" alt="Solo Pannello" />
+                    <span data-i18n="form.model.options.SOLO_PANNELLO">SOLO PANNELLO FISSO</span>
+                  </div>
+
+                  <div class="model-option" data-value="SOLO_ANTA">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/solo_anta.jpg" alt="Solo Anta" />
+                    <span data-i18n="form.model.options.SOLO_ANTA">SOLO ANTA</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="model"
+                  id="model-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectModel"
+                />
+              </div>
+
+              <input type="hidden" name="environment" id="environment-select" value="soloporta" />
+
+              <div class="configurator-section" id="solo-pannello-section" style="display: none;">
+                <h2 data-i18n="form.soloPanel.title">Configurazione Solo Pannello</h2>
+                <label for="num-panels-pannello" data-i18n-container="true">
+                  <span data-i18n="form.soloPanel.count">Numero di Pannelli</span>
+                </label>
+                <input type="number" id="num-panels-pannello" name="num_panels_pannello" min="1" max="10" />
+                <div id="panel-dimensions-container-pannello"></div>
+              </div>
+
+              <div class="configurator-section" id="solo-anta-section" style="display: none;">
+                <h2 data-i18n="form.soloLeaf.title">Configurazione Solo Anta</h2>
+                <label for="num-panels-anta" data-i18n-container="true">
+                  <span data-i18n="form.soloLeaf.count">Numero di Ante</span>
+                </label>
+                <input type="number" id="num-panels-anta" name="num_panels_anta" min="1" max="10" />
+                <div id="panel-dimensions-container-anta"></div>
+              </div>
+            </div>
+
+            <div class="form-step" data-step="1">
+              <div class="configurator-section" id="numero-ante-section">
+                <h2 data-i18n="form.numeroAnte.title">Scegli il numero di ante</h2>
+                <label data-i18n-container="true">
+                  <span data-i18n="form.numeroAnte.label">Numero di ante</span>
+                  <select name="numero_ante" id="numero-ante-select" required>
+                    <!-- Opzioni generate dinamicamente -->
+                  </select>
+                </label>
+              </div>
+
+              <div class="configurator-section" id="apertura-ante-section" style="display: none;">
+                <h2 data-i18n="form.aperturaAnte.title">Scegli l'Apertura delle Ante</h2>
+                <div class="apertura-ante-selection">
+                  <div class="apertura-ante-option" data-value="Normale">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/aperturaLato.svg" alt="Normale" />
+                    <span data-i18n="form.aperturaAnte.options.Normale">Normale</span>
+                  </div>
+                  <div class="apertura-ante-option" data-value="Destra Sinistra">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/aperturaDestraSinistra.svg" alt="Destra Sinistra" />
+                    <span data-i18n="form.aperturaAnte.options.Destra Sinistra">Destra Sinistra</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="apertura_ante"
+                  id="apertura-ante-select"
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectOpening"
+                />
+              </div>
+
+              <div class="configurator-section" id="tipologia-section" style="display: none;">
+                <h2 data-i18n="form.tipologia.title">Scegli la Tipologia</h2>
+                <div class="tipologia-selection">
+                  <div class="tipologia-option" data-value="1">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/tipologiasingola-1.svg" alt="1" />
+                    <span data-i18n="form.tipologia.options.1">1</span>
+                  </div>
+                  <div class="tipologia-option" data-value="1+1">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/tipologiasingola-11.svg" alt="1 + 1" />
+                    <span data-i18n="form.tipologia.options.1+1">1 + 1</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="tipologia"
+                  id="tipologia-select"
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectTipologia"
+                />
+              </div>
+            </div>
+
+            <div class="form-step" data-step="2">
+              <div class="configurator-section">
+                <h2 data-i18n="form.pannelloFisso.title">Vuoi un pannello fisso?</h2>
+                <div class="pannello-fisso-selection">
+                  <div class="pannello-fisso-option" data-value="Si">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/pannelloSi.svg" alt="Si" />
+                    <span data-i18n="misc.yes">Si</span>
+                  </div>
+                  <div class="pannello-fisso-option" data-value="No">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/pannelloNo.svg" alt="No" />
+                    <span data-i18n="misc.no">No</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="pannello_fisso"
+                  id="pannello-fisso-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectFixed"
+                />
+
+                <div id="pannello-fisso-extra" style="display: none;">
+                  <br /><br />
+
+                  <label data-i18n-container="true">
+                    <h2 data-i18n="form.pannelloFisso.quantity">Numero dei pannelli fissi:</h2>
+                    <input type="number" name="numero_pannelli_fissi" id="numero-pannelli-fissi" min="1" max="10" />
+                  </label>
+
+                  <div id="pannelli-su-binari-question">
+                    <h3 data-i18n="form.pannelloFisso.sameTracks">I pannelli fissi sono sugli stessi binari delle ante scorrevoli?</h3>
+                    <div class="pannelli-scelta">
+                      <div class="pannello-option" data-value="Si">
+                        <img src="https://glasscom.it/wp-content/uploads/2024/10/posizFissoSi.svg" alt="Si" />
+                        <span data-i18n="misc.yes">Si</span>
+                      </div>
+                      <div class="pannello-option" data-value="No">
+                        <img src="https://glasscom.it/wp-content/uploads/2024/10/posizFissoNo.svg" alt="No" />
+                        <span data-i18n="misc.no">No</span>
+                      </div>
+                    </div>
+                    <input
+                      type="hidden"
+                      name="pannelli_su_binari"
+                      id="pannelli-su-binari-select"
+                      data-step-validate="true"
+                      data-validation-message="form.validation.selectFixedPlacement"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <h3 data-i18n="form.pannelloFisso.widthQuestion">Come vuoi definire la larghezza del pannello fisso?</h3>
+                    <div class="binario-selection" id="scelta-dimensioni-pannello-fisso">
+                      <div class="binario-option" data-value="manuale">
+                        <img src="https://glasscom.it/wp-content/uploads/2024/10/manuale.svg" alt="Manuale" />
+                        <span data-i18n="form.pannelloFisso.widthOptions.manuale">Inserisco io la larghezza</span>
+                      </div>
+                      <div class="binario-option" data-value="uguale_anta">
+                        <img src="https://glasscom.it/wp-content/uploads/2024/10/uguale_alle_ante.svg" alt="Uguale alle ante" />
+                        <span data-i18n="form.pannelloFisso.widthOptions.uguale_anta">Uguale alle ante scorrevoli</span>
+                      </div>
+                    </div>
+                    <input type="hidden" name="sceltaPannelloFisso" id="sceltaPannelloFissoHidden" />
+                  </div>
+
+                  <div class="form-group" id="campo-larghezza-pannello-fisso" style="display: none;">
+                    <label for="larghezzaPannelloFisso">
+                      <h2 data-i18n="form.pannelloFisso.widthInput">Inserisci la larghezza del pannello fisso (in mm):</h2>
+                      <input
+                        type="number"
+                        name="larghezza_pannello_fisso"
+                        id="larghezza-pannello-fisso"
+                        min="1"
+                        placeholder="Es. 800 mm"
+                        data-i18n-attr="placeholder:form.placeholders.widthExample"
+                      />
+                    </label>
+                  </div>
+                </div>
+                <input type="hidden" id="input-larghezza-pannello-fisso" name="larghezza_pannello_fisso" value="" />
+              </div>
+
+              <div class="configurator-section" id="profilo-superiore-section" style="display: none;">
+                <h2 data-i18n="form.profiloSuperioreFissi.title">Scegli la Lunghezza del Profilo Superiore Porta Fissi</h2>
+                <div class="profilo-superiore-selection">
+                  <div class="profilo-superiore-option" data-value="Quanto i fissi">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/profilo_fissi.svg" alt="Quanto i fissi" />
+                    <span data-i18n="form.profiloSuperioreFissi.options.Quanto i fissi">Quanto i fissi</span>
+                  </div>
+                  <div class="profilo-superiore-option" data-value="Quanto tutto il binario">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/profilo_binario.svg" alt="Quanto tutto il binario" />
+                    <span data-i18n="form.profiloSuperioreFissi.options.Quanto tutto il binario">Quanto tutto il binario</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="profilo_superiore_fissi"
+                  id="profilo-superiore-fissi-select"
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectFixedProfile"
+                />
+              </div>
+
+              <div class="configurator-section" id="ante-nascoste-section">
+                <h2 data-i18n="form.anteNascoste.title">Vuoi che le Ante siano Nascoste dietro il Muro?</h2>
+                <div class="ante-nascoste-selection">
+                  <div class="ante-nascoste-option" data-value="No">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/anteNascosteNO.svg" alt="No" />
+                    <span data-i18n="misc.no">No</span>
+                  </div>
+                  <div class="ante-nascoste-option" data-value="Si">
+                    <img src="https://glasscom.it/wp-content/uploads/2024/10/anteNascosteSI.svg" alt="Si" />
+                    <span data-i18n="misc.yes">Si</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="ante_nascoste"
+                  id="ante-nascoste-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectHidden"
+                />
+              </div>
+            </div>
+
+            <div class="form-step" data-step="3">
+              <div class="configurator-section" id="door-box-section" style="display: none;">
+                <h2 data-i18n="form.doorBox.title">Vuoi aggiungere il Door Box?</h2>
+                <div class="door-box-selection">
+                  <div class="door-box-option" data-value="Si">
+                    <img
+                      src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxSi.svg"
+                      alt="Si"
+                      data-i18n-attr="alt:form.doorBox.options.Si"
+                    />
+                    <span data-i18n="form.doorBox.options.Si">Si</span>
+                  </div>
+                  <div class="door-box-option" data-value="No">
+                    <img
+                      src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxNo.svg"
+                      alt="No"
+                      data-i18n-attr="alt:form.doorBox.options.No"
+                    />
+                    <span data-i18n="form.doorBox.options.No">No</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="door_box"
+                  id="door-box-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectDoorBox"
+                />
+
+                <div id="door-box-mounting" style="display: none;">
+                  <h3 data-i18n="form.doorBox.mount">Montaggio Door Box</h3>
+                  <div class="door-box-selection">
+                    <div class="door-box-mounting-option" data-value="Destra">
+                      <img
+                        src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxDx.svg"
+                        alt="Destra"
+                        data-i18n-attr="alt:form.doorBox.sides.Destra"
+                      />
+                      <span data-i18n="form.doorBox.sides.Destra">Destra</span>
+                    </div>
+                    <div class="door-box-mounting-option" data-value="Sinistra">
+                      <img
+                        src="https://glasscom.it/wp-content/uploads/2024/10/DoorBoxSx.svg"
+                        alt="Sinistra"
+                        data-i18n-attr="alt:form.doorBox.sides.Sinistra"
+                      />
+                      <span data-i18n="form.doorBox.sides.Sinistra">Sinistra</span>
+                    </div>
+                  </div>
+                  <input
+                    type="hidden"
+                    name="door_box_mounting"
+                    id="door-box-mounting-select"
+                    data-step-validate="true"
+                    data-validation-message="form.validation.selectDoorBoxSide"
+                  />
+                </div>
+              </div>
+
+              <div class="configurator-section" id="binario-section">
+                <h2 data-i18n="form.binario.title">Scegli il binario</h2>
+                <div class="binario-selection">
+                  <div class="binario-option" data-value="A vista">
+                    <img
+                      src="https://glasscom.it/wp-content/uploads/2024/10/VisBinarioVis.svg"
+                      alt="A vista"
+                      data-i18n-attr="alt:form.binario.options.A vista"
+                    />
+                    <span data-i18n="form.binario.options.A vista">A vista</span>
+                  </div>
+                  <div class="binario-option" data-value="Nascosto">
+                    <img
+                      src="https://glasscom.it/wp-content/uploads/2024/10/VisBinarioNas.svg"
+                      alt="Nascosto"
+                      data-i18n-attr="alt:form.binario.options.Nascosto"
+                    />
+                    <span data-i18n="form.binario.options.Nascosto">Nascosto nel Cartongesso</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="binario"
+                  id="binario-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectTrack"
+                />
+              </div>
+
+              <div class="configurator-section" id="montaggio-section" style="display: none;">
+                <h2 data-i18n="form.montaggio.title">Scegli il Montaggio</h2>
+                <label>
+                  <select name="montaggio" id="montaggio-select" required>
+                    <option value="" data-i18n="form.montaggio.placeholder">-- Seleziona un'opzione --</option>
+                    <option value="A soffitto" selected data-i18n="form.montaggio.options.A soffitto">A soffitto</option>
+                    <option value="Parete" data-i18n="form.montaggio.options.Parete">Parete</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="configurator-section">
+                <h2 data-i18n="form.lunghezzaBinario.title">Scegli la lunghezza del binario</h2>
+                <p id="lunghezza-binario-msg" class="binario-warning"></p>
+                <label>
+                  <span data-i18n="form.lunghezzaBinario.label">Lunghezza del binario:</span>
+                  <select name="lunghezza_binario" id="lunghezza-binario-select" required>
+                    <!-- Opzioni generate dinamicamente -->
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-step" data-step="4">
+              <div class="configurator-section" id="traversino-section">
+                <h2 data-i18n="form.traversino.title">Vuoi aggiungere il Traversino Decorativo Adesivo?</h2>
+                <div class="traversino-selection">
+                  <div class="traversino-option" data-value="Si">
+                    <img
+                      src="https://glasscom.it/wp-content/uploads/2024/10/traversinoSi.svg"
+                      alt="Si"
+                      data-i18n-attr="alt:form.traversino.options.Si"
+                    />
+                    <span data-i18n="form.traversino.options.Si">Si</span>
+                  </div>
+                  <div class="traversino-option" data-value="No">
+                    <img
+                      src="https://glasscom.it/wp-content/uploads/2024/10/traversinoNo.svg"
+                      alt="No"
+                      data-i18n-attr="alt:form.traversino.options.No"
+                    />
+                    <span data-i18n="form.traversino.options.No">No</span>
+                  </div>
+                </div>
+                <input
+                  type="hidden"
+                  name="traversino"
+                  id="traversino-select"
+                  required
+                  data-step-validate="true"
+                  data-validation-message="form.validation.selectDecorative"
+                />
+
+                <div id="traversino-meters" style="display: none;">
+                  <br /><br />
+
+                  <label>
+                    <h2 data-i18n="form.traversino.quantity">Quantità in metri:</h2>
+                    <input type="number" name="traversino_meters" id="traversino-meters-input" min="1" step="1" />
+                  </label>
+                </div>
+              </div>
+
+            <div class="configurator-section" id="magnetica-optional-section" style="display: none;">
+                <h2 data-i18n="form.optionalMagnetica.title">Seleziona Optional per Modello Magnetica</h2>
+                <div class="accessory-grid">
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-ELB"
+                      data-name="Elettroblocco"
+                      data-i18n-name="accessories.items.MAG-AC-ELB.name"
+                      data-price="230"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-ELB">Elettroblocco</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-ELB">Codice: MAG-AC-ELB</p>
+                      <p class="accessory-card__price" data-accessory-price="230">Prezzo: € 230,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-TC1"
+                      data-name="Telecomando"
+                      data-i18n-name="accessories.items.MAG-AC-TC1.name"
+                      data-price="130"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-TC1">Telecomando</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-TC1">Codice: MAG-AC-TC1</p>
+                      <p class="accessory-card__price" data-accessory-price="130">Prezzo: € 130,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-TC2"
+                      data-name="Telecomando Smart"
+                      data-i18n-name="accessories.items.MAG-AC-TC2.name"
+                      data-price="250"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-TC2">Telecomando Smart</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-TC2">Codice: MAG-AC-TC2</p>
+                      <p class="accessory-card__price" data-accessory-price="250">Prezzo: € 250,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-TC3"
+                      data-name="Telecomando Smart con Supporto Magnetico di Montaggio"
+                      data-i18n-name="accessories.items.MAG-AC-TC3.name"
+                      data-price="270"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-TC3">Telecomando Smart con Supporto Magnetico</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-TC3">Codice: MAG-AC-TC3</p>
+                      <p class="accessory-card__price" data-accessory-price="270">Prezzo: € 270,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-TNT"
+                      data-name="Tastierino Numerico"
+                      data-i18n-name="accessories.items.MAG-AC-TNT.name"
+                      data-price="630"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-TNT">Tastierino Numerico con Lettore di Impronte</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-TNT">Codice: MAG-AC-TNT</p>
+                      <p class="accessory-card__price" data-accessory-price="630">Prezzo: € 630,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-CAV"
+                      data-name="Cavo di Connessione 4 Fili"
+                      data-i18n-name="accessories.items.MAG-AC-CAV.name"
+                      data-price="100"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-CAV">Cavo di Connessione 4 Fili</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-CAV">Codice: MAG-AC-CAV</p>
+                      <p class="accessory-card__price" data-accessory-price="100">Prezzo: € 100,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-MTS"
+                      data-name="Mini Sensore Superiore"
+                      data-i18n-name="accessories.items.MAG-AC-MTS.name"
+                      data-price="280"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-MTS">Mini Sensore Superiore</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-MTS">Codice: MAG-AC-MTS</p>
+                      <p class="accessory-card__price" data-accessory-price="280">Prezzo: € 280,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-CSB"
+                      data-name="Clean Switch Nero"
+                      data-i18n-name="accessories.items.MAG-AC-CSB.name"
+                      data-price="350"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-CSB">Clean Switch Nero</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-CSB">Codice: MAG-AC-CSB</p>
+                      <p class="accessory-card__price" data-accessory-price="350">Prezzo: € 350,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-CSW"
+                      data-name="Clean Switch Bianco"
+                      data-i18n-name="accessories.items.MAG-AC-CSW.name"
+                      data-price="350"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-CSW">Clean Switch Bianco</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-CSW">Codice: MAG-AC-CSW</p>
+                      <p class="accessory-card__price" data-accessory-price="350">Prezzo: € 350,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-SBH"
+                      data-name="Supporto per Clean Switch Quadrato"
+                      data-i18n-name="accessories.items.MAG-AC-SBH.name"
+                      data-price="50"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-SBH">Supporto per Clean Switch Quadrato</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-SBH">Codice: MAG-AC-SBH</p>
+                      <p class="accessory-card__price" data-accessory-price="50">Prezzo: € 50,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-SBW"
+                      data-name="Supporto per Clean Switch Rettangolare"
+                      data-i18n-name="accessories.items.MAG-AC-SBW.name"
+                      data-price="60"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-SBW">Supporto per Clean Switch Rettangolare</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-SBW">Codice: MAG-AC-SBW</p>
+                      <p class="accessory-card__price" data-accessory-price="60">Prezzo: € 60,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional_magnetica[]"
+                      value="MAG-AC-SYN"
+                      data-name="Cavo di Connessione Ante Sincronizzate"
+                      data-i18n-name="accessories.items.MAG-AC-SYN.name"
+                      data-price="100"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAG-AC-SYN">Cavo di Connessione Ante Sincronizzate</p>
+                      <p class="accessory-card__code" data-accessory-code="MAG-AC-SYN">Codice: MAG-AC-SYN</p>
+                      <p class="accessory-card__price" data-accessory-price="100">Prezzo: € 100,00</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="configurator-section optional-section">
+                <h2 data-i18n="form.optionalGenerali.title">Seleziona Optional</h2>
+                <div class="accessory-grid">
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional[]"
+                      value="UNK-KIT1S-K1A"
+                      data-name="Kit Anta Ridotta"
+                      data-i18n-name="accessories.items.UNK-KIT1S-K1A.name"
+                      data-price="450"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-KIT1S-K1A">Kit Anta Ridotta (+100 € su anta)</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-KIT1S-K1A">Codice: UNK-KIT1S-K1A</p>
+                      <p class="accessory-card__price" data-accessory-price="450">Prezzo: € 450,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox">
+                    <input
+                      type="checkbox"
+                      name="optional[]"
+                      value="UNK-PTO"
+                      data-name="Push to Open con Soft Close"
+                      data-i18n-name="accessories.items.UNK-PTO.name"
+                      data-price="100"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-PTO">Push to Open con Soft Close</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-PTO">Codice: UNK-PTO</p>
+                      <p class="accessory-card__price" data-accessory-price="100">Prezzo: € 100,00</p>
+                    </div>
+                  </label>
+                  <label class="accessory-card accessory-card--checkbox optional-trascinamento" style="display: none;">
+                    <input
+                      type="checkbox"
+                      name="optional[]"
+                      value="UNK-CAM-L1500"
+                      data-name="Cinta per la sincronizzazione delle ante Maggiorate"
+                      data-i18n-name="accessories.items.UNK-CAM-L1500.name"
+                      data-price="100"
+                    />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-CAM-L1500">Cinta per la sincronizzazione delle ante Maggiorate</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-CAM-L1500">Codice: UNK-CAM-L1500</p>
+                      <p class="accessory-card__price" data-accessory-price="100">Prezzo: € 100,00</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="configurator-section">
+                <h2 data-i18n="form.maniglie.title">Seleziona Maniglie e Nicchie</h2>
+                <div class="accessory-grid accessory-grid--quantity">
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="MAQ1015">Coppia di Maniglie Dritte Autoadesive 10 × 160 mm</p>
+                      <p class="accessory-card__code" data-accessory-code="MAQ1015">Codice: MAQ1015</p>
+                      <p class="accessory-card__price" data-accessory-price="47">Prezzo: € 47,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span data-i18n="form.maniglie.quantityLabel">Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[MAQ1015]"
+                        data-name="Coppia di Maniglie Dritte Autoadesive 10 x 160 mm"
+                        data-price="47"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-NTI NO">Coppia di Nicchie Tonde Autoadesive Ø 110 mm</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-NTI NO">Codice: UNK-NTI NO</p>
+                      <p class="accessory-card__price" data-accessory-price="60">Prezzo: € 60,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span data-i18n="form.maniglie.quantityLabel">Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[UNK-NTI NO]"
+                        data-name="Coppia di Nicchie Tonde Autoadesive Ø 110 mm"
+                        data-price="60"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-MRC200.33 NO">Coppia di Maniglie a C Angolo Retto 200 × 33 mm</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-MRC200.33 NO">Codice: UNK-MRC200.33 NO</p>
+                      <p class="accessory-card__price" data-accessory-price="65">Prezzo: € 65,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span data-i18n="form.maniglie.quantityLabel">Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[UNK-MRC200.33 NO]"
+                        data-name="Coppia di Maniglie a C Angolo Retto, 200 x 33 mm"
+                        data-price="65"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-MRC206.33 NO">Coppia di Maniglie a C 206 × 33 mm</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-MRC206.33 NO">Codice: UNK-MRC206.33 NO</p>
+                      <p class="accessory-card__price" data-accessory-price="70">Prezzo: € 70,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span data-i18n="form.maniglie.quantityLabel">Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[UNK-MRC206.33 NO]"
+                        data-name="Coppia di Maniglie a C 206 x 33 mm"
+                        data-price="70"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-KSM NO">Kit Serratura Magnetica per Porta Scorrevole</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-KSM NO">Codice: UNK-KSM NO</p>
+                      <p class="accessory-card__price" data-accessory-price="70">Prezzo: € 70,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span data-i18n="form.maniglie.quantityLabel">Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[UNK-KSM NO]"
+                        data-name="Kit Serratura Magnetica per Porta Scorrevole"
+                        data-price="70"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="NRCI50.220">Coppia di Nicchie Autoadesive 50 × 110 mm</p>
+                      <p class="accessory-card__code" data-accessory-code="NRCI50.220">Codice: NRCI50.220</p>
+                      <p class="accessory-card__price" data-accessory-price="70">Prezzo: € 70,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span data-i18n="form.maniglie.quantityLabel">Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[NRCI50.220]"
+                        data-name="Coppia di Nicchie Autoadesive 50 x 110 mm"
+                        data-price="70"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="accessory-card accessory-card--quantity">
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="NRCI45.220 NO">Coppia di Nicchie Autoadesive 45 × 220 mm</p>
+                      <p class="accessory-card__code" data-accessory-code="NRCI45.220 NO">Codice: NRCI45.220 NO</p>
+                      <p class="accessory-card__price" data-accessory-price="76">Prezzo: € 76,00</p>
+                    </div>
+                    <label class="accessory-card__quantity">
+                      <span data-i18n="form.maniglie.quantityLabel">Quantità</span>
+                      <input
+                        type="number"
+                        name="maniglie_nicchie_quantity[NRCI45.220 NO]"
+                        data-name="Coppia di Nicchie Autoadesive 45 x 220 mm"
+                        data-price="76"
+                        min="0"
+                        value="0"
+                        class="accessory-card__quantity-input"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="configurator-section">
+                <h2 data-i18n="form.kit.title">Seleziona Kit di Lavorazione Profili</h2>
+                <div class="kit-lav-prof">
+                  <p><strong data-i18n="form.kit.note">Da acquistare solo al primo ordine</strong></p>
+                  <div class="accessory-grid">
+                    <label class="accessory-card accessory-card--checkbox">
+                      <input
+                        type="checkbox"
+                        name="kit_lavorazione[]"
+                        value="UNK-PFT"
+                        data-name="Punta per Trapano Foratura Telaio Porta"
+                        data-i18n-name="accessories.items.UNK-PFT.name"
+                        data-price="16"
+                      />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-PFT">Punta per Trapano Foratura Telaio Porta</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-PFT">Codice: UNK-PFT</p>
+                      <p class="accessory-card__price" data-accessory-price="16">Prezzo: € 16,00</p>
+                    </div>
+                    </label>
+                    <label class="accessory-card accessory-card--checkbox kit-trascinamento-only" style="display: none;">
+                      <input
+                        type="checkbox"
+                        name="kit_lavorazione[]"
+                        value="UNK-PSC"
+                        data-name="Pinza per Serraggio su Cinghia"
+                        data-i18n-name="accessories.items.UNK-PSC.name"
+                        data-price="152.7"
+                      />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-PSC">Pinza per Serraggio su Cinghia</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-PSC">Codice: UNK-PSC</p>
+                      <p class="accessory-card__price" data-accessory-price="152.7">Prezzo: € 152,70</p>
+                    </div>
+                    </label>
+                      <label class="accessory-card accessory-card--checkbox">
+                        <input
+                          type="checkbox"
+                          name="kit_lavorazione[]"
+                          value="UNK-PVT"
+                          data-name="Prolunga per Fissaggio Viti su Telaio Porta"
+                          data-i18n-name="accessories.items.UNK-PVT.name"
+                          data-price="15"
+                        />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-PVT">Prolunga per Fissaggio Viti su Telaio Porta</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-PVT">Codice: UNK-PVT</p>
+                      <p class="accessory-card__price" data-accessory-price="15">Prezzo: € 15,00</p>
+                    </div>
+                    </label>
+                      <label class="accessory-card accessory-card--checkbox kit-trascinamento-only" style="display: none;">
+                        <input
+                          type="checkbox"
+                          name="kit_lavorazione[]"
+                          value="UNK-DDC"
+                          data-name="Dima per Localizzare la Dimensione della Cinghia"
+                          data-i18n-name="accessories.items.UNK-DDC.name"
+                          data-price="10"
+                        />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-DDC">Dima per Localizzare la Dimensione della Cinghia</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-DDC">Codice: UNK-DDC</p>
+                      <p class="accessory-card__price" data-accessory-price="10">Prezzo: € 10,00</p>
+                    </div>
+                    </label>
+                    <label class="accessory-card accessory-card--checkbox">
+                      <input
+                        type="checkbox"
+                        name="kit_lavorazione[]"
+                        value="UNK-DFT"
+                        data-name="Dima per Foratura Profili Telaio Porta"
+                        data-i18n-name="accessories.items.UNK-DFT.name"
+                        data-price="126"
+                      />
+                    <div class="accessory-card__details">
+                      <p class="accessory-card__name" data-accessory-name="UNK-DFT">Dima per Foratura Profili Telaio Porta</p>
+                      <p class="accessory-card__code" data-accessory-code="UNK-DFT">Codice: UNK-DFT</p>
+                      <p class="accessory-card__price" data-accessory-price="126">Prezzo: € 126,00</p>
+                    </div>
+                    </label>
+                  </div>
+                  <a id="select-all-kits" class="accessory-select-all" data-i18n="form.optionalGenerali.selectAll">Seleziona Tutti</a>
+                </div>
+              </div>
+
+            </div>
+
+            <section
+              class="summary-panel summary-panel--quote card--results is-collapsed"
+              id="summary-section"
+              aria-labelledby="preventivo-titolo"
+            >
+              <header class="summary-panel__header">
+                <div>
+                  <p class="summary-eyebrow" data-i18n="summary.quoteEyebrow">Riepilogo preventivo</p>
+                  <h2 id="preventivo-titolo" data-i18n="summary.quoteTitle">Totale configurazione</h2>
+                </div>
+                <div class="summary-total" id="quote-total">€ 0,00 + IVA e Spese di Trasporto</div>
+              </header>
+              <div id="quote-results" class="summary-panel__body">
+                <div class="summary-section">
+                  <h3 data-i18n="summary.configTitle">Dati configurazione</h3>
+                  <ul id="selection-summary" class="selection-summary"></ul>
+                </div>
+                <div class="summary-section">
+                  <h3 data-i18n="summary.itemsTitle">Dettaglio voci</h3>
+                  <div class="summary-breakdown" id="quote-breakdown" aria-live="polite"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="summary-panel summary-panel--cuts card--results is-collapsed" aria-labelledby="tagli-titolo">
+              <header class="summary-panel__header">
+                <div>
+                  <p class="summary-eyebrow" data-i18n="summary.cutsEyebrow">Tagli profili</p>
+                  <h2 id="tagli-titolo" data-i18n="summary.cutsTitle">Calcolo tagli</h2>
+                </div>
+              </header>
+              <div class="summary-panel__body">
+                <table class="cuts-table">
+                  <thead>
+                    <tr>
+                      <th data-i18n="summary.tableHeaders.element">Elemento</th>
+                      <th data-i18n="summary.tableHeaders.quantity">Quantità</th>
+                      <th data-i18n="summary.tableHeaders.length">Lunghezza (mm)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cuts-body"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <div class="form-step" data-step="5">
+              <div class="configurator-section configurator-section--summary">
+                <h2 data-i18n="form.summaryStep.title">Riepilogo finale</h2>
+                <p data-i18n="form.summaryStep.description">
+                  Conferma le tue scelte e salva il preventivo dettagliato in PDF comprensivo di lavorazioni e accessori.
+                </p>
+                <div class="summary-actions">
+                  <button type="button" id="open-full-summary" class="wizard-button wizard-button--secondary">
+                    <span data-i18n="buttons.openSummary">Mostra riepilogo completo</span>
+                  </button>
+                  <button type="button" id="save-pdf-button" class="wizard-button wizard-button--cta" data-i18n="buttons.savePdf">
+                    Salva in PDF
+                  </button>
+                </div>
+                <p class="configurator-note"><strong data-i18n="form.summaryStep.disclaimerBold">* La Glass Com non si assume nessuna responsabilità per errori commessi nei calcoli e nell'utilizzo del Tool.</strong></p>
+                <p class="configurator-note" data-i18n="form.summaryStep.disclaimer">Vi preghiamo di utilizzare i cataloghi, i listini e le schede tecniche a disposizione.</p>
+              </div>
+            </div>
+
+            <div class="wizard-navigation">
+              <button type="button" class="wizard-button wizard-button--secondary" id="step-prev" data-i18n="buttons.prev">
+                Indietro
+              </button>
+              <p id="step-feedback" class="wizard-feedback" role="status" aria-live="polite"></p>
+              <button type="button" class="wizard-button" id="step-next" data-i18n="buttons.next">Avanti</button>
+            </div>
+          </form>
+        </aside>
+      </div>
+      <nav
+        class="mobile-nav"
+        aria-label="Navigazione app"
+        data-i18n-attr="aria-label:navigation.ariaLabel"
+      >
+        <button
+          type="button"
+          class="mobile-nav__button is-active"
+          data-target="#viewer-section"
+          data-i18n-attr="aria-label:navigation.viewer"
+        >
+          <span class="mobile-nav__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path
+                d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span class="mobile-nav__label" data-i18n="navigation.viewer">Visualizzatore</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-nav__button"
+          data-target="#configurator-section"
+          data-i18n-attr="aria-label:navigation.configurator"
+        >
+          <span class="mobile-nav__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path
+                d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span class="mobile-nav__label" data-i18n="navigation.configurator">Configuratore</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-nav__button"
+          data-target="#summary-section"
+          data-i18n-attr="aria-label:navigation.summary"
+        >
+          <span class="mobile-nav__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path
+                d="M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v12h12V6H6zm2 2h8v2H8V8zm0 4h8v2H8v-2zm0 4h5v2H8v-2z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span class="mobile-nav__label" data-i18n="navigation.summary">Riepilogo</span>
+        </button>
+      </nav>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
