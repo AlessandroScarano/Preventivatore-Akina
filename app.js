@@ -4149,7 +4149,14 @@ class DoorVisualizer {
     const offsetX = (extraRight - extraLeft) / 2;
 
     const effectiveSpan = Math.max(trackLengthM, totalWidthM);
-    const loungeWidth = Math.max(effectiveSpan + 3.6, 6.4);
+    const doorHalfSpan = Math.max(totalWidthM / 2, 0.5);
+    const walkwayLeftEdge = offsetX - doorHalfSpan;
+    const walkwayRightEdge = offsetX + doorHalfSpan;
+    const baseMargin = Math.max(1.2, doorHalfSpan * 0.35);
+    const placementPadding = doorHalfSpan + baseMargin + 2.2;
+    const placeLeft = (halfWidth = 0) => walkwayLeftEdge - baseMargin - halfWidth;
+    const placeRight = (halfWidth = 0) => walkwayRightEdge + baseMargin + halfWidth;
+    const loungeWidth = Math.max(effectiveSpan + 3.6, placementPadding * 2);
     const loungeDepth = Math.max(wallDepthM + 3.6, 5.2);
     const loungeHeight = Math.max(heightM + 1.8, 3.4);
     const anisotropy = this.renderer?.capabilities?.getMaxAnisotropy?.() ?? 1;
@@ -4208,8 +4215,10 @@ class DoorVisualizer {
       rugTexture.repeat.set(3, 2.5);
       rugTexture.anisotropy = anisotropy;
     }
+    const rugWidth = Math.min(loungeWidth * 0.62, 3.6);
+    const rugDepth = Math.min(loungeDepth * 0.55, 2.8);
     const rug = new THREE.Mesh(
-      new THREE.PlaneGeometry(Math.min(loungeWidth * 0.62, 3.6), Math.min(loungeDepth * 0.55, 2.8)),
+      new THREE.PlaneGeometry(rugWidth, rugDepth),
       new THREE.MeshStandardMaterial({
         color: new THREE.Color('#f4f7ff'),
         map: rugTexture || null,
@@ -4219,7 +4228,7 @@ class DoorVisualizer {
       })
     );
     rug.rotation.x = -Math.PI / 2;
-    rug.position.set(offsetX - effectiveSpan / 3.2, 0.005, platform.position.z + 0.25);
+    rug.position.set(placeLeft(rugWidth / 2), 0.005, platform.position.z + 0.25);
     rug.receiveShadow = false;
     environment.add(rug);
 
@@ -4234,11 +4243,12 @@ class DoorVisualizer {
       roughness: 0.55,
       metalness: 0.12,
     });
+    const sofaWidth = Math.min(loungeWidth * 0.42, 2.4);
     const sofaSeat = new THREE.Mesh(
-      new THREE.BoxGeometry(Math.min(loungeWidth * 0.42, 2.4), 0.42, 1.05),
+      new THREE.BoxGeometry(sofaWidth, 0.42, 1.05),
       sofaMaterial.clone()
     );
-    sofaSeat.position.set(rug.position.x - 0.2, 0.21, rug.position.z - 0.15);
+    sofaSeat.position.set(placeLeft(sofaWidth / 2), 0.21, rug.position.z - 0.15);
     sofaSeat.castShadow = true;
     sofaSeat.receiveShadow = true;
     environment.add(sofaSeat);
@@ -4349,6 +4359,7 @@ class DoorVisualizer {
 
     // --- media wall -------------------------------------------------------
     const consoleWidth = Math.min(loungeWidth * 0.4, 2.1);
+    const consoleX = placeRight(consoleWidth / 2);
     const console = new THREE.Mesh(
       new THREE.BoxGeometry(consoleWidth, 0.12, 0.42),
       new THREE.MeshStandardMaterial({
@@ -4357,7 +4368,7 @@ class DoorVisualizer {
         metalness: 0.05,
       })
     );
-    console.position.set(offsetX + effectiveSpan / 2.6, 0.3, -0.55);
+    console.position.set(consoleX, 0.3, -0.55);
     console.castShadow = true;
     console.receiveShadow = true;
     environment.add(console);
@@ -4435,11 +4446,12 @@ class DoorVisualizer {
       roughness: 0.4,
       metalness: 0.18,
     });
+    const shelfWidth = 0.32;
     const shelf = new THREE.Mesh(
-      new THREE.BoxGeometry(0.32, 1.6, 0.32),
+      new THREE.BoxGeometry(shelfWidth, 1.6, 0.32),
       shelfMaterial.clone()
     );
-    shelf.position.set(offsetX - effectiveSpan / 2.2, 0.8, -loungeDepth / 3);
+    shelf.position.set(placeLeft(shelfWidth / 2) - 0.6, 0.8, -loungeDepth / 3);
     shelf.castShadow = true;
     shelf.receiveShadow = true;
     environment.add(shelf);
@@ -4563,7 +4575,7 @@ class DoorVisualizer {
       new THREE.CylinderGeometry(0.22, 0.28, 0.36, 24),
       planterMaterial.clone()
     );
-    planter.position.set(offsetX + effectiveSpan / 2.4, 0.18, rug.position.z + 0.55);
+    planter.position.set(placeRight(0.34) + 0.4, 0.18, rug.position.z + 0.55);
     planter.castShadow = true;
     planter.receiveShadow = true;
     environment.add(planter);
@@ -4581,7 +4593,7 @@ class DoorVisualizer {
 
     const lowPlanter = planter.clone();
     lowPlanter.scale.set(0.8, 0.8, 0.8);
-    lowPlanter.position.set(offsetX - effectiveSpan / 2.6, 0.14, platform.position.z - 0.7);
+    lowPlanter.position.set(placeLeft(0.34) - 0.5, 0.14, platform.position.z - 0.7);
     environment.add(lowPlanter);
     const lowPlant = new THREE.Mesh(
       new THREE.SphereGeometry(0.32, 24, 20),
