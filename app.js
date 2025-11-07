@@ -3605,66 +3605,10 @@ class DoorVisualizer {
     floor.receiveShadow = true;
     environment.add(floor);
 
-    const plasterTexture = getProceduralTexture('modernPlaster', createPlasterTexture);
-    if (plasterTexture) {
-      plasterTexture.repeat.set(Math.max(roomWidth * 0.6, 2), Math.max(roomHeight * 0.6, 2));
-      plasterTexture.anisotropy = anisotropy;
-    }
-    const wallMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color('#f5f3ef'),
-      map: plasterTexture || null,
-      roughness: 0.88,
-      metalness: 0.04,
-    });
-
-    const backWall = new THREE.Mesh(
-      new THREE.BoxGeometry(roomWidth + 2.4, roomHeight, 0.18),
-      wallMaterial.clone()
-    );
-    backWall.position.set(offsetX, roomHeight / 2, -roomDepth / 2 + 0.09);
-    backWall.castShadow = true;
-    backWall.receiveShadow = true;
-    environment.add(backWall);
-
-    const sideMaterial = wallMaterial.clone();
-    const sideDepth = roomDepth + 1.8;
-    const leftWall = new THREE.Mesh(
-      new THREE.BoxGeometry(0.18, roomHeight, sideDepth),
-      sideMaterial.clone()
-    );
-    leftWall.position.set(offsetX - (roomWidth + 2.4) / 2, roomHeight / 2, 0);
-    leftWall.castShadow = true;
-    leftWall.receiveShadow = true;
-    environment.add(leftWall);
-
-    const rightWall = leftWall.clone();
-    rightWall.position.x = offsetX + (roomWidth + 2.4) / 2;
-    environment.add(rightWall);
-
-    const ceilingTexture = getProceduralTexture('modernCeiling', () =>
-      generateCanvasTexture(256, (ctx, size) => {
-        ctx.fillStyle = '#f8f8f7';
-        ctx.fillRect(0, 0, size, size);
-        addCanvasNoise(ctx, size, size, 0.03);
-      })
-    );
-    if (ceilingTexture) {
-      ceilingTexture.repeat.set(Math.max(roomWidth * 0.5, 2), Math.max(roomDepth * 0.5, 2));
-      ceilingTexture.anisotropy = anisotropy;
-    }
-    const ceilingMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color('#f9f9f9'),
-      map: ceilingTexture || null,
-      roughness: 0.3,
-      metalness: 0.05,
-    });
-    const ceiling = new THREE.Mesh(
-      new THREE.PlaneGeometry(roomWidth + 2.4, roomDepth + 2.4),
-      ceilingMaterial
-    );
-    ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.set(offsetX, roomHeight + 0.02, 0);
-    environment.add(ceiling);
+    // The modern HD environment keeps the doorway visible from both sides, so
+    // we intentionally avoid enclosing walls or ceilings here. Furniture and
+    // decorative elements are freestanding around the door while the white
+    // vano provides the only architectural frame.
 
     const rugTexture = getProceduralTexture('modernRug', createRugTexture);
     if (rugTexture) {
