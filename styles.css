@@ -16,6 +16,7 @@
   --radius-small: 14px;
   --shadow-soft: 0 24px 55px rgba(22, 30, 56, 0.18);
   --shadow-card: 0 16px 35px rgba(15, 23, 42, 0.14);
+  --mobile-nav-height: 82px;
 }
 
 *,
@@ -154,6 +155,84 @@ a {
   gap: 2.4rem;
   padding: 2rem 2.4rem 2.6rem;
   align-items: stretch;
+}
+
+#viewer-section,
+#configurator-section,
+#summary-section {
+  scroll-margin-top: 140px;
+}
+
+.mobile-nav {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  height: var(--mobile-nav-height);
+  display: none;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(210, 218, 235, 0.8);
+  box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.12);
+  padding: 0.5rem 1.2rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+}
+
+.mobile-nav__button {
+  appearance: none;
+  border: none;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  color: var(--text-soft);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.8rem;
+  border-radius: 18px;
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.mobile-nav__button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.mobile-nav__button.is-active {
+  color: var(--accent-strong);
+  background: rgba(49, 104, 255, 0.14);
+  transform: translateY(-4px);
+}
+
+.mobile-nav__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 12px;
+  background: rgba(49, 104, 255, 0.12);
+  color: var(--accent-strong);
+}
+
+.mobile-nav__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mobile-nav__button.is-active .mobile-nav__icon {
+  background: var(--accent-strong);
+  color: #fff;
+}
+
+.mobile-nav__label {
+  display: block;
 }
 
 .viewer-area {
@@ -1073,6 +1152,56 @@ a {
 
   .summary-panel {
     max-height: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  body {
+    background: linear-gradient(180deg, #f5f7ff 0%, #e6ecfb 45%, #f8f9fe 100%);
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-shell {
+    width: min(100%, 720px);
+    margin: 0 auto;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .app-header {
+    padding: 1.1rem 1.4rem;
+  }
+
+  .app-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    padding: 1.2rem 1.4rem calc(1.4rem + var(--mobile-nav-height));
+  }
+
+  .viewer-stage {
+    min-height: 360px;
+    padding: 1.2rem 1.25rem 7.5rem;
+  }
+
+  .sidebar {
+    gap: 1.4rem;
+  }
+
+  .form-step {
+    overflow: visible;
+    max-height: none;
+    padding-right: 0;
+  }
+
+  #viewer-section,
+  #configurator-section,
+  #summary-section {
+    scroll-margin-top: calc(96px + var(--mobile-nav-height));
+  }
+
+  .mobile-nav {
+    display: flex;
   }
 }
 

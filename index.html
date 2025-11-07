@@ -95,7 +95,7 @@
       </header>
 
       <div class="app-main">
-        <section class="viewer-area" aria-labelledby="visualizer-titolo">
+        <section class="viewer-area" id="viewer-section" aria-labelledby="visualizer-titolo">
           <div class="viewer-stage">
             <div id="viewer-loading" class="viewer-loading is-hidden" aria-live="polite">
               <div class="viewer-loading__panel">
@@ -182,7 +182,7 @@
           </div>
         </section>
 
-        <aside class="sidebar">
+        <aside class="sidebar" id="configurator-section">
           <form id="akina-configurator-form" class="configurator-form" novalidate>
             <div class="form-step is-active" data-step="0">
               <div class="configurator-section">
@@ -1056,7 +1056,11 @@
 
             </div>
 
-            <section class="summary-panel summary-panel--quote card--results is-collapsed" aria-labelledby="preventivo-titolo">
+            <section
+              class="summary-panel summary-panel--quote card--results is-collapsed"
+              id="summary-section"
+              aria-labelledby="preventivo-titolo"
+            >
               <header class="summary-panel__header">
                 <div>
                   <p class="summary-eyebrow" data-i18n="summary.quoteEyebrow">Riepilogo preventivo</p>
@@ -1126,6 +1130,60 @@
           </form>
         </aside>
       </div>
+      <nav
+        class="mobile-nav"
+        aria-label="Navigazione app"
+        data-i18n-attr="aria-label:navigation.ariaLabel"
+      >
+        <button
+          type="button"
+          class="mobile-nav__button is-active"
+          data-target="#viewer-section"
+          data-i18n-attr="aria-label:navigation.viewer"
+        >
+          <span class="mobile-nav__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path
+                d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span class="mobile-nav__label" data-i18n="navigation.viewer">Visualizzatore</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-nav__button"
+          data-target="#configurator-section"
+          data-i18n-attr="aria-label:navigation.configurator"
+        >
+          <span class="mobile-nav__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path
+                d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h10v2H4v-2z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span class="mobile-nav__label" data-i18n="navigation.configurator">Configuratore</span>
+        </button>
+        <button
+          type="button"
+          class="mobile-nav__button"
+          data-target="#summary-section"
+          data-i18n-attr="aria-label:navigation.summary"
+        >
+          <span class="mobile-nav__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path
+                d="M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v12h12V6H6zm2 2h8v2H8V8zm0 4h8v2H8v-2zm0 4h5v2H8v-2z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span class="mobile-nav__label" data-i18n="navigation.summary">Riepilogo</span>
+        </button>
+      </nav>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>

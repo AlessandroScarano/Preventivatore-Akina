@@ -30,6 +30,12 @@ const TRANSLATIONS = {
       progressAria: 'Avanzamento configuratore',
     },
     steps: ['Dimensioni e modello', 'Struttura', 'Pannelli e profili', 'Scorrimento', 'Accessori', 'Riepilogo'],
+    navigation: {
+      ariaLabel: 'Navigazione app',
+      viewer: 'Visualizzatore',
+      configurator: 'Configuratore',
+      summary: 'Riepilogo',
+    },
     viewer: {
       loadingTitle: 'Caricamento modelli 3D…',
       controlsAria: 'Controlli visualizzatore 3D',
@@ -471,6 +477,12 @@ const TRANSLATIONS = {
       progressAria: 'Configurator progress',
     },
     steps: ['Dimensions & model', 'Structure', 'Panels & profiles', 'Sliding', 'Accessories', 'Summary'],
+    navigation: {
+      ariaLabel: 'App navigation',
+      viewer: '3D Viewer',
+      configurator: 'Configurator',
+      summary: 'Summary',
+    },
     viewer: {
       loadingTitle: 'Loading 3D models…',
       controlsAria: '3D viewer controls',
@@ -909,6 +921,12 @@ const TRANSLATIONS = {
       progressAria: 'Fortschritt des Konfigurators',
     },
     steps: ['Abmessungen & Modell', 'Struktur', 'Paneele & Profile', 'Lauftechnik', 'Zubehör', 'Zusammenfassung'],
+    navigation: {
+      ariaLabel: 'App-Navigation',
+      viewer: '3D-Ansicht',
+      configurator: 'Konfigurator',
+      summary: 'Zusammenfassung',
+    },
     viewer: {
       loadingTitle: '3D-Modelle werden geladen…',
       controlsAria: 'Bedienelemente des 3D-Viewers',
@@ -1347,6 +1365,12 @@ const TRANSLATIONS = {
       progressAria: '配置器进度',
     },
     steps: ['尺寸与型号', '结构', '面板与型材', '滑动系统', '配件', '汇总'],
+    navigation: {
+      ariaLabel: '应用导航',
+      viewer: '3D 视图',
+      configurator: '配置器',
+      summary: '汇总',
+    },
     viewer: {
       loadingTitle: '正在加载 3D 模型…',
       controlsAria: '3D 预览控制',
@@ -5319,6 +5343,7 @@ const selectors = {
   form: document.getElementById('akina-configurator-form'),
   formSteps: document.querySelectorAll('.form-step'),
   progressSteps: document.querySelectorAll('.progress-step'),
+  mobileNavButtons: document.querySelectorAll('.mobile-nav__button'),
   languageButtons: document.querySelectorAll('.language-switch__button'),
   prevButton: document.getElementById('step-prev'),
   nextButton: document.getElementById('step-next'),
@@ -5424,6 +5449,76 @@ let currentStepIndex = 0;
 function showStepFeedback(message = '') {
   if (!selectors.stepFeedback) return;
   selectors.stepFeedback.textContent = resolveMessage(message);
+}
+
+function setupMobileNav() {
+  const buttons = Array.from(selectors.mobileNavButtons ?? []);
+  if (!buttons.length) {
+    return;
+  }
+
+  const setActive = (activeButton) => {
+    buttons.forEach((button) => {
+      const isActive = button === activeButton;
+      button.classList.toggle('is-active', isActive);
+      if (isActive) {
+        button.setAttribute('aria-current', 'page');
+      } else {
+        button.removeAttribute('aria-current');
+      }
+    });
+  };
+
+  const observed = buttons
+    .map((button) => {
+      const targetSelector = button.getAttribute('data-target');
+      if (!targetSelector) return null;
+      const target = document.querySelector(targetSelector);
+      if (!target) return null;
+      return { button, target };
+    })
+    .filter(Boolean);
+
+  let suppressObserver = false;
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const targetSelector = button.getAttribute('data-target');
+      const target = targetSelector ? document.querySelector(targetSelector) : null;
+      if (!target) return;
+      suppressObserver = true;
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActive(button);
+      window.setTimeout(() => {
+        suppressObserver = false;
+      }, 600);
+    });
+  });
+
+  if (observed.length) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (suppressObserver) return;
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (!visible.length) return;
+        const { target } = visible[0];
+        const match = observed.find((item) => item.target === target);
+        if (match) {
+          setActive(match.button);
+        }
+      },
+      { threshold: [0.35, 0.6], rootMargin: '-25% 0px -45% 0px' }
+    );
+
+    observed.forEach(({ target }) => observer.observe(target));
+  }
+
+  const initialActive = buttons.find((btn) => btn.classList.contains('is-active')) || observed[0]?.button || buttons[0];
+  if (initialActive) {
+    setActive(initialActive);
+  }
 }
 
 function toggleSummaryCards(visible) {
@@ -8297,6 +8392,7 @@ let binarioGroup;
 let traversinoGroup;
 
 initializeLanguageSwitcher();
+setupMobileNav();
 
 modelGroup = setupSelectionGroup(selectors.modelContainer, '.model-option', document.getElementById('model-select'), {
   onChange: (value) => {
