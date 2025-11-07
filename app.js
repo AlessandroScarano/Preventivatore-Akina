@@ -4188,33 +4188,6 @@ class DoorVisualizer {
     floor.receiveShadow = true;
     environment.add(floor);
 
-    // Split-level platform around the door to emphasise the scene depth.
-    const platformMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color('#f7f4ef'),
-      roughness: 0.25,
-      metalness: 0.05,
-    });
-    const platform = new THREE.Mesh(
-      new THREE.BoxGeometry(effectiveSpan + 1.8, 0.12, wallDepthM + 2.2),
-      platformMaterial
-    );
-    platform.position.set(offsetX, 0.06, -0.4);
-    platform.castShadow = false;
-    platform.receiveShadow = true;
-    environment.add(platform);
-
-    const step = new THREE.Mesh(
-      new THREE.BoxGeometry(effectiveSpan + 2.2, 0.08, 0.5),
-      new THREE.MeshStandardMaterial({
-        color: new THREE.Color('#cdc5bb'),
-        roughness: 0.45,
-        metalness: 0.1,
-      })
-    );
-    step.position.set(offsetX, 0.04, platform.position.z + (wallDepthM + 2.2) / 2 + 0.25);
-    step.receiveShadow = true;
-    environment.add(step);
-
     const frontRoom = new THREE.Group();
     frontRoom.name = 'modernApartmentFrontRoom';
     frontRoom.position.set(offsetX, 0, frontRoomCenterZ);
