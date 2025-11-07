@@ -3823,6 +3823,7 @@ class DoorVisualizer {
     const columnGeometry = new THREE.CylinderGeometry(columnRadius, columnRadius * 0.98, columnHeight, 32);
     const columnBaseGeometry = new THREE.CylinderGeometry(columnRadius * 1.3, columnRadius * 1.3, 0.08, 32);
     const columnCapitalGeometry = new THREE.CylinderGeometry(columnRadius * 1.4, columnRadius * 1.25, 0.12, 32);
+    const columnWorldRadius = columnRadius * 1.4;
     const sideOffset = Math.max(totalWidthM / 2 + 0.55, 0.95);
     const depthOffset = Math.min(salonDepth / 2 - 0.5, 1.5);
 
@@ -3893,8 +3894,9 @@ class DoorVisualizer {
       consoleGroup.add(backLeg);
     });
     consoleGroup.rotation.y = Math.PI / 2;
+    const consoleOffsetX = sideOffset + columnWorldRadius + consoleDepth / 2 + 0.35;
     consoleGroup.position.set(
-      offsetX + sideOffset + consoleDepth + 0.35,
+      offsetX + consoleOffsetX,
       0,
       Math.min(salonDepth * 0.12, 0.7)
     );
@@ -3978,7 +3980,8 @@ class DoorVisualizer {
     backLeg.castShadow = true;
     backLeg.receiveShadow = true;
     easelGroup.add(backLeg);
-    easelGroup.position.set(offsetX - sideOffset - consoleDepth - 0.35, 0, Math.min(salonDepth * 0.12, 0.7));
+    const easelOffsetX = sideOffset + columnWorldRadius + consoleDepth / 2 + 0.35;
+    easelGroup.position.set(offsetX - easelOffsetX, 0, Math.min(salonDepth * 0.12, 0.7));
     environment.add(easelGroup);
 
     const curtainTexture = getProceduralTexture('classicCurtain', createClassicCurtainTexture);
@@ -3998,7 +4001,10 @@ class DoorVisualizer {
     const curtainWidth = Math.max(totalWidthM * 0.3, 0.9);
     const curtainHeight = Math.max(heightM + 0.5, 2.6);
     const curtainGeometry = new THREE.PlaneGeometry(curtainWidth, curtainHeight);
-    const curtainOffset = totalWidthM / 2 + curtainWidth / 2 + 0.3;
+    const curtainOffset = Math.max(
+      totalWidthM / 2 + curtainWidth / 2 + 0.3,
+      sideOffset + columnWorldRadius + curtainWidth / 2 + 0.15
+    );
     [-1, 1].forEach((side) => {
       const curtain = new THREE.Mesh(curtainGeometry, curtainMaterial.clone());
       curtain.position.set(offsetX + side * curtainOffset, curtainHeight / 2 - 0.02, -0.35);
@@ -4019,14 +4025,18 @@ class DoorVisualizer {
       roughness: 0.55,
       metalness: 0.15,
     });
+    const armchairBaseX = Math.min(
+      totalWidthM / 2 + 0.95,
+      Math.max(sideOffset - columnWorldRadius - 0.3, 1.1)
+    );
     const armchairPositions = [
       {
-        x: offsetX - Math.min(totalWidthM / 2 + 0.95, 1.4),
+        x: offsetX - armchairBaseX,
         z: rug.position.z + 0.62,
         rotation: Math.PI / 6,
       },
       {
-        x: offsetX + Math.min(totalWidthM / 2 + 0.95, 1.4),
+        x: offsetX + armchairBaseX,
         z: rug.position.z + 0.62,
         rotation: -Math.PI / 6,
       },
@@ -4073,9 +4083,10 @@ class DoorVisualizer {
     });
     const planterGeometry = new THREE.CylinderGeometry(0.16, 0.18, 0.38, 20);
     const foliageGeometry = new THREE.SphereGeometry(0.32, 24, 24);
+    const planterOffsetX = Math.max(totalWidthM / 2 + 0.45, sideOffset + columnWorldRadius + 0.25);
     [-1, 1].forEach((side) => {
       const planter = new THREE.Mesh(planterGeometry, planterMaterial.clone());
-      planter.position.set(offsetX + side * (totalWidthM / 2 + 0.45), 0.19, -Math.min(salonDepth / 3, 1));
+      planter.position.set(offsetX + side * planterOffsetX, 0.19, -Math.min(salonDepth / 3, 1));
       planter.castShadow = true;
       planter.receiveShadow = true;
       environment.add(planter);
