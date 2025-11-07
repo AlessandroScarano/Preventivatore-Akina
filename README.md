@@ -8,7 +8,7 @@ Applicazione web responsive per configurare e preventivare la porta Akina con un
 - **Calcolo economico dettagliato** con scomposizione di struttura base, scorrimento, finiture, maniglie e accessori opzionali.
 - **Generazione automatica dei tagli dei profili** per montanti, traversi, vetro e componenti di scorrimento.
 - **Visualizzatore 3D in Three.js** sincronizzato con le scelte estetiche per avere un'anteprima interattiva della porta.
-- **Scenari 3D selezionabili**: scegli dal menu integrato fra la resa classica e l'appartamento moderno in alta definizione, entrambe adattive alle dimensioni della porta.
+- **Scenari 3D selezionabili**: scegli dal menu integrato fra la resa classica, il nuovo salone classico HD e l'appartamento moderno HD, tutti adattivi alle dimensioni della porta.
 - **Layout responsive** con interfaccia glassmorphism, compatibile con desktop, tablet e mobile.
 
 ## Avvio
