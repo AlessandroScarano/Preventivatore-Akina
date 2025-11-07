@@ -4154,12 +4154,18 @@ class DoorVisualizer {
     const walkwayRightEdge = offsetX + doorHalfSpan;
     const baseMargin = Math.max(1.2, doorHalfSpan * 0.35);
     const placementPadding = doorHalfSpan + baseMargin + 2.2;
-    const placeLeft = (halfWidth = 0) => walkwayLeftEdge - baseMargin - halfWidth;
-    const placeRight = (halfWidth = 0) => walkwayRightEdge + baseMargin + halfWidth;
+    const walkwayGap = wallDepthM + 1.2;
+    const frontRoomDepth = Math.max(wallDepthM + 2.8, 3.6);
+    const backRoomDepth = Math.max(wallDepthM + 2.6, 3.4);
+    const frontRoomCenterZ = walkwayGap / 2 + frontRoomDepth / 2;
+    const backRoomCenterZ = -walkwayGap / 2 - backRoomDepth / 2;
     const loungeWidth = Math.max(effectiveSpan + 3.6, placementPadding * 2);
-    const loungeDepth = Math.max(wallDepthM + 3.6, 5.2);
+    const loungeDepth = Math.max(frontRoomDepth + backRoomDepth + walkwayGap, 8);
     const loungeHeight = Math.max(heightM + 1.8, 3.4);
     const anisotropy = this.renderer?.capabilities?.getMaxAnisotropy?.() ?? 1;
+
+    const placeLeft = (halfWidth = 0) => walkwayLeftEdge - baseMargin - halfWidth - offsetX;
+    const placeRight = (halfWidth = 0) => walkwayRightEdge + baseMargin + halfWidth - offsetX;
 
     // --- base floor -------------------------------------------------------
     const floorTexture = getProceduralTexture('modernFloor', createParquetTexture);
@@ -4209,6 +4215,16 @@ class DoorVisualizer {
     step.receiveShadow = true;
     environment.add(step);
 
+    const frontRoom = new THREE.Group();
+    frontRoom.name = 'modernApartmentFrontRoom';
+    frontRoom.position.set(offsetX, 0, frontRoomCenterZ);
+    environment.add(frontRoom);
+
+    const backRoom = new THREE.Group();
+    backRoom.name = 'modernApartmentBackRoom';
+    backRoom.position.set(offsetX, 0, backRoomCenterZ);
+    environment.add(backRoom);
+
     // --- lounge area ------------------------------------------------------
     const rugTexture = getProceduralTexture('modernRug', createRugTexture);
     if (rugTexture) {
@@ -4216,7 +4232,7 @@ class DoorVisualizer {
       rugTexture.anisotropy = anisotropy;
     }
     const rugWidth = Math.min(loungeWidth * 0.62, 3.6);
-    const rugDepth = Math.min(loungeDepth * 0.55, 2.8);
+    const rugDepth = Math.min(frontRoomDepth * 0.55, 2.6);
     const rug = new THREE.Mesh(
       new THREE.PlaneGeometry(rugWidth, rugDepth),
       new THREE.MeshStandardMaterial({
@@ -4228,9 +4244,9 @@ class DoorVisualizer {
       })
     );
     rug.rotation.x = -Math.PI / 2;
-    rug.position.set(placeLeft(rugWidth / 2), 0.005, platform.position.z + 0.25);
+    rug.position.set(placeLeft(rugWidth / 2), 0.005, -0.1);
     rug.receiveShadow = false;
-    environment.add(rug);
+    frontRoom.add(rug);
 
     const fabricTexture = getProceduralTexture('modernFabric', createFabricTexture);
     if (fabricTexture) {
@@ -4248,10 +4264,10 @@ class DoorVisualizer {
       new THREE.BoxGeometry(sofaWidth, 0.42, 1.05),
       sofaMaterial.clone()
     );
-    sofaSeat.position.set(placeLeft(sofaWidth / 2), 0.21, rug.position.z - 0.15);
+    sofaSeat.position.set(placeLeft(sofaWidth / 2), 0.21, -0.35);
     sofaSeat.castShadow = true;
     sofaSeat.receiveShadow = true;
-    environment.add(sofaSeat);
+    frontRoom.add(sofaSeat);
 
     const sofaChaise = new THREE.Mesh(
       new THREE.BoxGeometry(1.25, 0.42, 0.75),
@@ -4260,11 +4276,11 @@ class DoorVisualizer {
     sofaChaise.position.set(
       sofaSeat.position.x + sofaSeat.geometry.parameters.width / 2 - 0.6,
       0.21,
-      sofaSeat.position.z + 0.4
+      sofaSeat.position.z + sofaSeat.geometry.parameters.depth / 2 - 0.15
     );
     sofaChaise.castShadow = true;
     sofaChaise.receiveShadow = true;
-    environment.add(sofaChaise);
+    frontRoom.add(sofaChaise);
 
     const sofaBack = new THREE.Mesh(
       new THREE.BoxGeometry(sofaSeat.geometry.parameters.width, 0.55, 0.14),
@@ -4273,7 +4289,7 @@ class DoorVisualizer {
     sofaBack.position.set(sofaSeat.position.x, 0.55, sofaSeat.position.z - 0.45);
     sofaBack.castShadow = true;
     sofaBack.receiveShadow = true;
-    environment.add(sofaBack);
+    frontRoom.add(sofaBack);
 
     const cushionPalette = ['#f7d4b5', '#d8e3ff', '#ffe4f0'];
     cushionPalette.forEach((hex, index) => {
@@ -4291,7 +4307,7 @@ class DoorVisualizer {
         sofaSeat.position.z - 0.3
       );
       cushion.castShadow = true;
-      environment.add(cushion);
+      frontRoom.add(cushion);
     });
 
     const coffeeTop = new THREE.Mesh(
@@ -4304,7 +4320,7 @@ class DoorVisualizer {
     );
     coffeeTop.position.set(sofaSeat.position.x + 0.55, 0.37, sofaSeat.position.z + 0.25);
     coffeeTop.castShadow = true;
-    environment.add(coffeeTop);
+    frontRoom.add(coffeeTop);
     const coffeeBase = new THREE.Mesh(
       new THREE.CylinderGeometry(0.08, 0.16, 0.32, 24),
       new THREE.MeshStandardMaterial({
@@ -4315,7 +4331,7 @@ class DoorVisualizer {
     );
     coffeeBase.position.set(coffeeTop.position.x, 0.16, coffeeTop.position.z);
     coffeeBase.castShadow = true;
-    environment.add(coffeeBase);
+    frontRoom.add(coffeeBase);
 
     const sideTable = new THREE.Mesh(
       new THREE.BoxGeometry(0.45, 0.46, 0.45),
@@ -4332,7 +4348,7 @@ class DoorVisualizer {
     );
     sideTable.castShadow = true;
     sideTable.receiveShadow = true;
-    environment.add(sideTable);
+    frontRoom.add(sideTable);
 
     const vase = new THREE.Mesh(
       new THREE.CylinderGeometry(0.12, 0.18, 0.34, 24),
@@ -4344,7 +4360,7 @@ class DoorVisualizer {
     );
     vase.position.set(sideTable.position.x, 0.46, sideTable.position.z);
     vase.castShadow = true;
-    environment.add(vase);
+    frontRoom.add(vase);
     const stems = new THREE.Mesh(
       new THREE.ConeGeometry(0.22, 0.6, 16),
       new THREE.MeshStandardMaterial({
@@ -4355,7 +4371,7 @@ class DoorVisualizer {
     );
     stems.position.set(vase.position.x, 0.9, vase.position.z);
     stems.castShadow = true;
-    environment.add(stems);
+    frontRoom.add(stems);
 
     // --- media wall -------------------------------------------------------
     const consoleWidth = Math.min(loungeWidth * 0.4, 2.1);
@@ -4368,10 +4384,10 @@ class DoorVisualizer {
         metalness: 0.05,
       })
     );
-    console.position.set(consoleX, 0.3, -0.55);
+    console.position.set(consoleX, 0.3, -backRoomDepth / 2 + 0.5);
     console.castShadow = true;
     console.receiveShadow = true;
-    environment.add(console);
+    backRoom.add(console);
 
     const consoleBase = new THREE.Mesh(
       new THREE.BoxGeometry(consoleWidth, 0.2, 0.38),
@@ -4384,7 +4400,7 @@ class DoorVisualizer {
     consoleBase.position.set(console.position.x, 0.1, console.position.z);
     consoleBase.castShadow = true;
     consoleBase.receiveShadow = true;
-    environment.add(consoleBase);
+    backRoom.add(consoleBase);
 
     const sculpture = new THREE.Mesh(
       new THREE.TorusKnotGeometry(0.16, 0.04, 80, 18),
@@ -4396,7 +4412,7 @@ class DoorVisualizer {
     );
     sculpture.position.set(console.position.x - consoleWidth / 3.5, 0.46, console.position.z + 0.04);
     sculpture.castShadow = true;
-    environment.add(sculpture);
+    backRoom.add(sculpture);
 
     const books = new THREE.Mesh(
       new THREE.BoxGeometry(0.36, 0.06, 0.26),
@@ -4408,7 +4424,7 @@ class DoorVisualizer {
     );
     books.position.set(console.position.x + consoleWidth / 3.3, 0.45, console.position.z - 0.05);
     books.castShadow = true;
-    environment.add(books);
+    backRoom.add(books);
 
     const wallArtTexture = getProceduralTexture('modernArtwork', createArtworkTexture);
     if (wallArtTexture) {
@@ -4426,9 +4442,9 @@ class DoorVisualizer {
         metalness: 0.07,
       })
     );
-    artPanel.position.set(console.position.x, loungeHeight * 0.62, -loungeDepth / 2 + 0.03);
+    artPanel.position.set(console.position.x, loungeHeight * 0.62, console.position.z - 0.15);
     artPanel.castShadow = false;
-    environment.add(artPanel);
+    backRoom.add(artPanel);
     const artFrame = new THREE.Mesh(
       new THREE.BoxGeometry(1.71, 1.11, 0.04),
       new THREE.MeshStandardMaterial({
@@ -4438,7 +4454,7 @@ class DoorVisualizer {
       })
     );
     artFrame.position.copy(artPanel.position);
-    environment.add(artFrame);
+    backRoom.add(artFrame);
 
     // --- freestanding shelves --------------------------------------------
     const shelfMaterial = new THREE.MeshStandardMaterial({
@@ -4451,10 +4467,10 @@ class DoorVisualizer {
       new THREE.BoxGeometry(shelfWidth, 1.6, 0.32),
       shelfMaterial.clone()
     );
-    shelf.position.set(placeLeft(shelfWidth / 2) - 0.6, 0.8, -loungeDepth / 3);
+    shelf.position.set(placeLeft(shelfWidth / 2) - 0.4, 0.8, -backRoomDepth / 2 + 0.9);
     shelf.castShadow = true;
     shelf.receiveShadow = true;
-    environment.add(shelf);
+    backRoom.add(shelf);
 
     const shelfLevels = 4;
     for (let i = 0; i < shelfLevels; i += 1) {
@@ -4468,7 +4484,7 @@ class DoorVisualizer {
       );
       level.position.set(shelf.position.x, 0.18 + i * 0.42, shelf.position.z);
       level.castShadow = true;
-      environment.add(level);
+      backRoom.add(level);
     }
 
     const sculpture2 = new THREE.Mesh(
@@ -4483,7 +4499,7 @@ class DoorVisualizer {
     );
     sculpture2.position.set(shelf.position.x, 1.05, shelf.position.z + 0.08);
     sculpture2.castShadow = true;
-    environment.add(sculpture2);
+    backRoom.add(sculpture2);
 
     const floorLampBase = new THREE.Mesh(
       new THREE.CylinderGeometry(0.12, 0.14, 0.05, 20),
@@ -4493,9 +4509,9 @@ class DoorVisualizer {
         metalness: 0.2,
       })
     );
-    floorLampBase.position.set(shelf.position.x + 0.7, 0.025, shelf.position.z + 0.25);
+    floorLampBase.position.set(placeLeft(0.2), 0.025, -0.2);
     floorLampBase.castShadow = true;
-    environment.add(floorLampBase);
+    frontRoom.add(floorLampBase);
 
     const floorLampStem = new THREE.Mesh(
       new THREE.CylinderGeometry(0.04, 0.04, 1.65, 18),
@@ -4507,7 +4523,7 @@ class DoorVisualizer {
     );
     floorLampStem.position.set(floorLampBase.position.x, 0.85, floorLampBase.position.z);
     floorLampStem.castShadow = true;
-    environment.add(floorLampStem);
+    frontRoom.add(floorLampStem);
 
     const lampShade = new THREE.Mesh(
       new THREE.CylinderGeometry(0.25, 0.22, 0.32, 26),
@@ -4521,12 +4537,12 @@ class DoorVisualizer {
     );
     lampShade.position.set(floorLampStem.position.x, 1.52, floorLampStem.position.z);
     lampShade.castShadow = true;
-    environment.add(lampShade);
+    frontRoom.add(lampShade);
 
     const lampLight = new THREE.PointLight(0xffe6c8, 0.55, 5.5);
     lampLight.position.copy(lampShade.position);
     lampLight.castShadow = true;
-    environment.add(lampLight);
+    frontRoom.add(lampLight);
 
     // --- pendant cluster over the seating area ---------------------------
     const pendantRoot = new THREE.Group();
@@ -4558,12 +4574,12 @@ class DoorVisualizer {
     pendantStem.position.set(0, 0.4, 0);
     pendantStem.castShadow = true;
     pendantRoot.add(pendantStem);
-    environment.add(pendantRoot);
+    frontRoom.add(pendantRoot);
 
     const pendantLight = new THREE.PointLight(0xfff1d6, 0.6, 6.5);
     pendantLight.position.copy(pendantRoot.position).add(new THREE.Vector3(0, -0.55, 0));
     pendantLight.castShadow = true;
-    environment.add(pendantLight);
+    frontRoom.add(pendantLight);
 
     // --- greenery ---------------------------------------------------------
     const planterMaterial = new THREE.MeshStandardMaterial({
@@ -4575,10 +4591,10 @@ class DoorVisualizer {
       new THREE.CylinderGeometry(0.22, 0.28, 0.36, 24),
       planterMaterial.clone()
     );
-    planter.position.set(placeRight(0.34) + 0.4, 0.18, rug.position.z + 0.55);
+    planter.position.set(placeRight(0.34) + 0.4, 0.18, 0.25);
     planter.castShadow = true;
     planter.receiveShadow = true;
-    environment.add(planter);
+    frontRoom.add(planter);
     const palm = new THREE.Mesh(
       new THREE.ConeGeometry(0.42, 1.2, 32),
       new THREE.MeshStandardMaterial({
@@ -4589,12 +4605,12 @@ class DoorVisualizer {
     );
     palm.position.set(planter.position.x, 0.98, planter.position.z);
     palm.castShadow = true;
-    environment.add(palm);
+    frontRoom.add(palm);
 
     const lowPlanter = planter.clone();
     lowPlanter.scale.set(0.8, 0.8, 0.8);
-    lowPlanter.position.set(placeLeft(0.34) - 0.5, 0.14, platform.position.z - 0.7);
-    environment.add(lowPlanter);
+    lowPlanter.position.set(placeRight(0.3), 0.14, -backRoomDepth / 2 + 0.8);
+    backRoom.add(lowPlanter);
     const lowPlant = new THREE.Mesh(
       new THREE.SphereGeometry(0.32, 24, 20),
       new THREE.MeshStandardMaterial({
@@ -4605,7 +4621,7 @@ class DoorVisualizer {
     );
     lowPlant.position.set(lowPlanter.position.x, 0.45, lowPlanter.position.z);
     lowPlant.castShadow = true;
-    environment.add(lowPlant);
+    backRoom.add(lowPlant);
 
     // --- ambient light strips -------------------------------------------
     const ledStripMaterial = new THREE.MeshStandardMaterial({
