@@ -10,6 +10,21 @@
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          const storageKey = 'akina-theme';
+          const stored = window.localStorage.getItem(storageKey);
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const theme = stored === 'dark' || (!stored && prefersDark) ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+        } catch (error) {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.colorScheme = 'light';
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="styles.css" />
     <script type="importmap">
       {
@@ -35,47 +50,61 @@
             <h1 class="brand-title" data-i18n="header.title">Configura, visualizza e ottieni il preventivo</h1>
           </div>
         </div>
-        <div
-          class="language-switch"
-          role="group"
-          aria-label="Lingua"
-          data-i18n-attr="aria-label:language.switchAria"
-        >
+        <div class="header-controls">
+          <div
+            class="language-switch"
+            role="group"
+            aria-label="Lingua"
+            data-i18n-attr="aria-label:language.switchAria"
+          >
+            <button
+              type="button"
+              class="language-switch__button is-active"
+              data-lang="it"
+              data-i18n-attr="aria-label:language.names.it"
+              aria-label="Italiano"
+            >
+              <span aria-hidden="true">🇮🇹</span>
+            </button>
+            <button
+              type="button"
+              class="language-switch__button"
+              data-lang="en"
+              data-i18n-attr="aria-label:language.names.en"
+              aria-label="English"
+            >
+              <span aria-hidden="true">🇬🇧</span>
+            </button>
+            <button
+              type="button"
+              class="language-switch__button"
+              data-lang="de"
+              data-i18n-attr="aria-label:language.names.de"
+              aria-label="Deutsch"
+            >
+              <span aria-hidden="true">🇩🇪</span>
+            </button>
+            <button
+              type="button"
+              class="language-switch__button"
+              data-lang="zh"
+              data-i18n-attr="aria-label:language.names.zh"
+              aria-label="中文"
+            >
+              <span aria-hidden="true">🇨🇳</span>
+            </button>
+          </div>
           <button
             type="button"
-            class="language-switch__button is-active"
-            data-lang="it"
-            data-i18n-attr="aria-label:language.names.it"
-            aria-label="Italiano"
+            id="theme-toggle"
+            class="theme-toggle"
+            aria-pressed="false"
+            aria-label="Attiva modalità scura"
+            data-i18n-attr="aria-label:theme.toggleDark"
           >
-            <span aria-hidden="true">🇮🇹</span>
-          </button>
-          <button
-            type="button"
-            class="language-switch__button"
-            data-lang="en"
-            data-i18n-attr="aria-label:language.names.en"
-            aria-label="English"
-          >
-            <span aria-hidden="true">🇬🇧</span>
-          </button>
-          <button
-            type="button"
-            class="language-switch__button"
-            data-lang="de"
-            data-i18n-attr="aria-label:language.names.de"
-            aria-label="Deutsch"
-          >
-            <span aria-hidden="true">🇩🇪</span>
-          </button>
-          <button
-            type="button"
-            class="language-switch__button"
-            data-lang="zh"
-            data-i18n-attr="aria-label:language.names.zh"
-            aria-label="中文"
-          >
-            <span aria-hidden="true">🇨🇳</span>
+            <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">☀️</span>
+            <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">🌙</span>
+            <span class="theme-toggle__status" data-i18n="theme.light">Modalità chiara</span>
           </button>
         </div>
         <nav

@@ -24,6 +24,12 @@ const TRANSLATIONS = {
         zh: 'Cinese',
       },
     },
+    theme: {
+      toggleLight: 'Passa alla modalità chiara',
+      toggleDark: 'Passa alla modalità scura',
+      light: 'Modalità chiara',
+      dark: 'Modalità scura',
+    },
     header: {
       eyebrow: 'Preventivatore Porta Akina',
       title: 'Configura, visualizza e ottieni il preventivo',
@@ -471,6 +477,12 @@ const TRANSLATIONS = {
         zh: 'Chinese',
       },
     },
+    theme: {
+      toggleLight: 'Switch to light mode',
+      toggleDark: 'Switch to dark mode',
+      light: 'Light mode',
+      dark: 'Dark mode',
+    },
     header: {
       eyebrow: 'Akina Door Quoter',
       title: 'Configure, preview and get your quote',
@@ -914,6 +926,12 @@ const TRANSLATIONS = {
         de: 'Deutsch',
         zh: 'Chinesisch',
       },
+    },
+    theme: {
+      toggleLight: 'Zur hellen Ansicht wechseln',
+      toggleDark: 'Zur dunklen Ansicht wechseln',
+      light: 'Helle Ansicht',
+      dark: 'Dunkle Ansicht',
     },
     header: {
       eyebrow: 'Akina Türkonfigurator',
@@ -1359,6 +1377,12 @@ const TRANSLATIONS = {
         zh: '中文',
       },
     },
+    theme: {
+      toggleLight: '切换为浅色模式',
+      toggleDark: '切换为深色模式',
+      light: '浅色模式',
+      dark: '深色模式',
+    },
     header: {
       eyebrow: 'Akina 门报价器',
       title: '配置、预览并获取报价',
@@ -1795,6 +1819,12 @@ const TRANSLATIONS = {
   },
 };
 
+const THEME_STORAGE_KEY = 'akina-theme';
+const DEFAULT_THEME = 'light';
+const initialThemeAttribute =
+  typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : null;
+let currentTheme = initialThemeAttribute === 'dark' ? 'dark' : DEFAULT_THEME;
+
 let currentLanguage = 'it';
 
 function getTranslationValue(lang, path) {
@@ -1846,6 +1876,82 @@ function resolveMessage(message, replacements) {
     return t(message, replacements);
   }
   return formatTemplate(message, replacements);
+}
+
+function getStoredTheme() {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'dark' || stored === 'light') {
+      return stored;
+    }
+  } catch (error) {
+    // Ignore storage errors (e.g. privacy mode)
+  }
+  return null;
+}
+
+function updateThemeToggleLabel() {
+  if (typeof selectors === 'undefined' || !selectors?.themeToggle) return;
+  const isDark = currentTheme === 'dark';
+  const labelKey = isDark ? 'theme.toggleLight' : 'theme.toggleDark';
+  selectors.themeToggle.setAttribute('aria-label', t(labelKey));
+  const statusNode = selectors.themeToggle.querySelector('.theme-toggle__status');
+  if (statusNode) {
+    statusNode.textContent = isDark ? t('theme.dark') : t('theme.light');
+  }
+}
+
+function applyTheme(theme, { persist = true } = {}) {
+  const normalized = theme === 'dark' ? 'dark' : 'light';
+  currentTheme = normalized;
+
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.setAttribute('data-theme', normalized);
+    document.documentElement.style.colorScheme = normalized === 'dark' ? 'dark' : 'light';
+  }
+
+  if (persist && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, normalized);
+    } catch (error) {
+      // Ignore storage errors
+    }
+  }
+
+  if (typeof selectors !== 'undefined' && selectors?.themeToggle) {
+    selectors.themeToggle.classList.toggle('is-dark', normalized === 'dark');
+    selectors.themeToggle.setAttribute('aria-pressed', normalized === 'dark' ? 'true' : 'false');
+  }
+
+  updateThemeToggleLabel();
+}
+
+function initializeThemeToggle() {
+  if (typeof selectors === 'undefined' || !selectors?.themeToggle) return;
+
+  const stored = getStoredTheme();
+  if (stored) {
+    applyTheme(stored, { persist: false });
+  } else if (typeof window !== 'undefined' && window.matchMedia) {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    applyTheme(media.matches ? 'dark' : 'light', { persist: false });
+    try {
+      media.addEventListener('change', (event) => {
+        if (getStoredTheme()) return;
+        applyTheme(event.matches ? 'dark' : 'light', { persist: false });
+      });
+    } catch (error) {
+      // Older browsers
+    }
+  } else {
+    applyTheme(currentTheme, { persist: false });
+  }
+
+  selectors.themeToggle.addEventListener('click', () => {
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+  });
 }
 
 function getModelLabel(model) {
@@ -1971,6 +2077,7 @@ function applyTranslationsToDom() {
 
   applyAccessoryTranslations();
   updateLanguageSwitchUI();
+  updateThemeToggleLabel();
   updateTrackLengthOptions({ preserveSelection: true });
   if (selectors.modelInput) {
     updateNumeroAnteOptions(selectors.modelInput.value || 'TRASCINAMENTO', { preserveSelection: true });
@@ -5345,6 +5452,7 @@ const selectors = {
   progressSteps: document.querySelectorAll('.progress-step'),
   mobileNavButtons: document.querySelectorAll('.mobile-nav__button'),
   languageButtons: document.querySelectorAll('.language-switch__button'),
+  themeToggle: document.getElementById('theme-toggle'),
   prevButton: document.getElementById('step-prev'),
   nextButton: document.getElementById('step-next'),
   stepFeedback: document.getElementById('step-feedback'),
@@ -8391,6 +8499,7 @@ let doorBoxMountingGroup;
 let binarioGroup;
 let traversinoGroup;
 
+initializeThemeToggle();
 initializeLanguageSwitcher();
 setupMobileNav();
 
